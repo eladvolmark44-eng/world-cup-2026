@@ -31,6 +31,52 @@ const GROUPS_2026 = {
   L: ["אנגליה","קרואטיה","גאנה","פנמה"],
 };
 const ALL_TEAMS = Object.values(GROUPS_2026).flat();
+// Only real teams (no playoff placeholders) for champion picker
+const REAL_TEAMS = ALL_TEAMS.filter(t => !t.startsWith("פלייאוף"));
+
+// Top strikers / goal threats for World Cup 2026
+const STRIKERS = [
+  // ארגנטינה
+  "ליאונל מסי","חוליאן אלבארז","לאוטרו מרטינס",
+  // צרפת
+  "קיליאן מבאפה","אוליביה ז'ירו","מרכוס תוראם",
+  // אנגליה
+  "הארי קיין","בוקאיו סאקה","פיל פודן","ג'ודה בלינגהאם",
+  // פורטוגל
+  "קריסטיאנו רונאלדו","ברונו פרננדש","ז'ואאו פליקס","גונסאלו ראמוש",
+  // ברזיל
+  "וינישיוס ג'וניור","רודריגו","ראפיניה","אנדריק",
+  // ספרד
+  "לאמין יאמל","ניקו וויליאמס","אלוורו מוראטה","פדרי",
+  // גרמניה
+  "פלוריאן וירץ","ג'מאל מוסיאלה","קאי האברץ","תומאס מולר",
+  // הולנד
+  "קודי גאקפו","ממפיס דיפאי","דאהווי קלאסן",
+  // בלגיה
+  "רומלו לוקאקו","לואיס אופנדה",
+  // נורווגיה
+  "ארלינג הולאנד",
+  // אורוגוואי
+  "דרווין נונייס","לואיס סוארס","פדרו דה לה וגה",
+  // מקסיקו
+  "חיאן לוזאנו","הנרי מרטין","סנטיאגו חימנז",
+  // ארה"ב
+  "כריסטיאן פוליסיץ","פולקר הרוש","ריקי פוסה",
+  // קנדה
+  "אלפונסו דאוויס","תאדאוס סאלאה",
+  // סנגל
+  "סאדיו מאנה","ישחק קויאטה",
+  // מרוקו
+  "עיאש ח'מכוני","ופאד אח'יארד","יוסף אנסאפלה",
+  // קוריאה
+  "סון הון-מין",
+  // יפן
+  "דאיצ'י מיינו","ריוואטה אוסאקו",
+  // אקוודור
+  "אנר ואלנציה","גונסאלו פלאסיו",
+  // פולאנד / צ'כיה
+  "אדם הלוסה",
+].sort((a,b)=>a.localeCompare(b,"he"));
 
 const GROUP_MATCHES = [
   {id:"A1",group:"A",home:"מקסיקו",away:"דרום אפריקה",date:"11/06",kickoff:"2026-06-11T22:00:00+03:00"},
@@ -150,6 +196,17 @@ function calcScore(bets={},results={},allP=[]){
     }
   });
   });
+  // KO match bets (same scoring as group: 1pt direction + 3pt exact)
+  if(bets.koMatches && results.koResults) {
+    Object.keys(bets.koMatches).forEach(id=>{
+      const bet=bets.koMatches[id];
+      const real=results.koResults?.[id.replace("ko_","")];
+      if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
+      if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
+        t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=3;
+      }
+    });
+  }
   if(bets.champion&&bets.champion===results.champion)t+=12;
   if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())t+=12;
   if(bets.totalGoals!=null&&results.totalGoals!=null&&results.totalGoalsBonus!=null){
@@ -286,7 +343,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
         <span className="player-score-badge">{calcScore(bets,results,[])} נק׳</span>
       </div>
       <div className="sub-tabs">
-        {[["groups","🏠 בתים"],["matches","⚽ משחקים"],["special","⭐ מיוחד"]].map(([k,l])=>(
+        {[["groups","🏠 בתים"],["matches","⚽ משחקים"],["knockout","🏆 נוקאאוט"],["special","⭐ מיוחד"]].map(([k,l])=>(
           <button key={k} className={`sub-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
@@ -364,7 +421,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
   );
 }
 
-function BetForm({user, onSave, onSaveMatch, teamNames}){
+function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNames}){
   const [bets, setBets] = useState(user.bets||{});
   const [tab, setTab] = useState("groups");
   const globalLocked = isGlobalLocked();
@@ -403,18 +460,41 @@ function BetForm({user, onSave, onSaveMatch, teamNames}){
           ))}
         </div>
       )}
+      {tab==="knockout"&&(
+        <div className="scroll-area">
+          {(!koMatchesBet||koMatchesBet.length===0)
+            ? <div className="nothing-revealed" style={{padding:"2rem",textAlign:"center"}}>
+                <div style={{fontSize:"2rem"}}>⏳</div>
+                <p style={{color:"var(--muted)"}}>משחקי הנוקאאוט יופיעו כאן ברגע שהקבוצות ידועות</p>
+                <p style={{color:"var(--muted)",fontSize:".8rem"}}>ניתן להמר עד 5 דק׳ לפני כל משחק</p>
+              </div>
+            : <>
+                <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה 5 דק׳ לפני כל משחק</p>
+                {koMatchesBet.map((m,i)=>(
+                  <MatchBetRow key={m.id||i} match={m}
+                    savedBet={user.bets?.koMatches?.[m.id]}
+                    onSave={(id,bet)=>onSaveKoMatch(id,bet)}
+                    teamNames={teamNames}/>
+                ))}
+              </>
+          }
+        </div>
+      )}
       {tab==="special"&&(
         <div className="scroll-area special-area">
           <div className="special-row">
             <label>🏆 אלופה (12נק׳) {globalLocked&&"🔒"}</label>
             <select disabled={globalLocked} value={bets.champion||""} onChange={e=>setBets(p=>({...p,champion:e.target.value}))}>
               <option value="">— בחר —</option>
-              {ALL_TEAMS.map(t=><option key={t} value={t}>{teamNames?.[t]||t}</option>)}
+              {REAL_TEAMS.map(t=><option key={t} value={t}>{teamNames?.[t]||t}</option>)}
             </select>
           </div>
           <div className="special-row">
-            <label>👟 מלך שערים (12נק׳) {globalLocked&&"🔒"}</label>
-            <input disabled={globalLocked} placeholder="שם שחקן" value={bets.goldenBoot||""} onChange={e=>setBets(p=>({...p,goldenBoot:e.target.value}))}/>
+            <label>👟 מלך השערים (12נק׳) {globalLocked&&"🔒"}</label>
+            <select disabled={globalLocked} value={bets.goldenBoot||""} onChange={e=>setBets(p=>({...p,goldenBoot:e.target.value}))}>
+              <option value="">— בחר שחקן —</option>
+              {STRIKERS.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
           <div className="special-row">
             <label>⚽ ניחוש סה״כ שערים {globalLocked&&"🔒"}</label>
@@ -875,6 +955,12 @@ export default function App(){
     const updatedBets={...curBets,matches:{...curBets.matches,[matchId]:matchBet}};
     await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets:updatedBets});
   };
+  const handleSaveKoMatchBet=async(matchId, matchBet)=>{
+    if(!authUser)return;
+    const curBets=participants.find(p=>p.uid===authUser.uid)?.bets||{};
+    const updatedBets={...curBets,koMatches:{...curBets.koMatches,[matchId]:matchBet}};
+    await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets:updatedBets});
+  };
 
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
@@ -942,7 +1028,7 @@ export default function App(){
           {tab==="mybets"&&(
             <div className="section">
               <h2>🎯 ההימורים שלי</h2>
-              {me?<BetForm user={me} onSave={handleSaveBets} onSaveMatch={handleSaveMatchBet} teamNames={teamNames}/>:<p className="section-note">טוען...</p>}
+              {me?<BetForm user={me} onSave={handleSaveBets} onSaveMatch={handleSaveMatchBet} onSaveKoMatch={handleSaveKoMatchBet} koMatchesBet={game.results?.knockoutMatches||[]} teamNames={teamNames}/>:<p className="section-note">טוען...</p>}
             </div>
           )}
 
@@ -969,7 +1055,7 @@ export default function App(){
                 ["⚽ כיוון משחק","1נק׳"],["✅ תוצאה מדויקת","3נק׳ בונוס"],
                 
                 ["🏆 אלופה","12 נק׳"],["👟 מלך שערים","12 נק׳"],
-                ["⚽ סה״כ שערים","הקרוב ביותר מקבל 6–10 נק׳"],
+                ["⚽ סה״כ שערים","הקרוב ביותר מנצח — הניקוד נקבע לפני הגמר (6–10 נק׳)"],["🏆 נוקאאוט","1נק׳ כיוון · +3נק׳ תוצאה מדויקת (כמו שלב בתים)"],
                 ["🤖 תוצאות","מתעדכנות אוטומטית מ-API בזמן אמת"],
               ].map(([t,v])=>(
                 <div key={t} className="rule-row"><div className="rule-title">{t}</div><div className="rule-text">{v}</div></div>
