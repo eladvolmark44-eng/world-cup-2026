@@ -3,7 +3,6 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 
-// ─── FIREBASE ────────────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyBdD-8CkgpIKpyWWJvcdmf17ZmLD-cfxLo",
   authDomain: "world-cup-2026-31d78.firebaseapp.com",
@@ -17,7 +16,6 @@ const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 const googleProvider = new GoogleAuthProvider();
 
-// ─── DATA ────────────────────────────────────────────────────────────────────
 const GROUPS_2026 = {
   A: ["מקסיקו","קוריאה","דרום אפריקה","צ'כיה"],
   B: ["קנדה","שוויץ","קטאר","איטליה"],
@@ -109,14 +107,11 @@ const GROUP_MATCHES = [
   {id:"L6",group:"L",home:"קרואטיה",away:"גאנה",date:"28/06",kickoff:"2026-06-28T04:00:00+03:00"},
 ];
 
-// Last group match per group — for revealing group bets
 const GROUP_LAST_MATCH = {};
 Object.keys(GROUPS_2026).forEach(g => {
   const gm = GROUP_MATCHES.filter(m => m.group === g);
   GROUP_LAST_MATCH[g] = gm.reduce((a,b) => new Date(a.kickoff) > new Date(b.kickoff) ? a : b).kickoff;
 });
-
-// Tournament end — for revealing champion/golden boot
 const TOURNAMENT_END = "2026-07-19T23:59:00+03:00";
 const LOCK_MS = 5 * 60 * 1000;
 
@@ -124,54 +119,44 @@ function isMatchLocked(kickoff) { return Date.now() >= new Date(kickoff).getTime
 function isGlobalLocked() { return isMatchLocked("2026-06-11T22:00:00+03:00"); }
 function isGroupRevealed(group) { return Date.now() >= new Date(GROUP_LAST_MATCH[group]).getTime(); }
 function isTournamentOver() { return Date.now() >= new Date(TOURNAMENT_END).getTime(); }
-
-// ── VISIBILITY LOGIC ─────────────────────────────────────────────────────────
-// Can viewer see a specific match bet of another player?
 function canSeeMatchBet(matchId, viewerUid, ownerUid) {
   if (viewerUid === ownerUid) return true;
   const match = GROUP_MATCHES.find(m => m.id === matchId);
-  if (!match) return false;
-  return isMatchLocked(match.kickoff);
+  return match ? isMatchLocked(match.kickoff) : false;
 }
-// Can viewer see group picks of another player?
 function canSeeGroupBet(group, viewerUid, ownerUid) {
-  if (viewerUid === ownerUid) return true;
-  return isGroupRevealed(group);
+  return viewerUid === ownerUid || isGroupRevealed(group);
 }
-// Can viewer see champion/golden boot of another player?
 function canSeeSpecialBet(viewerUid, ownerUid) {
-  if (viewerUid === ownerUid) return true;
-  return isTournamentOver();
+  return viewerUid === ownerUid || isTournamentOver();
 }
 
 const KNOCKOUT_ROUNDS = [
-  {id:"r32",  label:"32 האחרונות",count:32,pts_dir:2, pts_exact:5 },
-  {id:"r16",  label:"שמינית גמר", count:16,pts_dir:2, pts_exact:5 },
-  {id:"qf",   label:"רבע גמר",    count:8, pts_dir:4, pts_exact:8 },
-  {id:"sf",   label:"חצי גמר",    count:4, pts_dir:5, pts_exact:10},
-  {id:"third",label:"מקום שלישי", count:2, pts_dir:5, pts_exact:10},
-  {id:"final",label:"גמר",        count:2, pts_dir:8, pts_exact:15},
+  {id:"r32",label:"32 האחרונות",count:32,pts_dir:2,pts_exact:5},
+  {id:"r16",label:"שמינית גמר",count:16,pts_dir:2,pts_exact:5},
+  {id:"qf",label:"רבע גמר",count:8,pts_dir:4,pts_exact:8},
+  {id:"sf",label:"חצי גמר",count:4,pts_dir:5,pts_exact:10},
+  {id:"third",label:"מקום שלישי",count:2,pts_dir:5,pts_exact:10},
+  {id:"final",label:"גמר",count:2,pts_dir:8,pts_exact:15},
 ];
 
-// ─── SCORING ──────────────────────────────────────────────────────────────────
 function getDir(h,a){if(+h>+a)return"home";if(+a>+h)return"away";return"draw";}
 function calcScore(bets={},results={},allP=[]){
   let t=0;
   Object.keys(GROUPS_2026).forEach(g=>{
-    const picks=bets.groups?.[g]||[];const correct=results.groups?.[g]||[];
+    const picks=bets.groups?.[g]||[],correct=results.groups?.[g]||[];
     const hits=picks.filter(x=>correct.includes(x)).length;
     if(hits===1)t+=2;if(hits===2)t+=5;
   });
   GROUP_MATCHES.forEach(m=>{
-    const bet=bets.matches?.[m.id];const real=results.matches?.[m.id];
+    const bet=bets.matches?.[m.id],real=results.matches?.[m.id];
     if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
     if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
       t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=3;
     }
   });
   KNOCKOUT_ROUNDS.forEach(({id,pts_dir})=>{
-    const picks=bets.knockout?.[id]||[];const correct=results.knockout?.[id]||[];
-    picks.forEach(x=>{if(correct.includes(x))t+=pts_dir;});
+    (bets.knockout?.[id]||[]).forEach(x=>{if((results.knockout?.[id]||[]).includes(x))t+=pts_dir;});
   });
   if(bets.champion&&bets.champion===results.champion)t+=12;
   if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())t+=12;
@@ -183,7 +168,6 @@ function calcScore(bets={},results={},allP=[]){
   return t;
 }
 
-// ─── FIREBASE HELPERS ─────────────────────────────────────────────────────────
 function generateCode(){return Math.random().toString(36).substring(2,7).toUpperCase();}
 async function loadGame(){
   const snap=await getDoc(doc(db,"mundial2026","game"));
@@ -192,7 +176,6 @@ async function loadGame(){
 async function saveGame(data){await setDoc(doc(db,"mundial2026","game"),data,{merge:true});}
 async function saveParticipant(p){await setDoc(doc(db,"mundial2026","game","participants",p.uid),p,{merge:true});}
 
-// ─── UI HELPERS ───────────────────────────────────────────────────────────────
 function NumStepper({value,onChange,min=0,max=99,disabled=false}){
   return(
     <div className="stepper">
@@ -204,27 +187,22 @@ function NumStepper({value,onChange,min=0,max=99,disabled=false}){
 }
 function Toast({msg}){return msg?<div className="toast">{msg}</div>:null;}
 
-// ─── GOOGLE SIGN IN SCREEN ───────────────────────────────────────────────────
 function SignInScreen({onSignIn,loading}){
   return(
     <div className="signin-screen">
-      <div className="home-ball" style={{fontSize:"4rem",marginBottom:"1rem"}}>⚽</div>
+      <div style={{fontSize:"4rem",marginBottom:"1rem"}}>⚽</div>
       <h1 className="home-title">מונדיאל<span>BET</span><small>2026</small></h1>
       <p className="home-sub">קנדה · מקסיקו · ארה״ב · 11 יוני – 19 יולי</p>
       <div className="signin-card">
         <p className="signin-desc">כניסה אחת — זוכר אותך לתמיד</p>
         <button className="btn-google" onClick={onSignIn} disabled={loading}>
-          {loading ? "מתחבר..." : (
-            <><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.7l-6.2-5.2C29.3 35.6 26.8 36 24 36c-5.2 0-9.6-2.9-11.3-7l-6.5 5C9.5 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.4 35.7 44 30.3 44 24c0-1.3-.1-2.7-.4-4z"/></svg>
-            התחבר עם Google</>
-          )}
+          {loading?"מתחבר...":<><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.7l-6.2-5.2C29.3 35.6 26.8 36 24 36c-5.2 0-9.6-2.9-11.3-7l-6.5 5C9.5 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.4 35.7 44 30.3 44 24c0-1.3-.1-2.7-.4-4z"/></svg>התחבר עם Google</>}
         </button>
       </div>
     </div>
   );
 }
 
-// ─── GROUP PICKER ─────────────────────────────────────────────────────────────
 function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
   const toggle=t=>{
     if(locked)return;
@@ -252,28 +230,22 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
   );
 }
 
-// ─── MATCH BET ROW ────────────────────────────────────────────────────────────
-function MatchBetRow({match,bet,onChange,teamNames,readOnly}){
+function MatchBetRow({match,bet,onChange,teamNames}){
   const locked=isMatchLocked(match.kickoff);
-  const disabled=locked||readOnly;
-  const h=bet?.home??null;const a=bet?.away??null;
+  const h=bet?.home??null,a=bet?.away??null;
   const dir=h!=null&&a!=null?getDir(+h,+a):null;
   return(
     <div className={`match-row ${locked?"locked-row":""}`}>
       <div className="match-meta">
         {match.date} · בית {match.group}
         {locked?<span className="lock-badge-sm"> 🔒</span>:<span className="open-badge-sm"> ✏️</span>}
-        {readOnly&&!locked&&<span className="hidden-badge"> 🙈 נסתר</span>}
       </div>
       <div className="match-body">
         <div className={`team-name ${dir==="home"?"winner":""}`}>{teamNames?.[match.home]||match.home}</div>
         <div className="score-area">
-          {readOnly&&!locked
-            ?<span className="hidden-score">סודי</span>
-            :<><NumStepper value={h} onChange={v=>onChange({...bet,home:v})} disabled={disabled}/>
-              <span className="colon">:</span>
-              <NumStepper value={a} onChange={v=>onChange({...bet,away:v})} disabled={disabled}/></>
-          }
+          <NumStepper value={h} onChange={v=>onChange({...bet,home:v})} disabled={locked}/>
+          <span className="colon">:</span>
+          <NumStepper value={a} onChange={v=>onChange({...bet,away:v})} disabled={locked}/>
         </div>
         <div className={`team-name away ${dir==="away"?"winner":""}`}>{teamNames?.[match.away]||match.away}</div>
       </div>
@@ -281,7 +253,6 @@ function MatchBetRow({match,bet,onChange,teamNames,readOnly}){
   );
 }
 
-// ─── KNOCKOUT PICKER ──────────────────────────────────────────────────────────
 function KnockoutPicker({label,pts_dir,pts_exact,count,picks,onChange,teamNames}){
   const toggle=t=>{
     const cur=picks||[];
@@ -303,7 +274,6 @@ function KnockoutPicker({label,pts_dir,pts_exact,count,picks,onChange,teamNames}
   );
 }
 
-// ─── PLAYER BETS VIEW (read-only, with privacy) ───────────────────────────────
 function PlayerBetsView({player,viewerUid,results,teamNames}){
   const [tab,setTab]=useState("groups");
   const bets=player.bets||{};
@@ -312,7 +282,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
       <div className="player-header">
         {player.photoURL&&<img src={player.photoURL} className="player-avatar" alt=""/>}
         <span className="player-hname">{player.name}</span>
-        <span className="player-score-badge">{calcScore(bets,results,[])}</span>
+        <span className="player-score-badge">{calcScore(bets,results,[])} נק׳</span>
       </div>
       <div className="sub-tabs">
         {[["groups","🏠 בתים"],["matches","⚽ משחקים"],["knockout","🏆 נוקאאוט"],["special","⭐ מיוחד"]].map(([k,l])=>(
@@ -405,9 +375,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
           ].map(({label,key,can})=>(
             <div key={key} className="special-row">
               <label>{label}</label>
-              <div className={`special-val ${!can?"hidden-val":""}`}>
-                {can?(bets[key]||"—"):"🔒 יחשף בסוף הטורניר"}
-              </div>
+              <div className={`special-val ${!can?"hidden-val":""}`}>{can?(bets[key]||"—"):"🔒 יחשף בסוף הטורניר"}</div>
             </div>
           ))}
         </div>
@@ -416,7 +384,6 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
   );
 }
 
-// ─── MY BET FORM ──────────────────────────────────────────────────────────────
 function BetForm({user,onSave,teamNames}){
   const [bets,setBets]=useState(user.bets||{});
   const [tab,setTab]=useState("groups");
@@ -446,7 +413,7 @@ function BetForm({user,onSave,teamNames}){
           <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה 5 דק׳ לפני כל משחק</p>
           {GROUP_MATCHES.map(m=>(
             <MatchBetRow key={m.id} match={m} bet={bets.matches?.[m.id]}
-              onChange={v=>setMatchBet(m.id,v)} teamNames={teamNames} readOnly={false}/>
+              onChange={v=>setMatchBet(m.id,v)} teamNames={teamNames}/>
           ))}
         </div>
       )}
@@ -469,13 +436,11 @@ function BetForm({user,onSave,teamNames}){
           </div>
           <div className="special-row">
             <label>👟 מלך שערים (12נק׳) {globalLocked&&"🔒"}</label>
-            <input disabled={globalLocked} placeholder="שם שחקן" value={bets.goldenBoot||""}
-              onChange={e=>setBets(p=>({...p,goldenBoot:e.target.value}))}/>
+            <input disabled={globalLocked} placeholder="שם שחקן" value={bets.goldenBoot||""} onChange={e=>setBets(p=>({...p,goldenBoot:e.target.value}))}/>
           </div>
           <div className="special-row">
             <label>⚽ ניחוש סה״כ שערים {globalLocked&&"🔒"}</label>
-            <input disabled={globalLocked} type="number" placeholder="כמה שערים?" value={bets.totalGoals||""}
-              onChange={e=>setBets(p=>({...p,totalGoals:e.target.value}))}/>
+            <input disabled={globalLocked} type="number" placeholder="כמה שערים?" value={bets.totalGoals||""} onChange={e=>setBets(p=>({...p,totalGoals:e.target.value}))}/>
           </div>
           <p className="section-note">💡 הקרוב ביותר מקבל 6–10 נק׳ (יוחלט לפני הגמר)</p>
         </div>
@@ -485,131 +450,6 @@ function BetForm({user,onSave,teamNames}){
   );
 }
 
-// ─── RESULTS PANEL ────────────────────────────────────────────────────────────
-// Results can only be entered AFTER the match has started (kickoff time passed)
-function isMatchStarted(kickoff){ return Date.now() >= new Date(kickoff).getTime(); }
-
-function MatchResultRow({match,result,onSave,teamNames}){
-  const [home,setHome]=useState(result?.home??null);
-  const [away,setAway]=useState(result?.away??null);
-  const [saving,setSaving]=useState(false);
-  const [saved,setSaved]=useState(false);
-  useEffect(()=>{setHome(result?.home??null);setAway(result?.away??null);},[result?.home,result?.away]);
-  
-  const started=isMatchStarted(match.kickoff);
-  const dirty=started&&(home!==result?.home||away!==result?.away)&&home!=null&&away!=null;
-  
-  const handleSave=async()=>{
-    if(!started)return;
-    setSaving(true);
-    await onSave(match.id,home,away);
-    setSaving(false);setSaved(true);setTimeout(()=>setSaved(false),1500);
-  };
-  const dir=home!=null&&away!=null?getDir(+home,+away):null;
-  const hasResult=result?.home!=null&&result?.away!=null;
-  
-  return(
-    <div className={`match-row result ${saved?"saved-row":""} ${!started?"future-match":""}`}>
-      <div className="match-meta">
-        {match.date} · בית {match.group}
-        {!started
-          ? <span className="future-badge"> 🕐 טרם התחיל</span>
-          : hasResult
-            ? <span className="open-badge-sm"> ✓ מוזן</span>
-            : <span className="open-badge-sm"> ✏️ פתוח להזנה</span>
-        }
-      </div>
-      <div className="match-body">
-        <span className={`team-name ${dir==="home"?"winner":""}`}>{teamNames?.[match.home]||match.home}</span>
-        <div className="score-area">
-          {started
-            ?<><NumStepper value={home} onChange={setHome}/>
-               <span className="colon">:</span>
-               <NumStepper value={away} onChange={setAway}/></>
-            :<span className="future-score">— : —</span>
-          }
-        </div>
-        <span className={`team-name away ${dir==="away"?"winner":""}`}>{teamNames?.[match.away]||match.away}</span>
-        {started&&(
-          <button
-            className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`}
-            onClick={handleSave}
-            disabled={!dirty||saving}
-          >
-            {saved?"✓":saving?"...":"💾"}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ResultsPanel({results,onSave,teamNames}){
-  const [tab,setTab]=useState("matches");
-  const [r,setR]=useState(results);
-  useEffect(()=>setR(results),[JSON.stringify(results)]);
-  const setGroup=(g,picks)=>setR(p=>({...p,groups:{...p.groups,[g]:picks}}));
-  const setKO=(round,picks)=>setR(p=>({...p,knockout:{...p.knockout,[round]:picks}}));
-
-  const saveMatch=async(id,home,away)=>{
-    await onSave({...results,matches:{...results.matches,[id]:{home,away}}});
-  };
-
-  return(
-    <div className="results-panel">
-      <div className="sub-tabs">
-        {[["matches","⚽ משחקים"],["groups","🏠 בתים"],["knockout","🏆 נוקאאוט"],["special","⭐ מיוחד"]].map(([k,l])=>(
-          <button key={k} className={`sub-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
-        ))}
-      </div>
-      {tab==="matches"&&(
-        <div className="scroll-area">
-          <p className="section-note">💾 לחץ שמור ליד כל משחק — מתעדכן לכולם מיד</p>
-          {GROUP_MATCHES.map(m=>(
-            <MatchResultRow key={m.id} match={m}
-              result={results.matches?.[m.id]}
-              onSave={saveMatch} teamNames={teamNames}/>
-          ))}
-        </div>
-      )}
-      {tab==="groups"&&(
-        <div className="scroll-area">
-          {Object.entries(GROUPS_2026).map(([g,teams])=>(
-            <GroupPicker key={g} groupId={g} teams={teams} picks={r.groups?.[g]}
-              onChange={p=>setGroup(g,p)} locked={false} teamNames={teamNames}/>
-          ))}
-          <button className="btn-green" onClick={()=>onSave(r)}>💾 שמור בתים</button>
-        </div>
-      )}
-      {tab==="knockout"&&(
-        <div className="scroll-area">
-          {KNOCKOUT_ROUNDS.map(({id,label,count,pts_dir,pts_exact})=>(
-            <KnockoutPicker key={id} label={label} pts_dir={pts_dir} pts_exact={pts_exact}
-              count={count} picks={r.knockout?.[id]} onChange={p=>setKO(id,p)} teamNames={teamNames}/>
-          ))}
-          <button className="btn-green" onClick={()=>onSave(r)}>💾 שמור נוקאאוט</button>
-        </div>
-      )}
-      {tab==="special"&&(
-        <div className="scroll-area special-area">
-          <div className="special-row"><label>🏆 אלופה</label>
-            <select value={r.champion||""} onChange={e=>setR(p=>({...p,champion:e.target.value}))}>
-              <option value="">—</option>{ALL_TEAMS.map(t=><option key={t} value={t}>{teamNames?.[t]||t}</option>)}
-            </select></div>
-          <div className="special-row"><label>👟 מלך שערים</label>
-            <input value={r.goldenBoot||""} onChange={e=>setR(p=>({...p,goldenBoot:e.target.value}))} placeholder="שם שחקן"/></div>
-          <div className="special-row"><label>⚽ סה״כ שערים בפועל</label>
-            <input type="number" value={r.totalGoals||""} onChange={e=>setR(p=>({...p,totalGoals:e.target.value}))}/></div>
-          <div className="special-row"><label>🎁 בונוס שערים (6–10)</label>
-            <NumStepper value={r.totalGoalsBonus||8} onChange={v=>setR(p=>({...p,totalGoalsBonus:v}))} min={6} max={10}/></div>
-          <button className="btn-green" onClick={()=>onSave(r)}>💾 שמור</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── LEADERBOARD ──────────────────────────────────────────────────────────────
 function Leaderboard({participants,results,onSelectPlayer}){
   const ranked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},results,participants)})).sort((a,b)=>b.score-a.score);
   const medals=["🥇","🥈","🥉"];
@@ -629,7 +469,6 @@ function Leaderboard({participants,results,onSelectPlayer}){
   );
 }
 
-// ─── SCHEDULE ─────────────────────────────────────────────────────────────────
 function ScheduleView({results,teamNames}){
   const [filter,setFilter]=useState("הכל");
   const shown=filter==="הכל"?GROUP_MATCHES:GROUP_MATCHES.filter(m=>m.group===filter);
@@ -659,9 +498,7 @@ function ScheduleView({results,teamNames}){
               </div>
               <div className="sched-teams">
                 <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{teamNames?.[m.home]||m.home}</span>
-                {hasRes
-                  ?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>
-                  :<span className="sched-vs">vs</span>}
+                {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>:<span className="sched-vs">vs</span>}
                 <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{teamNames?.[m.away]||m.away}</span>
               </div>
             </div>
@@ -672,7 +509,6 @@ function ScheduleView({results,teamNames}){
   );
 }
 
-// ─── PLAYOFF EDITOR ───────────────────────────────────────────────────────────
 function PlayoffEditor({playoffNames,onSave}){
   const [names,setNames]=useState(playoffNames||{});
   useEffect(()=>setNames(playoffNames||{}),[JSON.stringify(playoffNames)]);
@@ -681,15 +517,16 @@ function PlayoffEditor({playoffNames,onSave}){
     <div className="playoff-editor">
       <p className="section-note">כשידוע מי עבר פלייאוף — עדכן כאן</p>
       {pts.map(t=>(
-        <div key={t} className="special-row"><label>{t}</label>
-          <input placeholder="שם הקבוצה" value={names[t]||""} onChange={e=>setNames(p=>({...p,[t]:e.target.value}))}/></div>
+        <div key={t} className="special-row">
+          <label>{t}</label>
+          <input placeholder="שם הקבוצה" value={names[t]||""} onChange={e=>setNames(p=>({...p,[t]:e.target.value}))}/>
+        </div>
       ))}
       <button className="btn-green" onClick={()=>onSave(names)}>💾 שמור</button>
     </div>
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App(){
   const [authUser,setAuthUser]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
@@ -701,65 +538,113 @@ export default function App(){
   const [selectedPlayer,setSelectedPlayer]=useState(null);
   const [toast,setToast]=useState(null);
   const toastRef=useRef(null);
-
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
-  // Auth listener
   useEffect(()=>{
     return onAuthStateChanged(auth,async user=>{
-      setAuthUser(user);
-      setAuthLoading(false);
+      setAuthUser(user);setAuthLoading(false);
       if(user){
-        // Register/update participant
         const snap=await getDoc(doc(db,"mundial2026","game","participants",user.uid));
         const existing=snap.exists()?snap.data():{};
-        if(!snap.exists()||existing.name!==user.displayName){
+        if(!snap.exists()||existing.name!==user.displayName)
           await saveParticipant({uid:user.uid,name:user.displayName,photoURL:user.photoURL||null,bets:existing.bets||{}});
-        }
       }
     });
   },[]);
 
-  // Game + participants realtime
   useEffect(()=>{
     loadGame().then(g=>{setGame(g);setGameLoading(false);});
     const u1=onSnapshot(doc(db,"mundial2026","game"),snap=>{if(snap.exists())setGame(snap.data());});
     const u2=onSnapshot(collection(db,"mundial2026","game","participants"),snap=>{
       setParticipants(snap.docs.map(d=>({...d.data(),uid:d.id})));
     });
-    return()=>{u1();u2();};
+
+    // Poll API-Football every 2 minutes and save to Firebase
+    const syncScores = async () => {
+      try {
+        const res = await fetch(
+          "https://v3.football.api-sports.io/fixtures?league=1&season=2026",
+          { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
+        );
+        const data = await res.json();
+        const fixtures = data.response || [];
+        if (!fixtures.length) return;
+
+        const TEAM_MAP = {
+          "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה","Czech Republic":"צ'כיה","Czechia":"צ'כיה",
+          "Canada":"קנדה","Switzerland":"שוויץ","Qatar":"קטאר","Italy":"איטליה",
+          "Brazil":"ברזיל","Morocco":"מרוקו","Scotland":"סקוטלנד","Haiti":"האיטי",
+          "USA":"ארה\"ב","United States":"ארה\"ב","Australia":"אוסטרליה","Paraguay":"פרגוואי","Turkey":"טורקיה","Türkiye":"טורקיה",
+          "Germany":"גרמניה","Ecuador":"אקוודור","Ivory Coast":"חוף השנהב","Cote d'Ivoire":"חוף השנהב","Curacao":"קוראסאו","Curaçao":"קוראסאו",
+          "Netherlands":"הולנד","Japan":"יפן","Tunisia":"תוניסיה","Ukraine":"אוקראינה",
+          "Spain":"ספרד","Saudi Arabia":"ערב הסעודית","Uruguay":"אורוגוואי","Cape Verde":"כף ורדה",
+          "Belgium":"בלגיה","Iran":"איראן","Egypt":"מצרים","New Zealand":"ניו זילנד",
+          "France":"צרפת","Senegal":"סנגל","Norway":"נורווגיה",
+          "Argentina":"ארגנטינה","Algeria":"אלג'יריה","Austria":"אוסטריה","Jordan":"ירדן",
+          "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
+          "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
+        };
+
+        const byKey = {};
+        for (const f of fixtures) {
+          const {fixture, teams, goals} = f;
+          const status = fixture.status.short;
+          const isFinished = ["FT","AET","PEN"].includes(status);
+          const isLive = ["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
+          if ((isFinished||isLive) && goals.home!=null && goals.away!=null) {
+            const heb = (n) => TEAM_MAP[n]||n;
+            byKey[`${heb(teams.home.name)}_${heb(teams.away.name)}`] = {home:goals.home,away:goals.away,status,live:isLive};
+          }
+        }
+
+        const gameSnap = await getDoc(doc(db,"mundial2026","game"));
+        const cur = gameSnap.exists() ? gameSnap.data() : {};
+        const curMatches = cur.results?.matches || {};
+        const updatedMatches = {...curMatches};
+        let changed = false;
+
+        for (const m of GROUP_MATCHES) {
+          const key = `${m.home}_${m.away}`;
+          if (byKey[key]) {
+            const prev = curMatches[m.id];
+            const next = byKey[key];
+            if (!prev || prev.home!==next.home || prev.away!==next.away || prev.live!==next.live) {
+              updatedMatches[m.id] = next;
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          await saveGame({results:{...cur.results, matches:updatedMatches}});
+        }
+      } catch(e) { console.warn("Score sync failed:", e.message); }
+    };
+
+    syncScores(); // run immediately on load
+    const poll = setInterval(syncScores, 2 * 60 * 1000); // then every 2 min
+    return()=>{u1();u2();clearInterval(poll);};
   },[]);
 
   const handleSignIn=async()=>{
     setSigningIn(true);
-    try{await signInWithPopup(auth,googleProvider);}
-    catch(e){console.error(e);}
+    try{await signInWithPopup(auth,googleProvider);}catch(e){console.error(e);}
     setSigningIn(false);
   };
-
   const handleSaveBets=async bets=>{
     if(!authUser)return;
     await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets});
     showToast("✅ הימורים נשמרו!");
   };
-
-  const handleSaveResults=async r=>{await saveGame({results:r});showToast("✅ תוצאות עודכנו!");};
   const handleSavePlayoff=async names=>{await saveGame({playoffNames:names});showToast("✅ עודכן!");};
 
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
   const n=participants.length;
 
-  if(authLoading||gameLoading) return(
-    <div className="app loading-screen"><div className="loading-ball">⚽</div><p>טוען...</p></div>
-  );
+  if(authLoading||gameLoading)return(<div className="app loading-screen"><div className="loading-ball">⚽</div><p>טוען...</p></div>);
+  if(!authUser)return(<div className="app"><SignInScreen onSignIn={handleSignIn} loading={signingIn}/></div>);
 
-  if(!authUser) return(
-    <div className="app"><SignInScreen onSignIn={handleSignIn} loading={signingIn}/></div>
-  );
-
-  // Player detail view
-  if(selectedPlayer) return(
+  if(selectedPlayer)return(
     <div className="app" dir="rtl">
       <Toast msg={toast}/>
       <div className="main-screen">
@@ -768,8 +653,7 @@ export default function App(){
           <span className="header-title">הימורים של {selectedPlayer.name}</span>
         </div>
         <div className="main-body">
-          <PlayerBetsView player={selectedPlayer} viewerUid={authUser.uid}
-            results={game.results||{}} teamNames={teamNames}/>
+          <PlayerBetsView player={selectedPlayer} viewerUid={authUser.uid} results={game.results||{}} teamNames={teamNames}/>
         </div>
       </div>
       <style>{STYLES}</style>
@@ -794,7 +678,6 @@ export default function App(){
           ))}
         </div>
         <div className="main-body">
-
           {tab==="lb"&&(
             <div className="section">
               <div className="section-header">
@@ -808,37 +691,29 @@ export default function App(){
               <Leaderboard participants={participants} results={game.results||{}} onSelectPlayer={setSelectedPlayer}/>
             </div>
           )}
-
           {tab==="schedule"&&(
             <div className="section">
               <h2>📅 לוח משחקים</h2>
               <ScheduleView results={game.results||{}} teamNames={teamNames}/>
             </div>
           )}
-
           {tab==="mybets"&&(
             <div className="section">
               <h2>🎯 ההימורים שלי</h2>
-              {me?<BetForm user={me} onSave={handleSaveBets} teamNames={teamNames}/>
-                :<p className="section-note">טוען...</p>}
+              {me?<BetForm user={me} onSave={handleSaveBets} teamNames={teamNames}/>:<p className="section-note">טוען...</p>}
             </div>
           )}
-
-
-
           {tab==="playoff"&&(
             <div className="section">
               <h2>🔄 קבוצות פלייאוף</h2>
               <PlayoffEditor playoffNames={game.playoffNames||{}} onSave={handleSavePlayoff}/>
             </div>
           )}
-
           {tab==="rules"&&(
             <div className="section rules-section">
               <h2>📜 ספר חוקים</h2>
               {[
-                ["💰 קופה","כל משתתף שם 50 ₪"],
-                ["🥇 מקום ראשון","מקבל את כל הקופה"],
+                ["💰 קופה","כל משתתף שם 50 ₪"],["🥇 מקום ראשון","מקבל את כל הקופה"],
                 ["🥈 מקום שני","מקבל 50 ₪ ממי שסיים אחרון"],
                 ["🔒 נעילת הימורים","5 דקות לפני כל משחק"],
                 ["🙈 סודיות תוצאות","ניחוש משחק — נסתר עד שהמשחק מתחיל"],
@@ -850,6 +725,7 @@ export default function App(){
                 ["✅ נוקאאוט מדויק","32=5 | שמינית=5 | רבע=8 | חצי=10 | מקום3=10 | גמר=15"],
                 ["🏆 אלופה","12 נק׳"],["👟 מלך שערים","12 נק׳"],
                 ["⚽ סה״כ שערים","הקרוב ביותר מקבל 6–10 נק׳"],
+                ["🤖 תוצאות","מתעדכנות אוטומטית מ-API בזמן אמת"],
               ].map(([t,v])=>(
                 <div key={t} className="rule-row"><div className="rule-title">{t}</div><div className="rule-text">{v}</div></div>
               ))}
@@ -878,8 +754,8 @@ const STYLES=`
   .home-sub{color:var(--muted);font-size:.95rem}
   .signin-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.5rem 2rem;display:flex;flex-direction:column;gap:1rem;align-items:center;width:100%;max-width:320px}
   .signin-desc{color:var(--muted);font-size:.9rem}
-  .btn-google{display:flex;align-items:center;gap:.7rem;background:#fff;color:#333;font-weight:700;font-family:'Heebo',sans-serif;border:none;border-radius:12px;padding:.85rem 1.4rem;font-size:1rem;cursor:pointer;transition:transform .15s,box-shadow .15s;width:100%;justify-content:center}
-  .btn-google:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,255,255,.2)}
+  .btn-google{display:flex;align-items:center;gap:.7rem;background:#fff;color:#333;font-weight:700;font-family:'Heebo',sans-serif;border:none;border-radius:12px;padding:.85rem 1.4rem;font-size:1rem;cursor:pointer;transition:transform .15s;width:100%;justify-content:center}
+  .btn-google:hover{transform:translateY(-2px)}
   .btn-google:disabled{opacity:.6;cursor:default}
   .btn-green{background:var(--green);color:#060e1a;font-weight:800;font-family:'Heebo',sans-serif;border:none;border-radius:12px;padding:.8rem 1.4rem;font-size:1rem;cursor:pointer;transition:transform .15s;width:100%}
   .btn-green:hover{transform:translateY(-2px)}
@@ -919,7 +795,6 @@ const STYLES=`
   .hidden-block{background:rgba(90,123,160,.1);border:1px dashed var(--border);border-radius:10px;padding:.6rem;text-align:center;color:var(--muted);font-size:.82rem}
   .match-row{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.65rem .9rem;margin-bottom:.45rem}
   .match-row.locked-row{opacity:.75}
-  .match-row.result{border-right:3px solid var(--green)}
   .match-row.correct-row{border-right:3px solid var(--green)}
   .match-row.hidden-row{opacity:.6}
   .match-meta{font-size:.7rem;color:var(--muted);margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem}
@@ -930,7 +805,6 @@ const STYLES=`
   .colon{font-weight:800;color:var(--muted)}
   .lock-badge-sm{font-size:.65rem;color:var(--red)}
   .open-badge-sm{font-size:.65rem;color:var(--green)}
-  .hidden-badge{font-size:.65rem;color:var(--muted)}
   .hidden-score{color:var(--muted);font-size:.8rem;padding:0 .5rem}
   .bet-score{font-weight:800;font-size:.9rem;padding:.1rem .5rem;border-radius:6px;background:var(--card)}
   .bet-score.dir-ok{color:var(--green)}
@@ -972,7 +846,6 @@ const STYLES=`
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .sched-score-live{background:rgba(255,77,109,.15);color:var(--red) !important}
   .sched-winning{color:var(--gold) !important}
-  .sched-locked{opacity:.6}
   .sched-date{font-size:.68rem;color:var(--muted);margin-bottom:.28rem}
   .sched-teams{display:flex;align-items:center;gap:.5rem;font-size:.85rem;font-weight:600}
   .sched-teams>span:first-child,.sched-teams>span:last-child{flex:1;text-align:right}
@@ -987,15 +860,7 @@ const STYLES=`
   .special-row select:disabled,.special-row input:disabled{opacity:.45}
   .special-val{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.62rem 1rem;font-size:.92rem;font-weight:700;color:var(--green)}
   .hidden-val{color:var(--muted) !important;font-style:italic;font-weight:400}
-  .future-match{opacity:.55}
-  .future-badge{font-size:.65rem;color:var(--muted)}
-  .future-score{color:var(--muted);font-size:.9rem;padding:0 .5rem;font-weight:700}
-  .btn-save-match{background:var(--card);border:1.5px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .6rem;font-size:.85rem;cursor:pointer;transition:all .2s;margin-right:.3rem;min-width:36px;font-family:'Heebo',sans-serif}
-  .btn-save-match.dirty{border-color:var(--green);color:var(--green);background:rgba(0,216,127,.1)}
-  .btn-save-match.done{border-color:var(--green);color:var(--green);background:rgba(0,216,127,.2)}
-  .btn-save-match:disabled{opacity:.3;cursor:default}
-  .saved-row{border-color:rgba(0,216,127,.5) !important}
-  .results-panel,.playoff-editor{display:flex;flex-direction:column;gap:.8rem}
+  .playoff-editor{display:flex;flex-direction:column;gap:.8rem}
   .sub-tabs{display:flex;gap:.3rem;background:var(--card2);border-radius:10px;padding:.22rem;margin-bottom:.2rem}
   .sub-tab{flex:1;background:transparent;border:none;color:var(--muted);font-family:'Heebo',sans-serif;font-size:.76rem;border-radius:8px;padding:.42rem;cursor:pointer;transition:all .2s;white-space:nowrap}
   .sub-tab.active{background:var(--card);color:var(--text);font-weight:700}
