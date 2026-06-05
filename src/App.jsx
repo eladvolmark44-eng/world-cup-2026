@@ -559,9 +559,25 @@ export default function App(){
       setParticipants(snap.docs.map(d=>({...d.data(),uid:d.id})));
     });
 
-    // Poll API-Football every 2 minutes and save to Firebase
+    const TEAM_MAP = {
+      "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה","Czech Republic":"צ'כיה","Czechia":"צ'כיה",
+      "Canada":"קנדה","Switzerland":"שוויץ","Qatar":"קטאר","Italy":"איטליה",
+      "Brazil":"ברזיל","Morocco":"מרוקו","Scotland":"סקוטלנד","Haiti":"האיטי",
+      "USA":"ארה\"ב","United States":"ארה\"ב","Australia":"אוסטרליה","Paraguay":"פרגוואי","Turkey":"טורקיה","Türkiye":"טורקיה",
+      "Germany":"גרמניה","Ecuador":"אקוודור","Ivory Coast":"חוף השנהב","Cote d'Ivoire":"חוף השנהב","Curacao":"קוראסאו","Curaçao":"קוראסאו",
+      "Netherlands":"הולנד","Japan":"יפן","Tunisia":"תוניסיה","Ukraine":"אוקראינה",
+      "Spain":"ספרד","Saudi Arabia":"ערב הסעודית","Uruguay":"אורוגוואי","Cape Verde":"כף ורדה",
+      "Belgium":"בלגיה","Iran":"איראן","Egypt":"מצרים","New Zealand":"ניו זילנד",
+      "France":"צרפת","Senegal":"סנגל","Norway":"נורווגיה",
+      "Argentina":"ארגנטינה","Algeria":"אלג'יריה","Austria":"אוסטריה","Jordan":"ירדן",
+      "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
+      "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
+    };
+    const heb = n => TEAM_MAP[n]||n;
+
     const syncScores = async () => {
       try {
+        // 1. Fetch fixtures (scores)
         const res = await fetch(
           "https://v3.football.api-sports.io/fixtures?league=1&season=2026",
           { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
@@ -570,58 +586,100 @@ export default function App(){
         const fixtures = data.response || [];
         if (!fixtures.length) return;
 
-        const TEAM_MAP = {
-          "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה","Czech Republic":"צ'כיה","Czechia":"צ'כיה",
-          "Canada":"קנדה","Switzerland":"שוויץ","Qatar":"קטאר","Italy":"איטליה",
-          "Brazil":"ברזיל","Morocco":"מרוקו","Scotland":"סקוטלנד","Haiti":"האיטי",
-          "USA":"ארה\"ב","United States":"ארה\"ב","Australia":"אוסטרליה","Paraguay":"פרגוואי","Turkey":"טורקיה","Türkiye":"טורקיה",
-          "Germany":"גרמניה","Ecuador":"אקוודור","Ivory Coast":"חוף השנהב","Cote d'Ivoire":"חוף השנהב","Curacao":"קוראסאו","Curaçao":"קוראסאו",
-          "Netherlands":"הולנד","Japan":"יפן","Tunisia":"תוניסיה","Ukraine":"אוקראינה",
-          "Spain":"ספרד","Saudi Arabia":"ערב הסעודית","Uruguay":"אורוגוואי","Cape Verde":"כף ורדה",
-          "Belgium":"בלגיה","Iran":"איראן","Egypt":"מצרים","New Zealand":"ניו זילנד",
-          "France":"צרפת","Senegal":"סנגל","Norway":"נורווגיה",
-          "Argentina":"ארגנטינה","Algeria":"אלג'יריה","Austria":"אוסטריה","Jordan":"ירדן",
-          "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
-          "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
-        };
-
-        const byKey = {};
-        for (const f of fixtures) {
-          const {fixture, teams, goals} = f;
-          const status = fixture.status.short;
-          const isFinished = ["FT","AET","PEN"].includes(status);
-          const isLive = ["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
-          if ((isFinished||isLive) && goals.home!=null && goals.away!=null) {
-            const heb = (n) => TEAM_MAP[n]||n;
-            byKey[`${heb(teams.home.name)}_${heb(teams.away.name)}`] = {home:goals.home,away:goals.away,status,live:isLive};
-          }
-        }
+        // 2. Fetch standings (group qualifiers + playoff names)
+        const res2 = await fetch(
+          "https://v3.football.api-sports.io/standings?league=1&season=2026",
+          { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
+        );
+        const standingsData = await res2.json();
 
         const gameSnap = await getDoc(doc(db,"mundial2026","game"));
         const cur = gameSnap.exists() ? gameSnap.data() : {};
+
+        // ── MATCHES ────────────────────────────────────────────────
+        const byKey = {};
+        for (const f of fixtures) {
+          const {fixture:fi, teams, goals} = f;
+          const status = fi.status.short;
+          const isFinished = ["FT","AET","PEN"].includes(status);
+          const isLive = ["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
+          if ((isFinished||isLive) && goals.home!=null && goals.away!=null) {
+            byKey[`${heb(teams.home.name)}_${heb(teams.away.name)}`] = {home:goals.home,away:goals.away,status,live:isLive};
+          }
+        }
         const curMatches = cur.results?.matches || {};
         const updatedMatches = {...curMatches};
-        let changed = false;
-
+        let matchChanged = false;
         for (const m of GROUP_MATCHES) {
           const key = `${m.home}_${m.away}`;
           if (byKey[key]) {
-            const prev = curMatches[m.id];
-            const next = byKey[key];
+            const prev = curMatches[m.id], next = byKey[key];
             if (!prev || prev.home!==next.home || prev.away!==next.away || prev.live!==next.live) {
-              updatedMatches[m.id] = next;
-              changed = true;
+              updatedMatches[m.id] = next; matchChanged = true;
             }
           }
         }
-        if (changed) {
-          await saveGame({results:{...cur.results, matches:updatedMatches}});
+
+        // ── STANDINGS → auto group qualifiers + playoff names ──────
+        let groupsChanged = false, playoffChanged = false;
+        const updatedGroups = {...(cur.results?.groups||{})};
+        const updatedPlayoff = {...(cur.playoffNames||{})};
+
+        const standingsList = standingsData.response?.[0]?.league?.standings || [];
+        // Group A-L from standings
+        const GROUP_LETTER = {"Group A":"A","Group B":"B","Group C":"C","Group D":"D","Group E":"E","Group F":"F","Group G":"G","Group H":"H","Group I":"I","Group J":"J","Group K":"K","Group L":"L"};
+        for (const groupStandings of standingsList) {
+          if (!Array.isArray(groupStandings)||!groupStandings.length) continue;
+          const groupName = groupStandings[0]?.group;
+          const letter = GROUP_LETTER[groupName];
+          if (!letter) continue;
+
+          // Check if group stage is finished (all 3 matchdays played)
+          const allPlayed = groupStandings.every(t => t.all?.played >= 3);
+          if (allPlayed) {
+            // Top 2 qualify
+            const top2 = groupStandings.slice(0,2).map(t => heb(t.team.name));
+            const prev = updatedGroups[letter];
+            if (!prev || JSON.stringify(prev)!==JSON.stringify(top2)) {
+              updatedGroups[letter] = top2; groupsChanged = true;
+            }
+          }
+
+          // Auto-resolve playoff teams: if a "playoff" team played, update name
+          for (const t of groupStandings) {
+            const apiName = t.team.name;
+            const hebName = heb(apiName);
+            // If this team is in our groups as a placeholder, update
+            if (t.all?.played > 0) {
+              if (GROUPS_2026[letter]?.includes("פלייאוף FIFA 1") && t.all.played > 0) {
+                // find which slot by checking if name is not in our known teams
+                if (!Object.values(TEAM_MAP).includes(hebName) && hebName !== apiName) {
+                  if (updatedPlayoff["פלייאוף FIFA 1"] !== hebName) {
+                    updatedPlayoff["פלייאוף FIFA 1"] = hebName; playoffChanged = true;
+                  }
+                }
+              }
+            }
+          }
         }
+
+        // Save if anything changed
+        const updates = {};
+        if (matchChanged || groupsChanged) {
+          updates.results = {
+            ...cur.results,
+            matches: updatedMatches,
+            ...(groupsChanged ? {groups: updatedGroups} : {}),
+          };
+        }
+        if (playoffChanged) updates.playoffNames = updatedPlayoff;
+        if (Object.keys(updates).length) await saveGame(updates);
+
       } catch(e) { console.warn("Score sync failed:", e.message); }
     };
 
-    syncScores(); // run immediately on load
-    const poll = setInterval(syncScores, 2 * 60 * 1000); // then every 2 min
+    syncScores();
+    const poll = setInterval(syncScores, 2 * 60 * 1000);
     return()=>{u1();u2();clearInterval(poll);};
   },[]);
 
@@ -635,7 +693,6 @@ export default function App(){
     await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets});
     showToast("✅ הימורים נשמרו!");
   };
-  const handleSavePlayoff=async names=>{await saveGame({playoffNames:names});showToast("✅ עודכן!");};
 
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
@@ -673,7 +730,7 @@ export default function App(){
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
-          {[["lb","🏆 דירוג"],["schedule","📅 לוח"],["mybets","🎯 שלי"],["playoff","🔄 פלייאוף"],["rules","📜 חוקים"]].map(([k,l])=>(
+          {[["lb","🏆 דירוג"],["schedule","📅 לוח"],["mybets","🎯 שלי"],["rules","📜 חוקים"]].map(([k,l])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
           ))}
         </div>
@@ -693,7 +750,10 @@ export default function App(){
           )}
           {tab==="schedule"&&(
             <div className="section">
-              <h2>📅 לוח משחקים</h2>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <h2>📅 לוח משחקים</h2>
+                <span className="sync-badge">🔄 מתעדכן אוטומטית</span>
+              </div>
               <ScheduleView results={game.results||{}} teamNames={teamNames}/>
             </div>
           )}
@@ -703,12 +763,7 @@ export default function App(){
               {me?<BetForm user={me} onSave={handleSaveBets} teamNames={teamNames}/>:<p className="section-note">טוען...</p>}
             </div>
           )}
-          {tab==="playoff"&&(
-            <div className="section">
-              <h2>🔄 קבוצות פלייאוף</h2>
-              <PlayoffEditor playoffNames={game.playoffNames||{}} onSave={handleSavePlayoff}/>
-            </div>
-          )}
+
           {tab==="rules"&&(
             <div className="section rules-section">
               <h2>📜 ספר חוקים</h2>
@@ -869,6 +924,7 @@ const STYLES=`
   .rule-row{background:var(--card2);border-radius:12px;padding:.7rem 1rem;border-right:3px solid var(--green);margin-bottom:.1rem}
   .rule-title{font-weight:800;font-size:.87rem;margin-bottom:.18rem}
   .rule-text{color:var(--muted);font-size:.8rem}
+  .sync-badge{font-size:.72rem;color:var(--green);background:rgba(0,216,127,.1);border:1px solid rgba(0,216,127,.3);border-radius:20px;padding:.2rem .7rem}
   .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--green);color:#060e1a;font-weight:800;border-radius:100px;padding:.65rem 1.6rem;font-size:.92rem;z-index:999;box-shadow:0 8px 30px rgba(0,216,127,.4);animation:fadeUp .3s ease}
   @keyframes fadeUp{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 `;
