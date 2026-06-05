@@ -486,13 +486,75 @@ function BetForm({user,onSave,teamNames}){
 }
 
 // ─── RESULTS PANEL ────────────────────────────────────────────────────────────
+// Results can only be entered AFTER the match has started (kickoff time passed)
+function isMatchStarted(kickoff){ return Date.now() >= new Date(kickoff).getTime(); }
+
+function MatchResultRow({match,result,onSave,teamNames}){
+  const [home,setHome]=useState(result?.home??null);
+  const [away,setAway]=useState(result?.away??null);
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  useEffect(()=>{setHome(result?.home??null);setAway(result?.away??null);},[result?.home,result?.away]);
+  
+  const started=isMatchStarted(match.kickoff);
+  const dirty=started&&(home!==result?.home||away!==result?.away)&&home!=null&&away!=null;
+  
+  const handleSave=async()=>{
+    if(!started)return;
+    setSaving(true);
+    await onSave(match.id,home,away);
+    setSaving(false);setSaved(true);setTimeout(()=>setSaved(false),1500);
+  };
+  const dir=home!=null&&away!=null?getDir(+home,+away):null;
+  const hasResult=result?.home!=null&&result?.away!=null;
+  
+  return(
+    <div className={`match-row result ${saved?"saved-row":""} ${!started?"future-match":""}`}>
+      <div className="match-meta">
+        {match.date} · בית {match.group}
+        {!started
+          ? <span className="future-badge"> 🕐 טרם התחיל</span>
+          : hasResult
+            ? <span className="open-badge-sm"> ✓ מוזן</span>
+            : <span className="open-badge-sm"> ✏️ פתוח להזנה</span>
+        }
+      </div>
+      <div className="match-body">
+        <span className={`team-name ${dir==="home"?"winner":""}`}>{teamNames?.[match.home]||match.home}</span>
+        <div className="score-area">
+          {started
+            ?<><NumStepper value={home} onChange={setHome}/>
+               <span className="colon">:</span>
+               <NumStepper value={away} onChange={setAway}/></>
+            :<span className="future-score">— : —</span>
+          }
+        </div>
+        <span className={`team-name away ${dir==="away"?"winner":""}`}>{teamNames?.[match.away]||match.away}</span>
+        {started&&(
+          <button
+            className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`}
+            onClick={handleSave}
+            disabled={!dirty||saving}
+          >
+            {saved?"✓":saving?"...":"💾"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ResultsPanel({results,onSave,teamNames}){
-  const [r,setR]=useState(results);
   const [tab,setTab]=useState("matches");
+  const [r,setR]=useState(results);
   useEffect(()=>setR(results),[JSON.stringify(results)]);
-  const setMatch=(id,f,v)=>setR(p=>({...p,matches:{...p.matches,[id]:{...p.matches?.[id],[f]:v}}}));
   const setGroup=(g,picks)=>setR(p=>({...p,groups:{...p.groups,[g]:picks}}));
   const setKO=(round,picks)=>setR(p=>({...p,knockout:{...p.knockout,[round]:picks}}));
+
+  const saveMatch=async(id,home,away)=>{
+    await onSave({...results,matches:{...results.matches,[id]:{home,away}}});
+  };
+
   return(
     <div className="results-panel">
       <div className="sub-tabs">
@@ -502,19 +564,11 @@ function ResultsPanel({results,onSave,teamNames}){
       </div>
       {tab==="matches"&&(
         <div className="scroll-area">
+          <p className="section-note">💾 לחץ שמור ליד כל משחק — מתעדכן לכולם מיד</p>
           {GROUP_MATCHES.map(m=>(
-            <div key={m.id} className="match-row result">
-              <div className="match-meta">{m.date} · בית {m.group}</div>
-              <div className="match-body">
-                <span className="team-name">{teamNames?.[m.home]||m.home}</span>
-                <div className="score-area">
-                  <NumStepper value={r.matches?.[m.id]?.home??null} onChange={v=>setMatch(m.id,"home",v)}/>
-                  <span className="colon">:</span>
-                  <NumStepper value={r.matches?.[m.id]?.away??null} onChange={v=>setMatch(m.id,"away",v)}/>
-                </div>
-                <span className="team-name away">{teamNames?.[m.away]||m.away}</span>
-              </div>
-            </div>
+            <MatchResultRow key={m.id} match={m}
+              result={results.matches?.[m.id]}
+              onSave={saveMatch} teamNames={teamNames}/>
           ))}
         </div>
       )}
@@ -524,6 +578,7 @@ function ResultsPanel({results,onSave,teamNames}){
             <GroupPicker key={g} groupId={g} teams={teams} picks={r.groups?.[g]}
               onChange={p=>setGroup(g,p)} locked={false} teamNames={teamNames}/>
           ))}
+          <button className="btn-green" onClick={()=>onSave(r)}>💾 שמור בתים</button>
         </div>
       )}
       {tab==="knockout"&&(
@@ -532,6 +587,7 @@ function ResultsPanel({results,onSave,teamNames}){
             <KnockoutPicker key={id} label={label} pts_dir={pts_dir} pts_exact={pts_exact}
               count={count} picks={r.knockout?.[id]} onChange={p=>setKO(id,p)} teamNames={teamNames}/>
           ))}
+          <button className="btn-green" onClick={()=>onSave(r)}>💾 שמור נוקאאוט</button>
         </div>
       )}
       {tab==="special"&&(
@@ -546,9 +602,9 @@ function ResultsPanel({results,onSave,teamNames}){
             <input type="number" value={r.totalGoals||""} onChange={e=>setR(p=>({...p,totalGoals:e.target.value}))}/></div>
           <div className="special-row"><label>🎁 בונוס שערים (6–10)</label>
             <NumStepper value={r.totalGoalsBonus||8} onChange={v=>setR(p=>({...p,totalGoalsBonus:v}))} min={6} max={10}/></div>
+          <button className="btn-green" onClick={()=>onSave(r)}>💾 שמור</button>
         </div>
       )}
-      <button className="btn-green" onClick={()=>onSave(r)}>💾 שמור תוצאות</button>
     </div>
   );
 }
@@ -920,6 +976,14 @@ const STYLES=`
   .special-row select:disabled,.special-row input:disabled{opacity:.45}
   .special-val{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.62rem 1rem;font-size:.92rem;font-weight:700;color:var(--green)}
   .hidden-val{color:var(--muted) !important;font-style:italic;font-weight:400}
+  .future-match{opacity:.55}
+  .future-badge{font-size:.65rem;color:var(--muted)}
+  .future-score{color:var(--muted);font-size:.9rem;padding:0 .5rem;font-weight:700}
+  .btn-save-match{background:var(--card);border:1.5px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .6rem;font-size:.85rem;cursor:pointer;transition:all .2s;margin-right:.3rem;min-width:36px;font-family:'Heebo',sans-serif}
+  .btn-save-match.dirty{border-color:var(--green);color:var(--green);background:rgba(0,216,127,.1)}
+  .btn-save-match.done{border-color:var(--green);color:var(--green);background:rgba(0,216,127,.2)}
+  .btn-save-match:disabled{opacity:.3;cursor:default}
+  .saved-row{border-color:rgba(0,216,127,.5) !important}
   .results-panel,.playoff-editor{display:flex;flex-direction:column;gap:.8rem}
   .sub-tabs{display:flex;gap:.3rem;background:var(--card2);border-radius:10px;padding:.22rem;margin-bottom:.2rem}
   .sub-tab{flex:1;background:transparent;border:none;color:var(--muted);font-family:'Heebo',sans-serif;font-size:.76rem;border-radius:8px;padding:.42rem;cursor:pointer;transition:all .2s;white-space:nowrap}
