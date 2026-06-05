@@ -644,15 +644,25 @@ function ScheduleView({results,teamNames}){
       </div>
       <div className="scroll-area">
         {shown.map(m=>{
-          const res=results.matches?.[m.id];const hasRes=res?.home!=null&&res?.away!=null;
+          const res=results.matches?.[m.id];
+          const hasRes=res?.home!=null&&res?.away!=null;
+          const isLive=res?.live===true;
+          const isDone=hasRes&&!isLive;
           const locked=isMatchLocked(m.kickoff);
           return(
-            <div key={m.id} className={`sched-row ${locked&&!hasRes?"sched-locked":""}`}>
-              <div className="sched-date">{m.date} · בית {m.group}{!locked&&<span className="open-badge-sm"> ✏️</span>}</div>
+            <div key={m.id} className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes?"sched-open":""}`}>
+              <div className="sched-date">
+                {m.date} · בית {m.group}
+                {isLive&&<span className="live-badge"> 🔴 חי</span>}
+                {isDone&&<span className="done-badge"> ✓ סיים</span>}
+                {!locked&&!hasRes&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
+              </div>
               <div className="sched-teams">
-                <span className={hasRes&&+res.home>+res.away?"sched-winner":""}>{teamNames?.[m.home]||m.home}</span>
-                {hasRes?<span className="sched-score">{res.home} – {res.away}</span>:<span className="sched-vs">vs</span>}
-                <span className={hasRes&&+res.away>+res.home?"sched-winner":""}>{teamNames?.[m.away]||m.away}</span>
+                <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{teamNames?.[m.home]||m.home}</span>
+                {hasRes
+                  ?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>
+                  :<span className="sched-vs">vs</span>}
+                <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{teamNames?.[m.away]||m.away}</span>
               </div>
             </div>
           );
@@ -779,7 +789,7 @@ export default function App(){
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
-          {[["lb","🏆 דירוג"],["schedule","📅 לוח"],["mybets","🎯 שלי"],["results","📋 תוצאות"],["playoff","🔄 פלייאוף"],["rules","📜 חוקים"]].map(([k,l])=>(
+          {[["lb","🏆 דירוג"],["schedule","📅 לוח"],["mybets","🎯 שלי"],["playoff","🔄 פלייאוף"],["rules","📜 חוקים"]].map(([k,l])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
           ))}
         </div>
@@ -814,13 +824,7 @@ export default function App(){
             </div>
           )}
 
-          {tab==="results"&&(
-            <div className="section">
-              <h2>📋 עדכון תוצאות</h2>
-              <p className="section-note">כל אחד יכול לעדכן — הניקוד מתחשב אוטומטית לכולם</p>
-              <ResultsPanel results={game.results||{}} onSave={handleSaveResults} teamNames={teamNames}/>
-            </div>
-          )}
+
 
           {tab==="playoff"&&(
             <div className="section">
@@ -961,6 +965,13 @@ const STYLES=`
   .filter-btn{background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:.28rem .65rem;font-family:'Heebo',sans-serif;font-size:.75rem;cursor:pointer;white-space:nowrap;transition:all .15s}
   .filter-btn.active{background:rgba(0,216,127,.15);border-color:var(--green);color:var(--green);font-weight:700}
   .sched-row{background:var(--card2);border:1px solid var(--border);border-radius:11px;padding:.55rem .85rem;margin-bottom:.38rem}
+  .sched-live{border-color:rgba(255,77,109,.5) !important;background:rgba(255,77,109,.05)}
+  .sched-open{border-color:rgba(0,216,127,.2)}
+  .live-badge{font-size:.65rem;color:var(--red);font-weight:800;animation:pulse 1s ease-in-out infinite}
+  .done-badge{font-size:.65rem;color:var(--green)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .sched-score-live{background:rgba(255,77,109,.15);color:var(--red) !important}
+  .sched-winning{color:var(--gold) !important}
   .sched-locked{opacity:.6}
   .sched-date{font-size:.68rem;color:var(--muted);margin-bottom:.28rem}
   .sched-teams{display:flex;align-items:center;gap:.5rem;font-size:.85rem;font-weight:600}
