@@ -195,7 +195,6 @@ function calcScore(bets={},results={},allP=[]){
       t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=3;
     }
   });
-  });
   // KO match bets (same scoring as group: 1pt direction + 3pt exact)
   if(bets.koMatches && results.koResults) {
     Object.keys(bets.koMatches).forEach(id=>{
