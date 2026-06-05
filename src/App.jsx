@@ -227,9 +227,9 @@ async function saveParticipant(p){await setDoc(doc(db,"mundial2026","game","part
 function NumStepper({value,onChange,min=0,max=99,disabled=false}){
   return(
     <div className="stepper">
-      <button disabled={disabled} onClick={()=>onChange(Math.max(min,(value??0)-1))}>−</button>
+      <button disabled={disabled||value===null} onClick={()=>onChange(Math.max(min,(value??0)-1))}>−</button>
       <span>{value??'—'}</span>
-      <button disabled={disabled} onClick={()=>onChange(Math.min(max,(value??0)+1))}>+</button>
+      <button disabled={disabled} onClick={()=>onChange(value===null ? 0 : Math.min(max,value+1))}>+</button>
     </div>
   );
 }
@@ -301,8 +301,7 @@ function MatchBetRow({match, savedBet, onSave, teamNames}){
     setTimeout(()=>setSaved(false), 1500);
   };
 
-  const dir = h!=null && a!=null ? getDir(+h,+a) : null;
-  return(
+  const dir = h!=null && a!=null ? getDir(+h,+a) : null;  return(
     <div className={`match-row ${locked?"locked-row":""} ${saved?"saved-row":""}`}>
       <div className="match-meta">
         {match.date} · בית {match.group}
