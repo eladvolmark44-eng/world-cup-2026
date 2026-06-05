@@ -115,10 +115,15 @@ Object.keys(GROUPS_2026).forEach(g => {
 const TOURNAMENT_END = "2026-07-19T23:59:00+03:00";
 const LOCK_MS = 5 * 60 * 1000;
 
-function isMatchLocked(kickoff) { return Date.now() >= new Date(kickoff).getTime() - LOCK_MS; }
+// ─── DEBUG TIME OFFSET ───────────────────────────────────────────────────────
+// Allows simulating future time for testing. 0 = real time.
+let DEBUG_TIME_OFFSET_MS = 0;
+function now() { return Date.now() + DEBUG_TIME_OFFSET_MS; }
+
+function isMatchLocked(kickoff) { return now() >= new Date(kickoff).getTime() - LOCK_MS; }
 function isGlobalLocked() { return isMatchLocked("2026-06-11T22:00:00+03:00"); }
-function isGroupRevealed(group) { return Date.now() >= new Date(GROUP_LAST_MATCH[group]).getTime(); }
-function isTournamentOver() { return Date.now() >= new Date(TOURNAMENT_END).getTime(); }
+function isGroupRevealed(group) { return now() >= new Date(GROUP_LAST_MATCH[group]).getTime(); }
+function isTournamentOver() { return now() >= new Date(TOURNAMENT_END).getTime(); }
 function canSeeMatchBet(matchId, viewerUid, ownerUid) {
   if (viewerUid === ownerUid) return true;
   const match = GROUP_MATCHES.find(m => m.id === matchId);
@@ -527,6 +532,152 @@ function PlayoffEditor({playoffNames,onSave}){
   );
 }
 
+// ─── REVEALED BETS VIEW ───────────────────────────────────────────────────────
+function RevealedBetsView({participants, viewerUid, results, teamNames, debugOffset}){
+  const [activePlayer, setActivePlayer] = useState(null);
+  const [subTab, setSubTab] = useState("matches");
+
+  // What's currently revealed?
+  const revealedMatches = GROUP_MATCHES.filter(m => canSeeMatchBet(m.id, "other", viewerUid));
+  const revealedGroups = Object.keys(GROUPS_2026).filter(g => canSeeGroupBet(g, "other", viewerUid));
+  const specialRevealed = canSeeSpecialBet("other", viewerUid);
+
+  const nothingRevealed = revealedMatches.length===0 && revealedGroups.length===0 && !specialRevealed;
+
+  if(activePlayer) return(
+    <div className="section">
+      <button className="btn-back-sm" onClick={()=>setActivePlayer(null)}>← חזרה לרשימה</button>
+      <PlayerBetsView player={activePlayer} viewerUid={viewerUid} results={results} teamNames={teamNames}/>
+    </div>
+  );
+
+  return(
+    <div className="section">
+      <h2>👁️ הימורים גלויים</h2>
+
+      {debugOffset!==0&&(
+        <div className="debug-active-banner">
+          🕐 מצב בדיקה: זמן מוקדם ב-{debugOffset} ימים — הגלויות מחושבת בהתאם
+        </div>
+      )}
+
+      {/* What's revealed summary */}
+      <div className="revealed-summary">
+        <div className="revealed-item">
+          <span className="rev-label">⚽ משחקים גלויים</span>
+          <span className="rev-count">{revealedMatches.length} / {GROUP_MATCHES.length}</span>
+        </div>
+        <div className="revealed-item">
+          <span className="rev-label">🏠 בתים גלויים</span>
+          <span className="rev-count">{revealedGroups.length} / 12</span>
+        </div>
+        <div className="revealed-item">
+          <span className="rev-label">🏆 אלופה ומלך שערים</span>
+          <span className={`rev-count ${specialRevealed?"green":""}`}>{specialRevealed?"✓ גלוי":"🔒 נעול"}</span>
+        </div>
+      </div>
+
+      {nothingRevealed ? (
+        <div className="nothing-revealed">
+          <div style={{fontSize:"2.5rem"}}>🔒</div>
+          <p>עדיין לא הסתיים אף משחק</p>
+          <p className="section-note">הימורים ייחשפו אוטומטית אחרי כל משחק</p>
+        </div>
+      ) : (
+        <>
+          <p className="section-note">לחץ על שחקן לראות את ההימורים הגלויים שלו</p>
+          <div className="sub-tabs">
+            {[["matches","⚽ לפי משחק"],["players","👤 לפי שחקן"],["groups","🏠 בתים"]].map(([k,l])=>(
+              <button key={k} className={`sub-tab ${subTab===k?"active":""}`} onClick={()=>setSubTab(k)}>{l}</button>
+            ))}
+          </div>
+
+          {subTab==="players"&&(
+            <div className="scroll-area">
+              {participants.map(p=>(
+                <div key={p.uid} className="lb-row" onClick={()=>setActivePlayer(p)}>
+                  {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
+                  <span className="lb-name">{p.name}</span>
+                  <span className="lb-score">{calcScore(p.bets||{},results,participants)} נק׳</span>
+                  <span className="lb-arrow">›</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {subTab==="matches"&&(
+            <div className="scroll-area">
+              {revealedMatches.length===0&&<div className="empty-msg">עדיין אין משחקים שהסתיימו</div>}
+              {revealedMatches.map(m=>{
+                const real=results.matches?.[m.id];
+                const hasReal=real?.home!=null&&real?.away!=null;
+                return(
+                  <div key={m.id} className="revealed-match-block">
+                    <div className="rev-match-header">
+                      <span>{teamNames?.[m.home]||m.home}</span>
+                      {hasReal?<span className="sched-score">{real.home} – {real.away}</span>:<span className="sched-vs">vs</span>}
+                      <span>{teamNames?.[m.away]||m.away}</span>
+                    </div>
+                    <div className="rev-bets-row">
+                      {participants.map(p=>{
+                        const bet=p.bets?.matches?.[m.id];
+                        if(!bet||bet.home==null)return null;
+                        const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
+                        const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
+                        return(
+                          <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
+                            <span className="chip-name">{p.name.split(" ")[0]}</span>
+                            <span className="chip-score">{bet.home}:{bet.away}</span>
+                            {exact&&<span>🎯</span>}
+                            {!exact&&correct&&<span>✓</span>}
+                            {hasReal&&!correct&&<span>✗</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {subTab==="groups"&&(
+            <div className="scroll-area">
+              {revealedGroups.length===0&&<div className="empty-msg">עדיין לא הסתיים אף בית</div>}
+              {revealedGroups.map(g=>{
+                const correct=results.groups?.[g]||[];
+                return(
+                  <div key={g} className="group-box">
+                    <div className="group-label">
+                      בית {g}
+                      {correct.length>0&&<span style={{color:"var(--green)",marginRight:".5rem"}}>עלו: {correct.map(t=>teamNames?.[t]||t).join(", ")}</span>}
+                    </div>
+                    <div className="rev-bets-row wrap">
+                      {participants.map(p=>{
+                        const picks=p.bets?.groups?.[g]||[];
+                        if(!picks.length)return null;
+                        const hits=picks.filter(t=>correct.includes(t)).length;
+                        const pts=hits===2?5:hits===1?2:0;
+                        return(
+                          <div key={p.uid} className={`rev-bet-chip ${hits===2?"exact":hits===1?"correct":correct.length?"wrong":""}`}>
+                            <span className="chip-name">{p.name.split(" ")[0]}</span>
+                            <span className="chip-score">{picks.map(t=>teamNames?.[t]||t).join(", ")}</span>
+                            {correct.length>0&&<span>{pts>0?`+${pts}נק׳`:"✗"}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function App(){
   const [authUser,setAuthUser]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
@@ -538,6 +689,13 @@ export default function App(){
   const [selectedPlayer,setSelectedPlayer]=useState(null);
   const [toast,setToast]=useState(null);
   const toastRef=useRef(null);
+  const [debugOffset,setDebugOffset]=useState(0); // days offset for testing
+
+  const applyDebug=(days)=>{
+    DEBUG_TIME_OFFSET_MS = days * 24 * 60 * 60 * 1000;
+    setDebugOffset(days);
+  };
+
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
   useEffect(()=>{
@@ -727,10 +885,17 @@ export default function App(){
             <span className="header-name">{authUser.displayName?.split(" ")[0]}</span>
           </div>
           <span className="header-title">⚽ מונדיאל BET 2026</span>
-          <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
+          <div style={{display:"flex",gap:".4rem",alignItems:"center"}}>
+            {debugOffset!==0&&(
+              <button className="debug-reset-btn" onClick={()=>applyDebug(0)} title="חזור לזמן אמיתי">
+                🕐 {debugOffset}י
+              </button>
+            )}
+            <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
+          </div>
         </div>
         <div className="main-tabs">
-          {[["lb","🏆 דירוג"],["schedule","📅 לוח"],["mybets","🎯 שלי"],["rules","📜 חוקים"]].map(([k,l])=>(
+          {[["lb","🏆 דירוג"],["schedule","📅 לוח"],["mybets","🎯 שלי"],["revealed","👁️ גלויים"],["rules","📜 חוקים"]].map(([k,l])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
           ))}
         </div>
@@ -762,6 +927,34 @@ export default function App(){
               <h2>🎯 ההימורים שלי</h2>
               {me?<BetForm user={me} onSave={handleSaveBets} teamNames={teamNames}/>:<p className="section-note">טוען...</p>}
             </div>
+          )}
+
+          {tab==="revealed"&&(
+            <>
+              {/* Debug panel — time simulation */}
+              <div className="debug-panel">
+                <span className="debug-title">🔧 בדיקה — דמה זמן:</span>
+                {[
+                  {label:"עכשיו",days:0},
+                  {label:"אחרי משחק 1",days:0.5},
+                  {label:"אחרי בית A",days:17},
+                  {label:"סוף שלב בתים",days:18},
+                  {label:"סוף טורניר",days:39},
+                ].map(({label,days})=>(
+                  <button key={days}
+                    className={`debug-btn ${debugOffset===days?"active":""}`}
+                    onClick={()=>applyDebug(days)}
+                  >{label}</button>
+                ))}
+              </div>
+              <RevealedBetsView
+                participants={participants}
+                viewerUid={authUser.uid}
+                results={game.results||{}}
+                teamNames={teamNames}
+                debugOffset={debugOffset}
+              />
+            </>
           )}
 
           {tab==="rules"&&(
@@ -925,6 +1118,31 @@ const STYLES=`
   .rule-title{font-weight:800;font-size:.87rem;margin-bottom:.18rem}
   .rule-text{color:var(--muted);font-size:.8rem}
   .sync-badge{font-size:.72rem;color:var(--green);background:rgba(0,216,127,.1);border:1px solid rgba(0,216,127,.3);border-radius:20px;padding:.2rem .7rem}
+  .debug-panel{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;background:rgba(255,206,0,.06);border:1px solid rgba(255,206,0,.2);border-radius:12px;padding:.6rem .9rem;margin-bottom:.5rem}
+  .debug-title{font-size:.75rem;color:var(--gold);font-weight:700;margin-left:.3rem}
+  .debug-btn{background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.28rem .65rem;font-size:.75rem;font-family:'Heebo',sans-serif;cursor:pointer;transition:all .15s}
+  .debug-btn.active{background:rgba(255,206,0,.15);border-color:var(--gold);color:var(--gold);font-weight:700}
+  .debug-btn:hover{border-color:var(--gold);color:var(--gold)}
+  .debug-reset-btn{background:rgba(255,206,0,.15);border:1px solid var(--gold);color:var(--gold);border-radius:8px;padding:.25rem .6rem;font-size:.72rem;cursor:pointer;font-family:'Heebo',sans-serif}
+  .debug-active-banner{background:rgba(255,206,0,.1);border:1px solid rgba(255,206,0,.3);color:var(--gold);border-radius:10px;padding:.5rem .9rem;font-size:.82rem;font-weight:700}
+  .revealed-summary{display:flex;flex-wrap:wrap;gap:.5rem}
+  .revealed-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.5rem .8rem;display:flex;flex-direction:column;gap:.2rem;flex:1;min-width:120px}
+  .rev-label{font-size:.72rem;color:var(--muted)}
+  .rev-count{font-weight:800;font-size:.95rem}
+  .rev-count.green{color:var(--green)}
+  .nothing-revealed{text-align:center;padding:2rem;color:var(--muted);display:flex;flex-direction:column;gap:.5rem;align-items:center}
+  .revealed-match-block{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.7rem .9rem;margin-bottom:.5rem}
+  .rev-match-header{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:.85rem;margin-bottom:.6rem}
+  .rev-bets-row{display:flex;flex-wrap:wrap;gap:.4rem}
+  .rev-bets-row.wrap{flex-wrap:wrap}
+  .rev-bet-chip{display:flex;align-items:center;gap:.3rem;background:var(--card);border:1.5px solid var(--border);border-radius:20px;padding:.25rem .7rem;font-size:.75rem}
+  .rev-bet-chip.correct{border-color:var(--green);background:rgba(0,216,127,.1)}
+  .rev-bet-chip.exact{border-color:var(--gold);background:rgba(255,206,0,.1)}
+  .rev-bet-chip.wrong{opacity:.5}
+  .chip-name{font-weight:700;color:var(--text)}
+  .chip-score{color:var(--muted)}
+  .btn-back-sm{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .8rem;font-size:.85rem;font-family:'Heebo',sans-serif;cursor:pointer;margin-bottom:.5rem}
+  .btn-back-sm:hover{color:var(--text);border-color:var(--text)}
   .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--green);color:#060e1a;font-weight:800;border-radius:100px;padding:.65rem 1.6rem;font-size:.92rem;z-index:999;box-shadow:0 8px 30px rgba(0,216,127,.4);animation:fadeUp .3s ease}
   @keyframes fadeUp{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 `;
