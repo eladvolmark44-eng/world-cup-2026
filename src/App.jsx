@@ -235,24 +235,53 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
   );
 }
 
-function MatchBetRow({match,bet,onChange,teamNames}){
-  const locked=isMatchLocked(match.kickoff);
-  const h=bet?.home??null,a=bet?.away??null;
-  const dir=h!=null&&a!=null?getDir(+h,+a):null;
+function MatchBetRow({match, savedBet, onSave, teamNames}){
+  const locked = isMatchLocked(match.kickoff);
+  const [h, setH] = useState(savedBet?.home ?? null);
+  const [a, setA] = useState(savedBet?.away ?? null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Sync if external save updates come in
+  useEffect(()=>{
+    setH(savedBet?.home ?? null);
+    setA(savedBet?.away ?? null);
+  },[savedBet?.home, savedBet?.away]);
+
+  const dirty = !locked && h !== null && a !== null &&
+    (h !== savedBet?.home || a !== savedBet?.away);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(match.id, {home: h, away: a});
+    setSaving(false); setSaved(true);
+    setTimeout(()=>setSaved(false), 1500);
+  };
+
+  const dir = h!=null && a!=null ? getDir(+h,+a) : null;
   return(
-    <div className={`match-row ${locked?"locked-row":""}`}>
+    <div className={`match-row ${locked?"locked-row":""} ${saved?"saved-row":""}`}>
       <div className="match-meta">
         {match.date} · בית {match.group}
-        {locked?<span className="lock-badge-sm"> 🔒</span>:<span className="open-badge-sm"> ✏️</span>}
+        {locked ? <span className="lock-badge-sm"> 🔒</span> : <span className="open-badge-sm"> ✏️</span>}
       </div>
       <div className="match-body">
         <div className={`team-name ${dir==="home"?"winner":""}`}>{teamNames?.[match.home]||match.home}</div>
         <div className="score-area">
-          <NumStepper value={h} onChange={v=>onChange({...bet,home:v})} disabled={locked}/>
+          <NumStepper value={h} onChange={setH} disabled={locked}/>
           <span className="colon">:</span>
-          <NumStepper value={a} onChange={v=>onChange({...bet,away:v})} disabled={locked}/>
+          <NumStepper value={a} onChange={setA} disabled={locked}/>
         </div>
         <div className={`team-name away ${dir==="away"?"winner":""}`}>{teamNames?.[match.away]||match.away}</div>
+        {!locked && (
+          <button
+            className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`}
+            onClick={handleSave}
+            disabled={!dirty||saving}
+          >
+            {saved?"✓":saving?"...":"💾"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -389,13 +418,17 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
   );
 }
 
-function BetForm({user,onSave,teamNames}){
-  const [bets,setBets]=useState(user.bets||{});
-  const [tab,setTab]=useState("groups");
-  const globalLocked=isGlobalLocked();
+function BetForm({user, onSave, onSaveMatch, teamNames}){
+  const [bets, setBets] = useState(user.bets||{});
+  const [tab, setTab] = useState("groups");
+  const globalLocked = isGlobalLocked();
+
+  // Keep local bets in sync when user.bets updates from Firebase
+  useEffect(()=>{ setBets(user.bets||{}); },[JSON.stringify(user.bets)]);
+
   const setGroupPick=(g,picks)=>setBets(p=>({...p,groups:{...p.groups,[g]:picks}}));
-  const setMatchBet=(id,val)=>setBets(p=>({...p,matches:{...p.matches,[id]:val}}));
   const setKnockout=(round,picks)=>setBets(p=>({...p,knockout:{...p.knockout,[round]:picks}}));
+
   return(
     <div className="bet-form">
       {globalLocked&&<div className="locked-banner">🔒 הימורי בתים/אלופה/מלך שערים ננעלו!</div>}
@@ -411,14 +444,17 @@ function BetForm({user,onSave,teamNames}){
             <GroupPicker key={g} groupId={g} teams={teams} picks={bets.groups?.[g]}
               onChange={p=>setGroupPick(g,p)} locked={globalLocked} teamNames={teamNames}/>
           ))}
+          {!globalLocked&&<button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור הימורי בתים</button>}
         </div>
       )}
       {tab==="matches"&&(
         <div className="scroll-area">
           <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה 5 דק׳ לפני כל משחק</p>
           {GROUP_MATCHES.map(m=>(
-            <MatchBetRow key={m.id} match={m} bet={bets.matches?.[m.id]}
-              onChange={v=>setMatchBet(m.id,v)} teamNames={teamNames}/>
+            <MatchBetRow key={m.id} match={m}
+              savedBet={user.bets?.matches?.[m.id]}
+              onSave={onSaveMatch}
+              teamNames={teamNames}/>
           ))}
         </div>
       )}
@@ -428,6 +464,7 @@ function BetForm({user,onSave,teamNames}){
             <KnockoutPicker key={id} label={label} pts_dir={pts_dir} pts_exact={pts_exact}
               count={count} picks={bets.knockout?.[id]} onChange={p=>setKnockout(id,p)} teamNames={teamNames}/>
           ))}
+          <button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור הימורי נוקאאוט</button>
         </div>
       )}
       {tab==="special"&&(
@@ -448,9 +485,9 @@ function BetForm({user,onSave,teamNames}){
             <input disabled={globalLocked} type="number" placeholder="כמה שערים?" value={bets.totalGoals||""} onChange={e=>setBets(p=>({...p,totalGoals:e.target.value}))}/>
           </div>
           <p className="section-note">💡 הקרוב ביותר מקבל 6–10 נק׳ (יוחלט לפני הגמר)</p>
+          {!globalLocked&&<button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור</button>}
         </div>
       )}
-      <button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור הימורים</button>
     </div>
   );
 }
@@ -733,8 +770,24 @@ export default function App(){
     };
     const heb = n => TEAM_MAP[n]||n;
 
-    const syncScores = async () => {
+    const syncScores = async (uid) => {
       try {
+        // ── LEADER LOCK: only one user syncs at a time ──────────────
+        // Check if another client synced recently (within last 90 seconds)
+        const syncSnap = await getDoc(doc(db,"mundial2026","sync"));
+        const syncData = syncSnap.exists() ? syncSnap.data() : {};
+        const lastSync = syncData.lastSync ? new Date(syncData.lastSync).getTime() : 0;
+        const secondsSinceLast = (Date.now() - lastSync) / 1000;
+
+        // If synced less than 90s ago by someone else, skip — read from Firebase instead
+        if (secondsSinceLast < 90 && syncData.syncedBy !== uid) return;
+
+        // Claim the sync slot
+        await setDoc(doc(db,"mundial2026","sync"), {
+          lastSync: new Date().toISOString(),
+          syncedBy: uid,
+        });
+
         // 1. Fetch fixtures (scores)
         const res = await fetch(
           "https://v3.football.api-sports.io/fixtures?league=1&season=2026",
@@ -784,33 +837,25 @@ export default function App(){
         const updatedPlayoff = {...(cur.playoffNames||{})};
 
         const standingsList = standingsData.response?.[0]?.league?.standings || [];
-        // Group A-L from standings
         const GROUP_LETTER = {"Group A":"A","Group B":"B","Group C":"C","Group D":"D","Group E":"E","Group F":"F","Group G":"G","Group H":"H","Group I":"I","Group J":"J","Group K":"K","Group L":"L"};
         for (const groupStandings of standingsList) {
           if (!Array.isArray(groupStandings)||!groupStandings.length) continue;
           const groupName = groupStandings[0]?.group;
           const letter = GROUP_LETTER[groupName];
           if (!letter) continue;
-
-          // Check if group stage is finished (all 3 matchdays played)
           const allPlayed = groupStandings.every(t => t.all?.played >= 3);
           if (allPlayed) {
-            // Top 2 qualify
             const top2 = groupStandings.slice(0,2).map(t => heb(t.team.name));
             const prev = updatedGroups[letter];
             if (!prev || JSON.stringify(prev)!==JSON.stringify(top2)) {
               updatedGroups[letter] = top2; groupsChanged = true;
             }
           }
-
-          // Auto-resolve playoff teams: if a "playoff" team played, update name
           for (const t of groupStandings) {
             const apiName = t.team.name;
             const hebName = heb(apiName);
-            // If this team is in our groups as a placeholder, update
             if (t.all?.played > 0) {
               if (GROUPS_2026[letter]?.includes("פלייאוף FIFA 1") && t.all.played > 0) {
-                // find which slot by checking if name is not in our known teams
                 if (!Object.values(TEAM_MAP).includes(hebName) && hebName !== apiName) {
                   if (updatedPlayoff["פלייאוף FIFA 1"] !== hebName) {
                     updatedPlayoff["פלייאוף FIFA 1"] = hebName; playoffChanged = true;
@@ -821,7 +866,6 @@ export default function App(){
           }
         }
 
-        // Save if anything changed
         const updates = {};
         if (matchChanged || groupsChanged) {
           updates.results = {
@@ -836,8 +880,8 @@ export default function App(){
       } catch(e) { console.warn("Score sync failed:", e.message); }
     };
 
-    syncScores();
-    const poll = setInterval(syncScores, 2 * 60 * 1000);
+    syncScores(auth.currentUser?.uid||"anon");
+    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 2 * 60 * 1000);
     return()=>{u1();u2();clearInterval(poll);};
   },[]);
 
@@ -850,6 +894,13 @@ export default function App(){
     if(!authUser)return;
     await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets});
     showToast("✅ הימורים נשמרו!");
+  };
+
+  const handleSaveMatchBet=async(matchId, matchBet)=>{
+    if(!authUser)return;
+    const curBets=participants.find(p=>p.uid===authUser.uid)?.bets||{};
+    const updatedBets={...curBets,matches:{...curBets.matches,[matchId]:matchBet}};
+    await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets:updatedBets});
   };
 
   const teamNames=game.playoffNames||{};
@@ -925,7 +976,7 @@ export default function App(){
           {tab==="mybets"&&(
             <div className="section">
               <h2>🎯 ההימורים שלי</h2>
-              {me?<BetForm user={me} onSave={handleSaveBets} teamNames={teamNames}/>:<p className="section-note">טוען...</p>}
+              {me?<BetForm user={me} onSave={handleSaveBets} onSaveMatch={handleSaveMatchBet} teamNames={teamNames}/>:<p className="section-note">טוען...</p>}
             </div>
           )}
 
@@ -1117,6 +1168,11 @@ const STYLES=`
   .rule-row{background:var(--card2);border-radius:12px;padding:.7rem 1rem;border-right:3px solid var(--green);margin-bottom:.1rem}
   .rule-title{font-weight:800;font-size:.87rem;margin-bottom:.18rem}
   .rule-text{color:var(--muted);font-size:.8rem}
+  .btn-save-match{background:var(--card);border:1.5px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .6rem;font-size:.85rem;cursor:pointer;transition:all .2s;margin-right:.3rem;min-width:36px;font-family:'Heebo',sans-serif;flex-shrink:0}
+  .btn-save-match.dirty{border-color:var(--green);color:var(--green);background:rgba(0,216,127,.1)}
+  .btn-save-match.done{border-color:var(--green);color:var(--green);background:rgba(0,216,127,.2)}
+  .btn-save-match:disabled{opacity:.3;cursor:default}
+  .saved-row{border-color:rgba(0,216,127,.4) !important}
   .sync-badge{font-size:.72rem;color:var(--green);background:rgba(0,216,127,.1);border:1px solid rgba(0,216,127,.3);border-radius:20px;padding:.2rem .7rem}
   .debug-panel{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;background:rgba(255,206,0,.06);border:1px solid rgba(255,206,0,.2);border-radius:12px;padding:.6rem .9rem;margin-bottom:.5rem}
   .debug-title{font-size:.75rem;color:var(--gold);font-weight:700;margin-left:.3rem}
