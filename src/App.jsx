@@ -227,9 +227,9 @@ async function saveParticipant(p){await setDoc(doc(db,"mundial2026","game","part
 function NumStepper({value,onChange,min=0,max=99,disabled=false}){
   return(
     <div className="stepper">
-      <button disabled={disabled} onClick={()=>onChange(Math.max(min,(value||0)-1))}>−</button>
+      <button disabled={disabled} onClick={()=>onChange(Math.max(min,(value??0)-1))}>−</button>
       <span>{value??'—'}</span>
-      <button disabled={disabled} onClick={()=>onChange(Math.min(max,(value||0)+1))}>+</button>
+      <button disabled={disabled} onClick={()=>onChange(Math.min(max,(value??0)+1))}>+</button>
     </div>
   );
 }
