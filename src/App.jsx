@@ -133,14 +133,6 @@ function canSeeSpecialBet(viewerUid, ownerUid) {
   return viewerUid === ownerUid || isTournamentOver();
 }
 
-const KNOCKOUT_ROUNDS = [
-  {id:"r32",label:"32 האחרונות",count:32,pts_dir:2,pts_exact:5},
-  {id:"r16",label:"שמינית גמר",count:16,pts_dir:2,pts_exact:5},
-  {id:"qf",label:"רבע גמר",count:8,pts_dir:4,pts_exact:8},
-  {id:"sf",label:"חצי גמר",count:4,pts_dir:5,pts_exact:10},
-  {id:"third",label:"מקום שלישי",count:2,pts_dir:5,pts_exact:10},
-  {id:"final",label:"גמר",count:2,pts_dir:8,pts_exact:15},
-];
 
 function getDir(h,a){if(+h>+a)return"home";if(+a>+h)return"away";return"draw";}
 function calcScore(bets={},results={},allP=[]){
@@ -157,8 +149,6 @@ function calcScore(bets={},results={},allP=[]){
       t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=3;
     }
   });
-  KNOCKOUT_ROUNDS.forEach(({id,pts_dir})=>{
-    (bets.knockout?.[id]||[]).forEach(x=>{if((results.knockout?.[id]||[]).includes(x))t+=pts_dir;});
   });
   if(bets.champion&&bets.champion===results.champion)t+=12;
   if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())t+=12;
@@ -284,26 +274,6 @@ function MatchBetRow({match, savedBet, onSave, teamNames}){
   );
 }
 
-function KnockoutPicker({label,pts_dir,pts_exact,count,picks,onChange,teamNames}){
-  const toggle=t=>{
-    const cur=picks||[];
-    if(cur.includes(t))onChange(cur.filter(x=>x!==t));
-    else if(cur.length<count)onChange([...cur,t]);
-  };
-  return(
-    <div className="knockout-box">
-      <div className="knockout-header">{label}<span className="pts-hint">{pts_dir}נק׳ כיוון · {pts_exact}נק׳ בול</span></div>
-      <div className="team-grid sm">
-        {ALL_TEAMS.map(t=>(
-          <button key={t} className={`team-btn sm ${(picks||[]).includes(t)?"sel":""}`} onClick={()=>toggle(t)}>
-            {teamNames?.[t]||t}
-          </button>
-        ))}
-      </div>
-      <div className="hint">{(picks||[]).length}/{count} נבחרו</div>
-    </div>
-  );
-}
 
 function PlayerBetsView({player,viewerUid,results,teamNames}){
   const [tab,setTab]=useState("groups");
@@ -316,7 +286,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
         <span className="player-score-badge">{calcScore(bets,results,[])} נק׳</span>
       </div>
       <div className="sub-tabs">
-        {[["groups","🏠 בתים"],["matches","⚽ משחקים"],["knockout","🏆 נוקאאוט"],["special","⭐ מיוחד"]].map(([k,l])=>(
+        {[["groups","🏠 בתים"],["matches","⚽ משחקים"],["special","⭐ מיוחד"]].map(([k,l])=>(
           <button key={k} className={`sub-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
@@ -376,27 +346,6 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
           })}
         </div>
       )}
-      {tab==="knockout"&&(
-        <div className="scroll-area">
-          {KNOCKOUT_ROUNDS.map(({id,label})=>{
-            const picks=bets.knockout?.[id]||[];
-            const correct=results.knockout?.[id]||[];
-            return(
-              <div key={id} className="knockout-box">
-                <div className="knockout-header">{label}</div>
-                {picks.length===0?<div className="hint">לא מילא</div>:(
-                  <div className="team-grid sm">
-                    {picks.map(t=>{
-                      const hit=correct.includes(t);
-                      return<div key={t} className={`team-btn sm readonly ${hit?"correct":""}`}>{teamNames?.[t]||t}{hit?" ✓":""}</div>;
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
       {tab==="special"&&(
         <div className="scroll-area special-area">
           {[
@@ -424,13 +373,12 @@ function BetForm({user, onSave, onSaveMatch, teamNames}){
   useEffect(()=>{ setBets(user.bets||{}); },[JSON.stringify(user.bets)]);
 
   const setGroupPick=(g,picks)=>setBets(p=>({...p,groups:{...p.groups,[g]:picks}}));
-  const setKnockout=(round,picks)=>setBets(p=>({...p,knockout:{...p.knockout,[round]:picks}}));
 
   return(
     <div className="bet-form">
       {globalLocked&&<div className="locked-banner">🔒 הימורי בתים/אלופה/מלך שערים ננעלו!</div>}
       <div className="sub-tabs">
-        {[["groups","🏠 בתים"],["matches","⚽ משחקים"],["knockout","🏆 נוקאאוט"],["special","⭐ מיוחד"]].map(([k,l])=>(
+        {[["groups","🏠 בתים"],["matches","⚽ משחקים"],["special","⭐ מיוחד"]].map(([k,l])=>(
           <button key={k} className={`sub-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
@@ -453,15 +401,6 @@ function BetForm({user, onSave, onSaveMatch, teamNames}){
               onSave={onSaveMatch}
               teamNames={teamNames}/>
           ))}
-        </div>
-      )}
-      {tab==="knockout"&&(
-        <div className="scroll-area">
-          {KNOCKOUT_ROUNDS.map(({id,label,count,pts_dir,pts_exact})=>(
-            <KnockoutPicker key={id} label={label} pts_dir={pts_dir} pts_exact={pts_exact}
-              count={count} picks={bets.knockout?.[id]} onChange={p=>setKnockout(id,p)} teamNames={teamNames}/>
-          ))}
-          <button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור הימורי נוקאאוט</button>
         </div>
       )}
       {tab==="special"&&(
@@ -509,40 +448,58 @@ function Leaderboard({participants,results,onSelectPlayer}){
 }
 
 function ScheduleView({results,teamNames}){
-  const [filter,setFilter]=useState("הכל");
-  const shown=filter==="הכל"?GROUP_MATCHES:GROUP_MATCHES.filter(m=>m.group===filter);
+  const [filter,setFilter]=useState("שלב בתים");
+
+  // Knockout matches stored separately from API sync
+  const koMatches = results.knockoutMatches || [];
+
+  const STAGES = ["שלב בתים","32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
+  const GROUP_FILTERS = Object.keys(GROUPS_2026);
+
+  const renderMatch = (m, idx) => {
+    const res = results.matches?.[m.id] || (m.apiId ? results.koResults?.[m.apiId] : null);
+    const hasRes = res?.home!=null && res?.away!=null;
+    const isLive = res?.live===true;
+    const isDone = hasRes && !isLive;
+    const locked = m.kickoff ? isMatchLocked(m.kickoff) : true;
+    const homeName = teamNames?.[m.home]||m.home||"?";
+    const awayName = teamNames?.[m.away]||m.away||"?";
+    return(
+      <div key={m.id||idx} className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
+        <div className="sched-date">
+          {m.date&&`${m.date} · `}{m.group?`בית ${m.group}`:m.stage||""}
+          {isLive&&<span className="live-badge"> 🔴 חי</span>}
+          {isDone&&<span className="done-badge"> ✓ סיים</span>}
+          {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
+        </div>
+        <div className="sched-teams">
+          <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{homeName}</span>
+          {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>:<span className="sched-vs">vs</span>}
+          <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{awayName}</span>
+        </div>
+      </div>
+    );
+  };
+
   return(
     <div>
       <div className="filter-row">
-        {["הכל",...Object.keys(GROUPS_2026)].map(g=>(
-          <button key={g} className={`filter-btn ${filter===g?"active":""}`} onClick={()=>setFilter(g)}>
-            {g==="הכל"?"כולם":`בית ${g}`}
-          </button>
+        {STAGES.map(s=>(
+          <button key={s} className={`filter-btn ${filter===s?"active":""}`} onClick={()=>setFilter(s)}>{s}</button>
+        ))}
+        <span className="filter-sep">|</span>
+        {GROUP_FILTERS.map(g=>(
+          <button key={g} className={`filter-btn ${filter===g?"active":""}`} onClick={()=>setFilter(g)}>{`בית ${g}`}</button>
         ))}
       </div>
       <div className="scroll-area">
-        {shown.map(m=>{
-          const res=results.matches?.[m.id];
-          const hasRes=res?.home!=null&&res?.away!=null;
-          const isLive=res?.live===true;
-          const isDone=hasRes&&!isLive;
-          const locked=isMatchLocked(m.kickoff);
-          return(
-            <div key={m.id} className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes?"sched-open":""}`}>
-              <div className="sched-date">
-                {m.date} · בית {m.group}
-                {isLive&&<span className="live-badge"> 🔴 חי</span>}
-                {isDone&&<span className="done-badge"> ✓ סיים</span>}
-                {!locked&&!hasRes&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
-              </div>
-              <div className="sched-teams">
-                <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{teamNames?.[m.home]||m.home}</span>
-                {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>:<span className="sched-vs">vs</span>}
-                <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{teamNames?.[m.away]||m.away}</span>
-              </div>
-            </div>
-          );
-        })}
+        {filter==="שלב בתים"&&GROUP_MATCHES.map((m,i)=>renderMatch(m,i))}
+        {GROUP_FILTERS.includes(filter)&&GROUP_MATCHES.filter(m=>m.group===filter).map((m,i)=>renderMatch(m,i))}
+        {["32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"].includes(filter)&&(
+          koMatches.filter(m=>m.stage===filter).length > 0
+            ? koMatches.filter(m=>m.stage===filter).map((m,i)=>renderMatch(m,i))
+            : <div className="empty-msg">⏳ השלב טרם החל</div>
+        )}
       </div>
     </div>
   );
@@ -850,11 +807,43 @@ export default function App(){
           }
         }
 
+        // ── KNOCKOUT MATCHES (schedule + results, no betting) ─────
+        const STAGE_MAP = {
+          "Round of 32":"32 האחרונות","Round of 16":"שמינית גמר",
+          "Quarter-finals":"רבע גמר","Semi-finals":"חצי גמר",
+          "3rd Place Final":"מקום שלישי","Final":"גמר"
+        };
+        const koMatchesArr = [];
+        for (const f of fixtures) {
+          const round = f.league?.round || "";
+          const stage = STAGE_MAP[round];
+          if (!stage) continue; // skip group stage
+          const {fixture:fi, teams, goals} = f;
+          const status = fi.status.short;
+          const isFinished = ["FT","AET","PEN"].includes(status);
+          const isLive = ["1H","2H","HT","ET","BT","P"].includes(status);
+          const dateStr = fi.date ? new Date(fi.date).toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit"}) : "";
+          koMatchesArr.push({
+            id: `ko_${fi.id}`,
+            apiId: fi.id,
+            stage,
+            date: dateStr,
+            home: heb(teams.home.name),
+            away: heb(teams.away.name),
+            ...(((isFinished||isLive)&&goals.home!=null)?{result:{home:goals.home,away:goals.away,live:isLive,status}}:{}),
+          });
+        }
+        const koResults = {};
+        koMatchesArr.forEach(m=>{ if(m.result) koResults[m.apiId]=m.result; });
+        const koMatchesCleaned = koMatchesArr.map(({result,...m})=>m);
+
         const updates = {};
-        if (matchChanged || groupsChanged) {
+        if (matchChanged || groupsChanged || koMatchesArr.length > 0) {
           updates.results = {
             ...cur.results,
             matches: updatedMatches,
+            koResults,
+            knockoutMatches: koMatchesCleaned,
             ...(groupsChanged ? {groups: updatedGroups} : {}),
           };
         }
@@ -978,8 +967,7 @@ export default function App(){
                 ["🙈 סודיות אלופה","אלופה + מלך שערים — נחשפים רק בסוף הטורניר"],
                 ["🏠 בתים","2נק׳ לקבוצה נכונה · 5נק׳ לשתיים"],
                 ["⚽ כיוון משחק","1נק׳"],["✅ תוצאה מדויקת","3נק׳ בונוס"],
-                ["🏆 נוקאאוט","32=2 | שמינית=2 | רבע=4 | חצי=5 | מקום3=5 | גמר=8"],
-                ["✅ נוקאאוט מדויק","32=5 | שמינית=5 | רבע=8 | חצי=10 | מקום3=10 | גמר=15"],
+                
                 ["🏆 אלופה","12 נק׳"],["👟 מלך שערים","12 נק׳"],
                 ["⚽ סה״כ שערים","הקרוב ביותר מקבל 6–10 נק׳"],
                 ["🤖 תוצאות","מתעדכנות אוטומטית מ-API בזמן אמת"],
@@ -1071,8 +1059,6 @@ const STYLES=`
   .stepper button:hover:not(:disabled){border-color:var(--green);color:var(--green)}
   .stepper button:disabled{opacity:.35;cursor:default}
   .stepper span{width:24px;text-align:center;font-weight:700;font-size:.9rem}
-  .knockout-box{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:.9rem;margin-bottom:.6rem}
-  .knockout-header{display:flex;justify-content:space-between;align-items:center;font-weight:800;margin-bottom:.5rem;font-size:.9rem}
   .pts-hint{font-size:.7rem;color:var(--muted);font-weight:400}
   .lb-list{display:flex;flex-direction:column;gap:.45rem}
   .lb-row{display:flex;align-items:center;gap:.7rem;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.7rem 1rem;cursor:pointer;transition:border-color .15s}
@@ -1094,6 +1080,7 @@ const STYLES=`
   .filter-row{display:flex;overflow-x:auto;gap:.4rem;padding:.3rem 0;margin-bottom:.5rem;scrollbar-width:none}
   .filter-row::-webkit-scrollbar{display:none}
   .filter-btn{background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:.28rem .65rem;font-family:'Heebo',sans-serif;font-size:.75rem;cursor:pointer;white-space:nowrap;transition:all .15s}
+  .filter-sep{color:var(--border);padding:0 .2rem;font-size:.8rem;align-self:center}
   .filter-btn.active{background:rgba(0,216,127,.15);border-color:var(--green);color:var(--green);font-weight:700}
   .sched-row{background:var(--card2);border:1px solid var(--border);border-radius:11px;padding:.55rem .85rem;margin-bottom:.38rem}
   .sched-live{border-color:rgba(255,77,109,.5) !important;background:rgba(255,77,109,.05)}
