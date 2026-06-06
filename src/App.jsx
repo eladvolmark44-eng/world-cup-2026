@@ -973,8 +973,8 @@ export default function App(){
         const lastSync = syncData.lastSync ? new Date(syncData.lastSync).getTime() : 0;
         const secondsSinceLast = (Date.now() - lastSync) / 1000;
 
-        // If synced less than 90s ago by someone else, skip — read from Firebase instead
-        if (secondsSinceLast < 90 && syncData.syncedBy !== uid) return;
+        // If synced less than 5min ago by someone else, skip — read from Firebase instead
+        if (secondsSinceLast < 300 && syncData.syncedBy !== uid) return;
 
         // Claim the sync slot
         await setDoc(doc(db,"mundial2026","sync"), {
@@ -982,20 +982,29 @@ export default function App(){
           syncedBy: uid,
         });
 
-        // 1. Fetch fixtures (scores)
-        const res = await fetch(
-          "https://v3.football.api-sports.io/fixtures?league=1&season=2026",
-          { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
-        );
-        const data = await res.json();
-        const fixtures = data.response || [];
+        // Only call WC APIs once the tournament has started (saves daily quota)
+        const firstWCKickoff = Math.min(...GROUP_MATCHES.filter(m=>m.group!=="יזיזות").map(m=>new Date(m.kickoff).getTime()));
+        const wcStarted = Date.now() >= firstWCKickoff - 2*60*60*1000;
 
-        // 2. Fetch standings (group qualifiers + playoff names)
-        const res2 = await fetch(
-          "https://v3.football.api-sports.io/standings?league=1&season=2026",
-          { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
-        );
-        const standingsData = await res2.json();
+        let fixtures = [];
+        let standingsData = { response: [] };
+
+        if (wcStarted) {
+          // 1. Fetch fixtures (scores)
+          const res = await fetch(
+            "https://v3.football.api-sports.io/fixtures?league=1&season=2026",
+            { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
+          );
+          const data = await res.json();
+          fixtures = data.response || [];
+
+          // 2. Fetch standings (group qualifiers + playoff names)
+          const res2 = await fetch(
+            "https://v3.football.api-sports.io/standings?league=1&season=2026",
+            { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
+          );
+          standingsData = await res2.json();
+        }
 
         const gameSnap = await getDoc(doc(db,"mundial2026","game"));
         const cur = gameSnap.exists() ? gameSnap.data() : {};
@@ -1131,7 +1140,7 @@ export default function App(){
     };
 
     syncScores(auth.currentUser?.uid||"anon");
-    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 2 * 60 * 1000);
+    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 5 * 60 * 1000);
     return()=>{u1();u2();clearInterval(poll);};
   },[]);
 
