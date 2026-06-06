@@ -127,7 +127,9 @@ export default async function handler(req, res) {
             const isFinished = ["FT","AET","PEN"].includes(status);
             const isLive = ["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
             if ((isFinished || isLive) && goals.home !== null && goals.away !== null) {
+              // Store both orderings so we match regardless of how API assigns home/away
               matches[`${homeName}_${awayName}`] = { home: goals.home, away: goals.away, status, live: isLive, fixtureId: f.id };
+              matches[`${awayName}_${homeName}`] = { home: goals.away, away: goals.home, status, live: isLive, fixtureId: f.id };
             }
           }
         }

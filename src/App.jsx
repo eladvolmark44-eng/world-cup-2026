@@ -989,7 +989,6 @@ export default function App(){
         );
         const data = await res.json();
         const fixtures = data.response || [];
-        if (!fixtures.length) return;
 
         // 2. Fetch standings (group qualifiers + playoff names)
         const res2 = await fetch(
@@ -1029,10 +1028,13 @@ export default function App(){
               const isFinished=["FT","AET","PEN"].includes(status);
               const isLive=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
               if((isFinished||isLive)&&goals.home!=null&&goals.away!=null){
-                byKey[`${heb(teams.home.name)}_${heb(teams.away.name)}`]={home:goals.home,away:goals.away,status,live:isLive};
+                const h=heb(teams.home.name), a=heb(teams.away.name);
+                // Store both orderings so we match regardless of how API assigns home/away
+                byKey[`${h}_${a}`]={home:goals.home,away:goals.away,status,live:isLive};
+                byKey[`${a}_${h}`]={home:goals.away,away:goals.home,status,live:isLive};
               }
             }
-          }catch(e){/* ignore */}
+          }catch(e){ console.warn("Date fixture fetch failed:", e.message); }
         }
         const curMatches = cur.results?.matches || {};
         const updatedMatches = {...curMatches};
