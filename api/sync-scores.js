@@ -104,12 +104,17 @@ export default async function handler(req, res) {
       if ((isFinished || isLive) && goals.home !== null && goals.away !== null) {
         // Store both orderings so we match regardless of how the API assigns home/away
         const minute = isLive ? (f.status.elapsed ?? null) : null;
+        const isRC = e => (e.type==="Card") && (e.detail==="Red Card" || e.detail==="Yellow Red Card");
+        const hrc = (fixture.events||[]).filter(e=>isRC(e)&&e.team?.id===teams.home.id).length;
+        const arc = (fixture.events||[]).filter(e=>isRC(e)&&e.team?.id===teams.away.id).length;
         matches[`${homeName}_${awayName}`] = {
           home: goals.home,
           away: goals.away,
           status,
           live: isLive,
           minute,
+          homeRedCards: hrc,
+          awayRedCards: arc,
           fixtureId: f.id,
         };
         matches[`${awayName}_${homeName}`] = {
@@ -118,6 +123,8 @@ export default async function handler(req, res) {
           status,
           live: isLive,
           minute,
+          homeRedCards: arc,
+          awayRedCards: hrc,
           fixtureId: f.id,
         };
 
@@ -150,8 +157,11 @@ export default async function handler(req, res) {
             if ((isFinished || isLive) && goals.home !== null && goals.away !== null) {
               // Store both orderings so we match regardless of how API assigns home/away
               const minute = isLive ? (f.status.elapsed ?? null) : null;
-              matches[`${homeName}_${awayName}`] = { home: goals.home, away: goals.away, status, live: isLive, minute, fixtureId: f.id };
-              matches[`${awayName}_${homeName}`] = { home: goals.away, away: goals.home, status, live: isLive, minute, fixtureId: f.id };
+              const isRC = e => (e.type==="Card") && (e.detail==="Red Card" || e.detail==="Yellow Red Card");
+              const hrc = (fixture.events||[]).filter(e=>isRC(e)&&e.team?.id===teams.home.id).length;
+              const arc = (fixture.events||[]).filter(e=>isRC(e)&&e.team?.id===teams.away.id).length;
+              matches[`${homeName}_${awayName}`] = { home: goals.home, away: goals.away, status, live: isLive, minute, homeRedCards: hrc, awayRedCards: arc, fixtureId: f.id };
+              matches[`${awayName}_${homeName}`] = { home: goals.away, away: goals.home, status, live: isLive, minute, homeRedCards: arc, awayRedCards: hrc, fixtureId: f.id };
             }
           }
         }
@@ -270,6 +280,8 @@ export default async function handler(req, res) {
           status: matches[key].status,
           live: matches[key].live || false,
           minute: matches[key].minute ?? null,
+          homeRedCards: matches[key].homeRedCards ?? 0,
+          awayRedCards: matches[key].awayRedCards ?? 0,
         };
         updatedCount++;
       }
