@@ -218,10 +218,10 @@ function canSeeMatchBet(matchId, viewerUid, ownerUid) {
   return match ? isMatchLocked(match.kickoff) : false;
 }
 function canSeeGroupBet(group, viewerUid, ownerUid) {
-  return viewerUid === ownerUid || isGroupRevealed(group);
+  return viewerUid === ownerUid || isGlobalLocked();
 }
 function canSeeSpecialBet(viewerUid, ownerUid) {
-  return viewerUid === ownerUid || isTournamentOver();
+  return viewerUid === ownerUid || isGlobalLocked();
 }
 
 
@@ -453,7 +453,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
           {[
             {label:"🏆 אלופה",key:"champion",can:canSeeSpecialBet(viewerUid,player.uid)},
             {label:"👟 מלך שערים",key:"goldenBoot",can:canSeeSpecialBet(viewerUid,player.uid)},
-            {label:"⚽ ניחוש שערים",key:"totalGoals",can:true},
+            {label:"⚽ ניחוש שערים",key:"totalGoals",can:canSeeSpecialBet(viewerUid,player.uid)},
           ].map(({label,key,can})=>(
             <div key={key} className="special-row">
               <label>{label}</label>
@@ -1094,8 +1094,7 @@ export default function App(){
                 ["🥈 מקום שני","מקבל 50 ₪ ממי שסיים אחרון"],
                 ["🔒 נעילת הימורים","בשריקת הפתיחה של כל משחק — אי אפשר לשנות אחרי הנעילה"],
                 ["🔓 חשיפת ניחושים","ניחוש משחק נחשף לכולם ברגע שריקת הפתיחה"],
-                ["🙈 סודיות בתים","מנצחת/סגנית — נחשפת רק אחרי סיום כל משחקי הבית"],
-                ["🙈 סודיות אלופה","אלופה + מלך שערים — נחשפים רק בסוף הטורניר"],
+                ["🔐 נעילה וחשיפה מוקדמת","בתים · אלופה · מלך שערים · כמות שערים — ננעלים ונחשפים לכולם בשריקת הפתיחה של המשחק הראשון בטורניר"],
                 ["🏠 בתים","2נק׳ לקבוצה נכונה · 5נק׳ לשתיים"],
                 ["⚽ כיוון משחק","1נק׳"],["✅ תוצאה מדויקת","3נק׳ בונוס"],
                 
