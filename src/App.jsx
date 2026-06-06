@@ -161,6 +161,31 @@ Object.keys(GROUPS_2026).forEach(g => {
 const TOURNAMENT_END = "2026-07-19T23:59:00+03:00";
 const LOCK_MS = 5 * 60 * 1000;
 
+const FLAG_MAP = {
+  "מקסיקו":"🇲🇽","קוריאה":"🇰🇷","דרום אפריקה":"🇿🇦","צ'כיה":"🇨🇿",
+  "קנדה":"🇨🇦","שוויץ":"🇨🇭","קטאר":"🇶🇦","איטליה":"🇮🇹",
+  "ברזיל":"🇧🇷","מרוקו":"🇲🇦","סקוטלנד":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","האיטי":"🇭🇹",
+  'ארה"ב':"🇺🇸","אוסטרליה":"🇦🇺","פרגוואי":"🇵🇾","טורקיה":"🇹🇷",
+  "גרמניה":"🇩🇪","אקוודור":"🇪🇨","חוף השנהב":"🇨🇮","קוראסאו":"🇨🇼",
+  "הולנד":"🇳🇱","יפן":"🇯🇵","תוניסיה":"🇹🇳","אוקראינה":"🇺🇦",
+  "ספרד":"🇪🇸","ערב הסעודית":"🇸🇦","אורוגוואי":"🇺🇾","כף ורדה":"🇨🇻",
+  "בלגיה":"🇧🇪","איראן":"🇮🇷","מצרים":"🇪🇬","ניו זילנד":"🇳🇿",
+  "צרפת":"🇫🇷","סנגל":"🇸🇳","נורווגיה":"🇳🇴",
+  "ארגנטינה":"🇦🇷","אלג'יריה":"🇩🇿","אוסטריה":"🇦🇹","ירדן":"🇯🇴",
+  "פורטוגל":"🇵🇹","אוזבקיסטן":"🇺🇿","קולומביה":"🇨🇴",
+  "אנגליה":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","קרואטיה":"🇭🇷","גאנה":"🇬🇭","פנמה":"🇵🇦",
+};
+function withFlag(name) {
+  if (!name) return name;
+  if (name.startsWith("פלייאוף")) return `❓ ${name}`;
+  return FLAG_MAP[name] ? `${FLAG_MAP[name]} ${name}` : name;
+}
+function formatKickoffTime(kickoff) {
+  if (!kickoff) return "";
+  const m = kickoff.match(/T(\d{2}:\d{2})/);
+  return m ? m[1] : "";
+}
+
 function now() { return Date.now(); }
 
 function isMatchLocked(kickoff) { return now() >= new Date(kickoff).getTime() - LOCK_MS; }
@@ -268,7 +293,7 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
             <button key={t} className={`team-btn ${idx>=0?"sel":""} ${locked?"locked":""}`} onClick={()=>toggle(t)}>
               {idx===0&&<span className="badge">1</span>}
               {idx===1&&<span className="badge">2</span>}
-              {teamNames?.[t]||t}
+              {withFlag(teamNames?.[t]||t)}
             </button>
           );
         })}
@@ -304,17 +329,17 @@ function MatchBetRow({match, savedBet, onSave, teamNames}){
   const dir = h!=null && a!=null ? getDir(+h,+a) : null;  return(
     <div className={`match-row ${locked?"locked-row":""} ${saved?"saved-row":""}`}>
       <div className="match-meta">
-        {match.date} · בית {match.group}
+        {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · בית {match.group}
         {locked ? <span className="lock-badge-sm"> 🔒</span> : <span className="open-badge-sm"> ✏️</span>}
       </div>
       <div className="match-body">
-        <div className={`team-name ${dir==="home"?"winner":""}`}>{teamNames?.[match.home]||match.home}</div>
+        <div className={`team-name ${dir==="home"?"winner":""}`}>{withFlag(teamNames?.[match.home]||match.home)}</div>
         <div className="score-area">
           <NumStepper value={h} onChange={setH} disabled={locked}/>
           <span className="colon">:</span>
           <NumStepper value={a} onChange={setA} disabled={locked}/>
         </div>
-        <div className={`team-name away ${dir==="away"?"winner":""}`}>{teamNames?.[match.away]||match.away}</div>
+        <div className={`team-name away ${dir==="away"?"winner":""}`}>{withFlag(teamNames?.[match.away]||match.away)}</div>
         {!locked && (
           <button
             className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`}
@@ -363,7 +388,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
                         <div key={t} className={`team-btn readonly ${idx>=0?"sel":""} ${hit?"correct":""}`}>
                           {idx===0&&<span className="badge">1</span>}
                           {idx===1&&<span className="badge">2</span>}
-                          {teamNames?.[t]||t}{hit?" ✓":""}
+                          {withFlag(teamNames?.[t]||t)}{hit?" ✓":""}
                         </div>
                       );
                     })}
@@ -385,16 +410,16 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
             const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
             return(
               <div key={m.id} className={`match-row ${!visible?"hidden-row":correct?"correct-row":""}`}>
-                <div className="match-meta">{m.date} · בית {m.group}</div>
+                <div className="match-meta">{m.date}{m.kickoff && ` ${formatKickoffTime(m.kickoff)}`} · בית {m.group}</div>
                 <div className="match-body">
-                  <span className="team-name">{teamNames?.[m.home]||m.home}</span>
+                  <span className="team-name">{withFlag(teamNames?.[m.home]||m.home)}</span>
                   <div className="score-area">
                     {visible&&bet?.home!=null
                       ?<span className={`bet-score ${exact?"exact":correct?"dir-ok":""}`}>{bet.home}:{bet.away}{exact?" 🎯":correct?" ✓":""}</span>
                       :<span className="hidden-score">{visible?"—":"🔒"}</span>
                     }
                   </div>
-                  <span className="team-name away">{teamNames?.[m.away]||m.away}</span>
+                  <span className="team-name away">{withFlag(teamNames?.[m.away]||m.away)}</span>
                 </div>
               </div>
             );
@@ -484,7 +509,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
             <label>🏆 אלופה (12נק׳) {globalLocked&&"🔒"}</label>
             <select disabled={globalLocked} value={bets.champion||""} onChange={e=>setBets(p=>({...p,champion:e.target.value}))}>
               <option value="">— בחר —</option>
-              {REAL_TEAMS.map(t=><option key={t} value={t}>{teamNames?.[t]||t}</option>)}
+              {REAL_TEAMS.map(t=><option key={t} value={t}>{withFlag(teamNames?.[t]||t)}</option>)}
             </select>
           </div>
           <div className="special-row">
@@ -545,15 +570,15 @@ function ScheduleView({results,teamNames}){
     return(
       <div key={m.id||idx} className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
         <div className="sched-date">
-          {m.date&&`${m.date} · `}{m.group?`בית ${m.group}`:m.stage||""}
+          {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?`בית ${m.group}`:m.stage||""}
           {isLive&&<span className="live-badge"> 🔴 חי</span>}
           {isDone&&<span className="done-badge"> ✓ סיים</span>}
           {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
         </div>
         <div className="sched-teams">
-          <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{homeName}</span>
+          <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}</span>
           {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>:<span className="sched-vs">vs</span>}
-          <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{awayName}</span>
+          <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}</span>
         </div>
       </div>
     );
@@ -677,9 +702,9 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
                 return(
                   <div key={m.id} className="revealed-match-block">
                     <div className="rev-match-header">
-                      <span>{teamNames?.[m.home]||m.home}</span>
+                      <span>{withFlag(teamNames?.[m.home]||m.home)}</span>
                       {hasReal?<span className="sched-score">{real.home} – {real.away}</span>:<span className="sched-vs">vs</span>}
-                      <span>{teamNames?.[m.away]||m.away}</span>
+                      <span>{withFlag(teamNames?.[m.away]||m.away)}</span>
                     </div>
                     <div className="rev-bets-row">
                       {participants.map(p=>{
@@ -713,7 +738,7 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
                   <div key={g} className="group-box">
                     <div className="group-label">
                       בית {g}
-                      {correct.length>0&&<span style={{color:"var(--green)",marginRight:".5rem"}}>עלו: {correct.map(t=>teamNames?.[t]||t).join(", ")}</span>}
+                      {correct.length>0&&<span style={{color:"var(--green)",marginRight:".5rem"}}>עלו: {correct.map(t=>withFlag(teamNames?.[t]||t)).join(", ")}</span>}
                     </div>
                     <div className="rev-bets-row wrap">
                       {participants.map(p=>{
@@ -724,7 +749,7 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
                         return(
                           <div key={p.uid} className={`rev-bet-chip ${hits===2?"exact":hits===1?"correct":correct.length?"wrong":""}`}>
                             <span className="chip-name">{p.name.split(" ")[0]}</span>
-                            <span className="chip-score">{picks.map(t=>teamNames?.[t]||t).join(", ")}</span>
+                            <span className="chip-score">{picks.map(t=>withFlag(teamNames?.[t]||t)).join(", ")}</span>
                             {correct.length>0&&<span>{pts>0?`+${pts}נק׳`:"✗"}</span>}
                           </div>
                         );
@@ -1045,8 +1070,8 @@ export default function App(){
               {[
                 ["💰 קופה","כל משתתף שם 50 ₪"],["🥇 מקום ראשון","מקבל את כל הקופה"],
                 ["🥈 מקום שני","מקבל 50 ₪ ממי שסיים אחרון"],
-                ["🔒 נעילת הימורים","5 דקות לפני כל משחק"],
-                ["🙈 סודיות תוצאות","ניחוש משחק — נסתר עד שהמשחק מתחיל"],
+                ["🔒 נעילת הימורים","5 דקות לפני כל משחק — אי אפשר לשנות אחרי הנעילה"],
+                ["🔓 חשיפת ניחושים","ניחוש משחק נחשף לכולם ברגע הנעילה (5 דק׳ לפני הקיקאוף)"],
                 ["🙈 סודיות בתים","מנצחת/סגנית — נחשפת רק אחרי סיום כל משחקי הבית"],
                 ["🙈 סודיות אלופה","אלופה + מלך שערים — נחשפים רק בסוף הטורניר"],
                 ["🏠 בתים","2נק׳ לקבוצה נכונה · 5נק׳ לשתיים"],
