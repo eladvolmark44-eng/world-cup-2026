@@ -80,7 +80,10 @@ const STRIKERS = [
 
 const GROUP_MATCHES = [
   // --- June 6 (יזיזות — dry run) ---
-  {id:"T1",group:"יזיזות",home:"צ'ילה",away:"פורטוגל",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
+  {id:"T0",group:"יזיזות",home:"בלגיה",away:"תוניסיה",date:"06/06",kickoff:"2026-06-06T16:00:00+03:00"},
+  {id:"T4",group:"יזיזות",home:"ארמניה",away:"קזחסטן",date:"06/06",kickoff:"2026-06-06T19:00:00+03:00"},
+  {id:"T5",group:"יזיזות",home:"וויילס",away:"רומניה",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
+  {id:"T1",group:"יזיזות",home:"פורטוגל",away:"צ'ילה",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
   {id:"T2",group:"יזיזות",home:'ארה"ב',away:"גרמניה",date:"06/06",kickoff:"2026-06-06T21:30:00+03:00"},
   {id:"T3",group:"יזיזות",home:"אנגליה",away:"ניו זילנד",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
   // --- June 11 ---
@@ -201,6 +204,7 @@ const FLAG_MAP = {
   "עיראק":"🇮🇶","קונגו דמוקרטית":"🇨🇩",
   "בוסניה והרצגובינה":"🇧🇦","שוודיה":"🇸🇪",
   "צ'ילה":"🇨🇱",
+  "ארמניה":"🇦🇲","קזחסטן":"🇰🇿","וויילס":"🏴󠁧󠁢󠁷󠁬󠁳󠁿","רומניה":"🇷🇴",
 };
 function withFlag(name) {
   if (!name) return name;
@@ -954,6 +958,7 @@ export default function App(){
       "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
       "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
       "Chile":"צ'ילה",
+      "Armenia":"ארמניה","Kazakhstan":"קזחסטן","Wales":"וויילס","Romania":"רומניה",
     };
     const heb = n => TEAM_MAP[n]||n;
 

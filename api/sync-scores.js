@@ -28,6 +28,7 @@ const TEAM_NAME_MAP = {
   "DR Congo": "קונגו דמוקרטית", "Congo DR": "קונגו דמוקרטית", "Democratic Republic of the Congo": "קונגו דמוקרטית",
   "England": "אנגליה", "Croatia": "קרואטיה", "Ghana": "גאנה", "Panama": "פנמה",
   "Chile": "צ'ילה",
+  "Armenia": "ארמניה", "Kazakhstan": "קזחסטן", "Wales": "וויילס", "Romania": "רומניה",
 };
 
 function toHebrew(name) {
@@ -139,7 +140,10 @@ export default async function handler(req, res) {
 
     // Map API results to our match IDs using team names
     const GROUP_MATCHES = [
-      {id:"T1",home:"צ'ילה",away:"פורטוגל"},
+      {id:"T0",home:"בלגיה",away:"תוניסיה"},
+      {id:"T4",home:"ארמניה",away:"קזחסטן"},
+      {id:"T5",home:"וויילס",away:"רומניה"},
+      {id:"T1",home:"פורטוגל",away:"צ'ילה"},
       {id:"T2",home:'ארה"ב',away:"גרמניה"},
       {id:"T3",home:"אנגליה",away:"ניו זילנד"},
       {id:"A1",home:"מקסיקו",away:"דרום אפריקה"},
