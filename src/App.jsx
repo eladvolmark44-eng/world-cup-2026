@@ -81,6 +81,7 @@ const STRIKERS = [
 const GROUP_MATCHES = [
   // --- June 6 (יזיזות — dry run) ---
   {id:"T0",group:"יזיזות",home:"בלגיה",away:"תוניסיה",date:"06/06",kickoff:"2026-06-06T16:00:00+03:00"},
+  {id:"T6",group:"יזיזות",home:"סנטרל אספניול",away:"ראסינג מונטבידאו",date:"06/06",kickoff:"2026-06-06T16:00:00+03:00"},
   {id:"T4",group:"יזיזות",home:"ארמניה",away:"קזחסטן",date:"06/06",kickoff:"2026-06-06T19:00:00+03:00"},
   {id:"T5",group:"יזיזות",home:"וויילס",away:"רומניה",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
   {id:"T1",group:"יזיזות",home:"פורטוגל",away:"צ'ילה",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
@@ -959,6 +960,7 @@ export default function App(){
       "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
       "Chile":"צ'ילה",
       "Armenia":"ארמניה","Kazakhstan":"קזחסטן","Wales":"וויילס","Romania":"רומניה",
+      "Central Español":"סנטרל אספניול","Racing Montevideo":"ראסינג מונטבידאו","Racing Club de Montevideo":"ראסינג מונטבידאו",
     };
     const heb = n => TEAM_MAP[n]||n;
 

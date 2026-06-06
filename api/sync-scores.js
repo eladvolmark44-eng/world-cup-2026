@@ -29,6 +29,7 @@ const TEAM_NAME_MAP = {
   "England": "אנגליה", "Croatia": "קרואטיה", "Ghana": "גאנה", "Panama": "פנמה",
   "Chile": "צ'ילה",
   "Armenia": "ארמניה", "Kazakhstan": "קזחסטן", "Wales": "וויילס", "Romania": "רומניה",
+  "Central Español": "סנטרל אספניול", "Racing Montevideo": "ראסינג מונטבידאו", "Racing Club de Montevideo": "ראסינג מונטבידאו",
 };
 
 function toHebrew(name) {
@@ -141,6 +142,7 @@ export default async function handler(req, res) {
     // Map API results to our match IDs using team names
     const GROUP_MATCHES = [
       {id:"T0",home:"בלגיה",away:"תוניסיה"},
+      {id:"T6",home:"סנטרל אספניול",away:"ראסינג מונטבידאו"},
       {id:"T4",home:"ארמניה",away:"קזחסטן"},
       {id:"T5",home:"וויילס",away:"רומניה"},
       {id:"T1",home:"פורטוגל",away:"צ'ילה"},
