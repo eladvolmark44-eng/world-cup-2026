@@ -292,6 +292,15 @@ function canSeeSpecialBet(viewerUid, ownerUid) {
 }
 
 
+const KO_POINTS = {
+  "32 האחרונות": {dir:2, exact:5},
+  "שמינית גמר":  {dir:2, exact:5},
+  "רבע גמר":     {dir:4, exact:8},
+  "חצי גמר":     {dir:5, exact:10},
+  "מקום שלישי":  {dir:5, exact:10},
+  "גמר":         {dir:8, exact:15},
+};
+
 function getDir(h,a){if(+h>+a)return"home";if(+a>+h)return"away";return"draw";}
 function calcScore(bets={},results={},allP=[]){
   let t=0;
@@ -311,14 +320,16 @@ function calcScore(bets={},results={},allP=[]){
       t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=3;
     }
   });
-  // KO match bets
+  // KO match bets — points depend on stage
   if(bets.koMatches && results.koResults){
     Object.keys(bets.koMatches).forEach(id=>{
       const bet=bets.koMatches[id];
       const real=results.koResults?.[id.replace("ko_","")];
       if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
+      const koMatch=(results.knockoutMatches||[]).find(m=>m.id===id);
+      const pts=KO_POINTS[koMatch?.stage]||{dir:2,exact:5};
       if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
-        t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=3;
+        t+=pts.dir; if(+bet.home===+real.home&&+bet.away===+real.away)t+=pts.exact;
       }
     });
   }
@@ -598,7 +609,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
                 <p style={{color:"var(--muted)",fontSize:".8rem"}}>ניתן להמר עד 5 דק׳ לפני כל משחק</p>
               </div>
             : <>
-                <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה 5 דק׳ לפני כל משחק</p>
+                <p className="section-note">⚡ כיוון / מדויק: 32&שמינית 2/+5 · רבע 4/+8 · חצי&מקום3 5/+10 · גמר 8/+15</p>
                 {koMatchesBet.map((m,i)=>(
                   <MatchBetRow key={m.id||i} match={m}
                     savedBet={user.bets?.koMatches?.[m.id]}
@@ -1201,7 +1212,7 @@ export default function App(){
                 ["🏆 אלופה","12 נק׳ · הניקוד מחושב בסיום הטורניר"],
                 ["👟 מלך שערים","12 נק׳ · הניקוד מחושב בסיום הטורניר"],
                 ["⚽ סה״כ שערים","הקרוב ביותר מנצח — הניקוד מחושב בסיום הטורניר (6–10 נק׳)"],
-                ["🏆 נוקאאוט","1נק׳ כיוון · +3נק׳ תוצאה מדויקת (כמו שלב בתים)"],
+                ["🏆 נוקאאוט — כיוון / מדויק","32 האחרונות & שמינית: 2 / +5 · רבע גמר: 4 / +8 · חצי & מקום 3: 5 / +10 · גמר: 8 / +15"],
                 ["🤖 תוצאות","מתעדכנות אוטומטית מ-API בזמן אמת"],
               ].map(([t,v])=>(
                 <div key={t} className="rule-row"><div className="rule-title">{t}</div><div className="rule-text">{v}</div></div>
