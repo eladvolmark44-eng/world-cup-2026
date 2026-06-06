@@ -27,6 +27,7 @@ const TEAM_NAME_MAP = {
   "Portugal": "פורטוגל", "Uzbekistan": "אוזבקיסטן", "Colombia": "קולומביה",
   "DR Congo": "קונגו דמוקרטית", "Congo DR": "קונגו דמוקרטית", "Democratic Republic of the Congo": "קונגו דמוקרטית",
   "England": "אנגליה", "Croatia": "קרואטיה", "Ghana": "גאנה", "Panama": "פנמה",
+  "Chile": "צ'ילה",
 };
 
 function toHebrew(name) {
@@ -104,6 +105,33 @@ export default async function handler(req, res) {
       }
     }
 
+    // Also fetch friendly/test match results by date (±3h window)
+    const TEST_DATES = ["2026-06-06"];
+    for (const date of TEST_DATES) {
+      const dayStart = new Date(date + "T00:00:00+03:00").getTime();
+      const dayEnd   = new Date(date + "T23:59:00+03:00").getTime();
+      if (Date.now() >= dayStart - 3*60*60*1000 && Date.now() <= dayEnd + 3*60*60*1000) {
+        const rf = await fetch(
+          `https://v3.football.api-sports.io/fixtures?date=${date}`,
+          { headers: { "x-apisports-key": API_KEY } }
+        );
+        if (rf.ok) {
+          const df = await rf.json();
+          for (const fixture of (df.response || [])) {
+            const { fixture: f, teams, goals } = fixture;
+            const status = f.status.short;
+            const homeName = toHebrew(teams.home.name);
+            const awayName = toHebrew(teams.away.name);
+            const isFinished = ["FT","AET","PEN"].includes(status);
+            const isLive = ["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
+            if ((isFinished || isLive) && goals.home !== null && goals.away !== null) {
+              matches[`${homeName}_${awayName}`] = { home: goals.home, away: goals.away, status, live: isLive, fixtureId: f.id };
+            }
+          }
+        }
+      }
+    }
+
     // Load current game data to get our match ID mapping
     const gameSnap = await db.doc("mundial2026/game").get();
     const gameData = gameSnap.exists ? gameSnap.data() : {};
@@ -111,6 +139,9 @@ export default async function handler(req, res) {
 
     // Map API results to our match IDs using team names
     const GROUP_MATCHES = [
+      {id:"T1",home:"צ'ילה",away:"פורטוגל"},
+      {id:"T2",home:'ארה"ב',away:"גרמניה"},
+      {id:"T3",home:"אנגליה",away:"ניו זילנד"},
       {id:"A1",home:"מקסיקו",away:"דרום אפריקה"},
       {id:"A2",home:"קוריאה",away:"צ'כיה"},
       {id:"B1",home:"קנדה",away:"בוסניה והרצגובינה"},

@@ -79,6 +79,10 @@ const STRIKERS = [
 ].sort((a,b)=>a.localeCompare(b,"he"));
 
 const GROUP_MATCHES = [
+  // --- June 6 (ידידות — dry run) ---
+  {id:"T1",group:"ידידות",home:"צ'ילה",away:"פורטוגל",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
+  {id:"T2",group:"ידידות",home:'ארה"ב',away:"גרמניה",date:"06/06",kickoff:"2026-06-06T21:30:00+03:00"},
+  {id:"T3",group:"ידידות",home:"אנגליה",away:"ניו זילנד",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
   // --- June 11 ---
   {id:"A1",group:"A",home:"מקסיקו",away:"דרום אפריקה",date:"11/06",kickoff:"2026-06-11T22:00:00+03:00"},
   // --- June 12 ---
@@ -196,6 +200,7 @@ const FLAG_MAP = {
   "אנגליה":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","קרואטיה":"🇭🇷","גאנה":"🇬🇭","פנמה":"🇵🇦",
   "עיראק":"🇮🇶","קונגו דמוקרטית":"🇨🇩",
   "בוסניה והרצגובינה":"🇧🇦","שוודיה":"🇸🇪",
+  "צ'ילה":"🇨🇱",
 };
 function withFlag(name) {
   if (!name) return name;
@@ -236,6 +241,7 @@ const ODDS_TEAM_MAP = {
   "Argentina":"ארגנטינה","Algeria":"אלג'יריה","Austria":"אוסטריה","Jordan":"ירדן",
   "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
   "DR Congo":"קונגו דמוקרטית","Congo DR":"קונגו דמוקרטית",
+  "Chile":"צ'ילה",
   "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
 };
 function oddsHeb(n){ return ODDS_TEAM_MAP[n]||n; }
@@ -272,6 +278,7 @@ async function fetchOdds(){
   }catch{return {};}
 }
 
+function groupLabel(g){ return g==="ידידות"?"⚽ ידידות":`בית ${g}`; }
 function now() { return Date.now(); }
 
 function isMatchLocked(kickoff) { return now() >= new Date(kickoff).getTime() - LOCK_MS; }
@@ -438,7 +445,7 @@ function MatchBetRow({match, savedBet, onSave, teamNames, odds}){
   const dir = h!=null && a!=null ? getDir(+h,+a) : null;  return(
     <div className={`match-row ${locked?"locked-row":""} ${saved?"saved-row":""}`}>
       <div className="match-meta">
-        {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · בית {match.group}
+        {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · {groupLabel(match.group)}
         {locked ? <span className="lock-badge-sm"> 🔒</span> : <span className="open-badge-sm"> ✏️</span>}
       </div>
       {matchOdds && (
@@ -526,7 +533,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
             const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
             return(
               <div key={m.id} className={`match-row ${!visible?"hidden-row":correct?"correct-row":""}`}>
-                <div className="match-meta">{m.date}{m.kickoff && ` ${formatKickoffTime(m.kickoff)}`} · בית {m.group}</div>
+                <div className="match-meta">{m.date}{m.kickoff && ` ${formatKickoffTime(m.kickoff)}`} · {groupLabel(m.group)}</div>
                 <div className="match-body">
                   <span className="team-name">{withFlag(teamNames?.[m.home]||m.home)}</span>
                   <div className="score-area">
@@ -590,7 +597,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
       )}
       {tab==="matches"&&(
         <div className="scroll-area">
-          <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה 5 דק׳ לפני כל משחק</p>
+          <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה בשריקת הפתיחה</p>
           {GROUP_MATCHES.map(m=>(
             <MatchBetRow key={m.id} match={m}
               savedBet={user.bets?.matches?.[m.id]}
@@ -606,7 +613,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
             ? <div className="nothing-revealed" style={{padding:"2rem",textAlign:"center"}}>
                 <div style={{fontSize:"2rem"}}>⏳</div>
                 <p style={{color:"var(--muted)"}}>משחקי הנוקאאוט יופיעו כאן ברגע שהקבוצות ידועות</p>
-                <p style={{color:"var(--muted)",fontSize:".8rem"}}>ניתן להמר עד 5 דק׳ לפני כל משחק</p>
+                <p style={{color:"var(--muted)",fontSize:".8rem"}}>ניתן להמר עד שריקת הפתיחה</p>
               </div>
             : <>
                 <p className="section-note">⚡ כיוון / מדויק: 32&שמינית 2/+5 · רבע 4/+8 · חצי&מקום3 5/+10 · גמר 8/+15</p>
@@ -674,7 +681,7 @@ function ScheduleView({results,teamNames,odds}){
   // Knockout matches stored separately from API sync
   const koMatches = results.knockoutMatches || [];
 
-  const STAGES = ["שלב בתים","32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
+  const STAGES = ["שלב בתים","ידידות","32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
   const GROUP_FILTERS = Object.keys(GROUPS_2026);
 
   const renderMatch = (m, idx) => {
@@ -689,7 +696,7 @@ function ScheduleView({results,teamNames,odds}){
     return(
       <div key={m.id||idx} className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
         <div className="sched-date">
-          {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?`בית ${m.group}`:m.stage||""}
+          {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?groupLabel(m.group):m.stage||""}
           {isLive&&<span className="live-badge"> 🔴 חי</span>}
           {isDone&&<span className="done-badge"> ✓ סיים</span>}
           {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
@@ -722,7 +729,8 @@ function ScheduleView({results,teamNames,odds}){
         ))}
       </div>
       <div className="scroll-area">
-        {filter==="שלב בתים"&&GROUP_MATCHES.map((m,i)=>renderMatch(m,i))}
+        {filter==="שלב בתים"&&GROUP_MATCHES.filter(m=>m.group!=="ידידות").map((m,i)=>renderMatch(m,i))}
+        {filter==="ידידות"&&GROUP_MATCHES.filter(m=>m.group==="ידידות").map((m,i)=>renderMatch(m,i))}
         {GROUP_FILTERS.includes(filter)&&GROUP_MATCHES.filter(m=>m.group===filter).map((m,i)=>renderMatch(m,i))}
         {["32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"].includes(filter)&&(
           koMatches.filter(m=>m.stage===filter).length > 0
@@ -945,6 +953,7 @@ export default function App(){
       "Argentina":"ארגנטינה","Algeria":"אלג'יריה","Austria":"אוסטריה","Jordan":"ירדן",
       "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
       "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
+      "Chile":"צ'ילה",
     };
     const heb = n => TEAM_MAP[n]||n;
 
@@ -995,6 +1004,28 @@ export default function App(){
           if ((isFinished||isLive) && goals.home!=null && goals.away!=null) {
             byKey[`${heb(teams.home.name)}_${heb(teams.away.name)}`] = {home:goals.home,away:goals.away,status,live:isLive};
           }
+        }
+        // Fetch friendly/test match results by date (only during active window ±3h)
+        const testDates = [...new Set(
+          GROUP_MATCHES.filter(m=>m.group==="ידידות").filter(m=>{
+            const t=new Date(m.kickoff).getTime();
+            return Date.now()>=t-3*60*60*1000 && Date.now()<=t+3*60*60*1000;
+          }).map(m=>m.kickoff.split("T")[0])
+        )];
+        for(const date of testDates){
+          try{
+            const rf=await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}`,{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
+            const df=await rf.json();
+            for(const f of (df.response||[])){
+              const {fixture:fi,teams,goals}=f;
+              const status=fi.status.short;
+              const isFinished=["FT","AET","PEN"].includes(status);
+              const isLive=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
+              if((isFinished||isLive)&&goals.home!=null&&goals.away!=null){
+                byKey[`${heb(teams.home.name)}_${heb(teams.away.name)}`]={home:goals.home,away:goals.away,status,live:isLive};
+              }
+            }
+          }catch(e){/* ignore */}
         }
         const curMatches = cur.results?.matches || {};
         const updatedMatches = {...curMatches};
