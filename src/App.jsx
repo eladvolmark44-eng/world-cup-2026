@@ -25,9 +25,9 @@ const GROUPS_2026 = {
   F: ["הולנד","יפן","תוניסיה","אוקראינה"],
   G: ["בלגיה","איראן","מצרים","ניו זילנד"],
   H: ["ספרד","ערב הסעודית","אורוגוואי","כף ורדה"],
-  I: ["צרפת","סנגל","נורווגיה","פלייאוף FIFA 2"],
+  I: ["צרפת","סנגל","נורווגיה","עיראק"],
   J: ["ארגנטינה","אלג'יריה","אוסטריה","ירדן"],
-  K: ["פורטוגל","אוזבקיסטן","קולומביה","פלייאוף FIFA 1"],
+  K: ["פורטוגל","אוזבקיסטן","קולומביה","קונגו דמוקרטית"],
   L: ["אנגליה","קרואטיה","גאנה","פנמה"],
 };
 const ALL_TEAMS = Object.values(GROUPS_2026).flat();
@@ -96,10 +96,10 @@ const GROUP_MATCHES = [
   {id:"H2",group:"H",home:"ערב הסעודית",away:"אורוגוואי",date:"16/06",kickoff:"2026-06-16T01:00:00+03:00"},
   {id:"G2",group:"G",home:"איראן",away:"ניו זילנד",date:"16/06",kickoff:"2026-06-16T04:00:00+03:00"},
   {id:"I1",group:"I",home:"צרפת",away:"סנגל",date:"16/06",kickoff:"2026-06-16T22:00:00+03:00"},
-  {id:"I2",group:"I",home:"פלייאוף FIFA 2",away:"נורווגיה",date:"17/06",kickoff:"2026-06-17T01:00:00+03:00"},
+  {id:"I2",group:"I",home:"עיראק",away:"נורווגיה",date:"17/06",kickoff:"2026-06-17T01:00:00+03:00"},
   {id:"J1",group:"J",home:"ארגנטינה",away:"אלג'יריה",date:"17/06",kickoff:"2026-06-17T04:00:00+03:00"},
   {id:"J2",group:"J",home:"אוסטריה",away:"ירדן",date:"17/06",kickoff:"2026-06-17T07:00:00+03:00"},
-  {id:"K1",group:"K",home:"פורטוגל",away:"פלייאוף FIFA 1",date:"17/06",kickoff:"2026-06-17T20:00:00+03:00"},
+  {id:"K1",group:"K",home:"פורטוגל",away:"קונגו דמוקרטית",date:"17/06",kickoff:"2026-06-17T20:00:00+03:00"},
   {id:"L1",group:"L",home:"אנגליה",away:"קרואטיה",date:"17/06",kickoff:"2026-06-17T23:00:00+03:00"},
   {id:"L2",group:"L",home:"גאנה",away:"פנמה",date:"18/06",kickoff:"2026-06-18T02:00:00+03:00"},
   {id:"K2",group:"K",home:"אוזבקיסטן",away:"קולומביה",date:"18/06",kickoff:"2026-06-18T05:00:00+03:00"},
@@ -119,13 +119,13 @@ const GROUP_MATCHES = [
   {id:"H3",group:"H",home:"ספרד",away:"ערב הסעודית",date:"21/06",kickoff:"2026-06-21T22:00:00+03:00"},
   {id:"H4",group:"H",home:"אורוגוואי",away:"כף ורדה",date:"22/06",kickoff:"2026-06-22T01:00:00+03:00"},
   {id:"G4",group:"G",home:"מצרים",away:"איראן",date:"22/06",kickoff:"2026-06-22T04:00:00+03:00"},
-  {id:"I3",group:"I",home:"צרפת",away:"נורווגיה",date:"22/06",kickoff:"2026-06-22T19:00:00+03:00"},
+  {id:"I3",group:"I",home:"צרפת",away:"עיראק",date:"23/06",kickoff:"2026-06-23T00:00:00+03:00"},
   {id:"J3",group:"J",home:"ארגנטינה",away:"אוסטריה",date:"22/06",kickoff:"2026-06-22T22:00:00+03:00"},
   {id:"J4",group:"J",home:"אלג'יריה",away:"ירדן",date:"23/06",kickoff:"2026-06-23T01:00:00+03:00"},
-  {id:"I4",group:"I",home:"סנגל",away:"פלייאוף FIFA 2",date:"23/06",kickoff:"2026-06-23T04:00:00+03:00"},
+  {id:"I4",group:"I",home:"נורווגיה",away:"סנגל",date:"23/06",kickoff:"2026-06-23T03:00:00+03:00"},
   {id:"L3",group:"L",home:"אנגליה",away:"גאנה",date:"23/06",kickoff:"2026-06-23T19:00:00+03:00"},
-  {id:"K3",group:"K",home:"פורטוגל",away:"קולומביה",date:"23/06",kickoff:"2026-06-23T22:00:00+03:00"},
-  {id:"K4",group:"K",home:"אוזבקיסטן",away:"פלייאוף FIFA 1",date:"24/06",kickoff:"2026-06-24T01:00:00+03:00"},
+  {id:"K3",group:"K",home:"פורטוגל",away:"אוזבקיסטן",date:"23/06",kickoff:"2026-06-23T20:00:00+03:00"},
+  {id:"K4",group:"K",home:"קולומביה",away:"קונגו דמוקרטית",date:"24/06",kickoff:"2026-06-24T05:00:00+03:00"},
   {id:"L4",group:"L",home:"קרואטיה",away:"פנמה",date:"24/06",kickoff:"2026-06-24T04:00:00+03:00"},
   {id:"A5",group:"A",home:"מקסיקו",away:"צ'כיה",date:"25/06",kickoff:"2026-06-25T00:00:00+03:00"},
   {id:"A6",group:"A",home:"קוריאה",away:"דרום אפריקה",date:"25/06",kickoff:"2026-06-25T00:00:00+03:00"},
@@ -143,12 +143,12 @@ const GROUP_MATCHES = [
   {id:"G6",group:"G",home:"מצרים",away:"ניו זילנד",date:"27/06",kickoff:"2026-06-27T00:00:00+03:00"},
   {id:"H5",group:"H",home:"ספרד",away:"אורוגוואי",date:"27/06",kickoff:"2026-06-27T04:00:00+03:00"},
   {id:"H6",group:"H",home:"ערב הסעודית",away:"כף ורדה",date:"27/06",kickoff:"2026-06-27T04:00:00+03:00"},
-  {id:"I5",group:"I",home:"צרפת",away:"פלייאוף FIFA 2",date:"27/06",kickoff:"2026-06-27T22:00:00+03:00"},
-  {id:"I6",group:"I",home:"נורווגיה",away:"סנגל",date:"27/06",kickoff:"2026-06-27T22:00:00+03:00"},
+  {id:"I5",group:"I",home:"נורווגיה",away:"צרפת",date:"26/06",kickoff:"2026-06-26T22:00:00+03:00"},
+  {id:"I6",group:"I",home:"סנגל",away:"עיראק",date:"26/06",kickoff:"2026-06-26T22:00:00+03:00"},
   {id:"J5",group:"J",home:"ארגנטינה",away:"ירדן",date:"28/06",kickoff:"2026-06-28T02:00:00+03:00"},
   {id:"J6",group:"J",home:"אלג'יריה",away:"אוסטריה",date:"28/06",kickoff:"2026-06-28T02:00:00+03:00"},
-  {id:"K5",group:"K",home:"פורטוגל",away:"אוזבקיסטן",date:"28/06",kickoff:"2026-06-28T00:00:00+03:00"},
-  {id:"K6",group:"K",home:"קולומביה",away:"פלייאוף FIFA 1",date:"28/06",kickoff:"2026-06-28T00:00:00+03:00"},
+  {id:"K5",group:"K",home:"קולומביה",away:"פורטוגל",date:"28/06",kickoff:"2026-06-28T02:30:00+03:00"},
+  {id:"K6",group:"K",home:"קונגו דמוקרטית",away:"אוזבקיסטן",date:"28/06",kickoff:"2026-06-28T02:30:00+03:00"},
   {id:"L5",group:"L",home:"אנגליה",away:"פנמה",date:"28/06",kickoff:"2026-06-28T04:00:00+03:00"},
   {id:"L6",group:"L",home:"קרואטיה",away:"גאנה",date:"28/06",kickoff:"2026-06-28T04:00:00+03:00"},
 ];
@@ -174,6 +174,7 @@ const FLAG_MAP = {
   "ארגנטינה":"🇦🇷","אלג'יריה":"🇩🇿","אוסטריה":"🇦🇹","ירדן":"🇯🇴",
   "פורטוגל":"🇵🇹","אוזבקיסטן":"🇺🇿","קולומביה":"🇨🇴",
   "אנגליה":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","קרואטיה":"🇭🇷","גאנה":"🇬🇭","פנמה":"🇵🇦",
+  "עיראק":"🇮🇶","קונגו דמוקרטית":"🇨🇩",
 };
 function withFlag(name) {
   if (!name) return name;
@@ -477,11 +478,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
       {tab==="matches"&&(
         <div className="scroll-area">
           <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה 5 דק׳ לפני כל משחק</p>
-          {GROUP_MATCHES.filter(m=>{
-            const home=teamNames?.[m.home]||m.home;
-            const away=teamNames?.[m.away]||m.away;
-            return !home.startsWith("פלייאוף")&&!away.startsWith("פלייאוף");
-          }).map(m=>(
+          {GROUP_MATCHES.map(m=>(
             <MatchBetRow key={m.id} match={m}
               savedBet={user.bets?.matches?.[m.id]}
               onSave={onSaveMatch}
