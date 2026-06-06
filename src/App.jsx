@@ -79,10 +79,10 @@ const STRIKERS = [
 ].sort((a,b)=>a.localeCompare(b,"he"));
 
 const GROUP_MATCHES = [
-  // --- June 6 (ידידות — dry run) ---
-  {id:"T1",group:"ידידות",home:"צ'ילה",away:"פורטוגל",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
-  {id:"T2",group:"ידידות",home:'ארה"ב',away:"גרמניה",date:"06/06",kickoff:"2026-06-06T21:30:00+03:00"},
-  {id:"T3",group:"ידידות",home:"אנגליה",away:"ניו זילנד",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
+  // --- June 6 (יזיזות — dry run) ---
+  {id:"T1",group:"יזיזות",home:"צ'ילה",away:"פורטוגל",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
+  {id:"T2",group:"יזיזות",home:'ארה"ב',away:"גרמניה",date:"06/06",kickoff:"2026-06-06T21:30:00+03:00"},
+  {id:"T3",group:"יזיזות",home:"אנגליה",away:"ניו זילנד",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
   // --- June 11 ---
   {id:"A1",group:"A",home:"מקסיקו",away:"דרום אפריקה",date:"11/06",kickoff:"2026-06-11T22:00:00+03:00"},
   // --- June 12 ---
@@ -278,7 +278,7 @@ async function fetchOdds(){
   }catch{return {};}
 }
 
-function groupLabel(g){ return g==="ידידות"?"⚽ ידידות":`בית ${g}`; }
+function groupLabel(g){ return g==="יזיזות"?"⚽ יזיזות":`בית ${g}`; }
 function now() { return Date.now(); }
 
 function isMatchLocked(kickoff) { return now() >= new Date(kickoff).getTime() - LOCK_MS; }
@@ -681,7 +681,7 @@ function ScheduleView({results,teamNames,odds}){
   // Knockout matches stored separately from API sync
   const koMatches = results.knockoutMatches || [];
 
-  const STAGES = ["שלב בתים","ידידות","32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
+  const STAGES = ["שלב בתים","יזיזות","32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
   const GROUP_FILTERS = Object.keys(GROUPS_2026);
 
   const renderMatch = (m, idx) => {
@@ -729,8 +729,8 @@ function ScheduleView({results,teamNames,odds}){
         ))}
       </div>
       <div className="scroll-area">
-        {filter==="שלב בתים"&&GROUP_MATCHES.filter(m=>m.group!=="ידידות").map((m,i)=>renderMatch(m,i))}
-        {filter==="ידידות"&&GROUP_MATCHES.filter(m=>m.group==="ידידות").map((m,i)=>renderMatch(m,i))}
+        {filter==="שלב בתים"&&GROUP_MATCHES.filter(m=>m.group!=="יזיזות").map((m,i)=>renderMatch(m,i))}
+        {filter==="יזיזות"&&GROUP_MATCHES.filter(m=>m.group==="יזיזות").map((m,i)=>renderMatch(m,i))}
         {GROUP_FILTERS.includes(filter)&&GROUP_MATCHES.filter(m=>m.group===filter).map((m,i)=>renderMatch(m,i))}
         {["32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"].includes(filter)&&(
           koMatches.filter(m=>m.stage===filter).length > 0
@@ -1007,7 +1007,7 @@ export default function App(){
         }
         // Fetch friendly/test match results by date (only during active window ±3h)
         const testDates = [...new Set(
-          GROUP_MATCHES.filter(m=>m.group==="ידידות").filter(m=>{
+          GROUP_MATCHES.filter(m=>m.group==="יזיזות").filter(m=>{
             const t=new Date(m.kickoff).getTime();
             return Date.now()>=t-3*60*60*1000 && Date.now()<=t+3*60*60*1000;
           }).map(m=>m.kickoff.split("T")[0])
