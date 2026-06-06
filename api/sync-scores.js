@@ -30,6 +30,8 @@ const TEAM_NAME_MAP = {
   "Chile": "צ'ילה",
   "Armenia": "ארמניה", "Kazakhstan": "קזחסטן", "Wales": "וויילס", "Romania": "רומניה",
   "Bolivia": "בוליביה",
+  "Gibraltar": "גיברלטר", "Cayman Islands": "קיימן", "Cayman": "קיימן",
+  "Albania": "אלבניה", "Luxembourg": "לוקסמבורג",
   "Central Español": "סנטרל אספניול", "Racing Montevideo": "ראסינג מונטבידאו", "Racing Club de Montevideo": "ראסינג מונטבידאו",
 };
 
@@ -154,6 +156,8 @@ export default async function handler(req, res) {
       {id:"T7",home:"שוויץ",away:"אוסטרליה"},
       {id:"T8",home:"בוליביה",away:"סקוטלנד"},
       {id:"T9",home:"ברזיל",away:"מצרים"},
+      {id:"T10",home:"גיברלטר",away:"קיימן"},
+      {id:"T11",home:"אלבניה",away:"לוקסמבורג"},
       {id:"A1",home:"מקסיקו",away:"דרום אפריקה"},
       {id:"A2",home:"קוריאה",away:"צ'כיה"},
       {id:"B1",home:"קנדה",away:"בוסניה והרצגובינה"},
