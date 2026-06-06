@@ -509,7 +509,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
                       );
                     })}
                   </div>
-                ):<div className="hidden-block">🔒 יחשף לאחר סיום כל משחקי הבית</div>}
+                ):<div className="hidden-block">🔒 יחשף בשריקת הפתיחה של המשחק הראשון</div>}
               </div>
             );
           })}
@@ -551,7 +551,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
           ].map(({label,key,can})=>(
             <div key={key} className="special-row">
               <label>{label}</label>
-              <div className={`special-val ${!can?"hidden-val":""}`}>{can?(bets[key]||"—"):"🔒 יחשף בסוף הטורניר"}</div>
+              <div className={`special-val ${!can?"hidden-val":""}`}>{can?(bets[key]||"—"):"🔒 יחשף בשריקת הפתיחה של המשחק הראשון"}</div>
             </div>
           ))}
         </div>
