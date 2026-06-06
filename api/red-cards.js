@@ -1,4 +1,5 @@
-// Vercel Serverless Function — CORS-free SofaScore proxy for red card data
+// Vercel Serverless Function — ESPN play-by-play proxy for red card data
+// SofaScore is blocked from Vercel IPs; ESPN is free, public, no auth needed.
 const TEAM_NAME_MAP = {
   "Mexico": "מקסיקו", "South Korea": "קוריאה", "South Africa": "דרום אפריקה",
   "Czech Republic": "צ'כיה", "Czechia": "צ'כיה",
@@ -40,32 +41,63 @@ function toHebrew(name) {
   return TEAM_NAME_MAP[name] || name;
 }
 
+function isRedCard(text) {
+  const t = (text || "").toLowerCase();
+  return t.includes("red card") || t.includes("second yellow") || t.includes("double yellow");
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   try {
     const date = req.query.date || new Date().toISOString().split("T")[0];
-    const response = await fetch(
-      `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
-      { headers: { "User-Agent": "Mozilla/5.0", "Referer": "https://www.sofascore.com/" } }
-    );
-
-    if (!response.ok) return res.status(200).json({});
-
-    const data = await response.json();
+    const ymd = date.replace(/-/g, ""); // YYYYMMDD for ESPN
     const result = {};
 
-    for (const ev of (data.events || [])) {
-      const t = ev.status?.type;
-      if (t !== "finished" && t !== "inprogress") continue;
-      const hn = toHebrew(ev.homeTeam?.name);
-      const an = toHebrew(ev.awayTeam?.name);
-      const hrc = ev.homeRedCards ?? 0;
-      const arc = ev.awayRedCards ?? 0;
-      if (hrc > 0 || arc > 0) {
-        result[`${hn}_${an}`] = { homeRedCards: hrc, awayRedCards: arc };
-        result[`${an}_${hn}`] = { homeRedCards: arc, awayRedCards: hrc };
+    for (const slug of ["fifa.friendly", "intl.friendlies", "fifa.world"]) {
+      let events;
+      try {
+        const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
+        const d = await r.json();
+        events = d.events || [];
+      } catch (e) { continue; }
+
+      for (const ev of events) {
+        const comp = ev.competitions?.[0];
+        const state = comp?.status?.type?.state;
+        if (state !== "post" && state !== "in") continue;
+
+        const hC = comp.competitors?.find(c => c.homeAway === "home");
+        const aC = comp.competitors?.find(c => c.homeAway === "away");
+        if (!hC || !aC) continue;
+
+        const hn = toHebrew(hC.team?.displayName);
+        const an = toHebrew(aC.team?.displayName);
+
+        // Try statistics from scoreboard first (works for some leagues)
+        let hrc = (hC.statistics || []).find(s => s.name === "redCards")?.value ?? 0;
+        let arc = (aC.statistics || []).find(s => s.name === "redCards")?.value ?? 0;
+
+        // Fall back to play-by-play event parsing
+        if (!hrc && !arc) {
+          try {
+            const pr = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/playbyplay?event=${ev.id}`);
+            const pd = await pr.json();
+            const plays = pd.plays || pd.gamePackageJSON?.plays || [];
+            for (const play of plays) {
+              if (!isRedCard(play.type?.text)) continue;
+              const tid = play.team?.id;
+              if (tid === hC.team?.id) hrc++;
+              else if (tid === aC.team?.id) arc++;
+            }
+          } catch (e) {}
+        }
+
+        if (hrc > 0 || arc > 0) {
+          result[`${hn}_${an}`] = { homeRedCards: hrc, awayRedCards: arc };
+          result[`${an}_${hn}`] = { homeRedCards: arc, awayRedCards: hrc };
+        }
       }
     }
 
