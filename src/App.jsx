@@ -895,9 +895,10 @@ export default function App(){
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
   useEffect(()=>{
-    fetchOdds().then(setOdds);
-    const p=setInterval(()=>fetchOdds().then(setOdds), 5*60*1000);
-    return()=>clearInterval(p);
+    // Delay odds fetch so Firebase+Auth load first, then fill in odds silently
+    const init=setTimeout(()=>fetchOdds().then(setOdds), 3000);
+    const poll=setInterval(()=>fetchOdds().then(setOdds), 5*60*1000);
+    return()=>{clearTimeout(init);clearInterval(poll);};
   },[]);
 
   useEffect(()=>{
