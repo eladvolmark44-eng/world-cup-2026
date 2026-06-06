@@ -1281,6 +1281,7 @@ const STYLES=`
   .match-meta{font-size:.85rem;color:var(--muted);margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem}
   .match-body{display:flex;align-items:center;gap:.5rem}
   .team-name{font-size:.95rem;font-weight:600;flex:1;text-align:right}
+  .team-name.away{text-align:left}
   .team-name.winner{color:var(--green)}
   .score-area{display:flex;align-items:center;gap:.35rem}
   .colon{font-weight:800;color:var(--muted)}
