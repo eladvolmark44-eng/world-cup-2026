@@ -851,10 +851,12 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
                         if(!bet||bet.home==null)return null;
                         const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
                         const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
+                        const pts = hasReal ? (exact ? 4 : correct ? 1 : 0) : null;
                         return(
                           <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                             <span className="chip-name">{p.name.split(" ")[0]}</span>
                             <span className="chip-score">{bet.away}:{bet.home}</span>
+                            {pts!==null&&<span className="chip-pts">{pts} נק׳</span>}
                             {exact&&<span>🎯</span>}
                             {!exact&&correct&&<span>✓</span>}
                             {hasReal&&!correct&&<span>✗</span>}
@@ -1449,6 +1451,7 @@ const STYLES=`
   .rev-bet-chip.wrong{opacity:.5}
   .chip-name{font-weight:700;color:var(--text)}
   .chip-score{color:var(--muted)}
+  .chip-pts{font-size:.75rem;font-weight:800;color:var(--accent);opacity:.9}
   .btn-back-sm{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .8rem;font-size:.85rem;font-family:'Heebo',sans-serif;cursor:pointer;margin-bottom:.5rem}
   .btn-back-sm:hover{color:var(--text);border-color:var(--text)}
   .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--green);color:#060e1a;font-weight:800;border-radius:100px;padding:.65rem 1.6rem;font-size:.92rem;z-index:999;box-shadow:0 8px 30px rgba(0,216,127,.4);animation:fadeUp .3s ease}
