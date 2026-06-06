@@ -176,6 +176,8 @@ Object.keys(GROUPS_2026).forEach(g => {
   const gm = GROUP_MATCHES.filter(m => m.group === g);
   GROUP_LAST_MATCH[g] = gm.reduce((a,b) => new Date(a.kickoff) > new Date(b.kickoff) ? a : b).kickoff;
 });
+// Last group stage kickoff + 2h buffer for match to finish
+const GROUP_STAGE_END_TS = Math.max(...Object.values(GROUP_LAST_MATCH).map(k => new Date(k).getTime())) + 2 * 60 * 60 * 1000;
 const TOURNAMENT_END = "2026-07-19T23:59:00+03:00";
 const LOCK_MS = 0;
 
@@ -211,6 +213,7 @@ function now() { return Date.now(); }
 function isMatchLocked(kickoff) { return now() >= new Date(kickoff).getTime() - LOCK_MS; }
 function isGlobalLocked() { return isMatchLocked("2026-06-11T22:00:00+03:00"); }
 function isGroupRevealed(group) { return now() >= new Date(GROUP_LAST_MATCH[group]).getTime(); }
+function isGroupStageOver() { return now() >= GROUP_STAGE_END_TS; }
 function isTournamentOver() { return now() >= new Date(TOURNAMENT_END).getTime(); }
 function canSeeMatchBet(matchId, viewerUid, ownerUid) {
   if (viewerUid === ownerUid) return true;
@@ -228,11 +231,15 @@ function canSeeSpecialBet(viewerUid, ownerUid) {
 function getDir(h,a){if(+h>+a)return"home";if(+a>+h)return"away";return"draw";}
 function calcScore(bets={},results={},allP=[]){
   let t=0;
-  Object.keys(GROUPS_2026).forEach(g=>{
-    const picks=bets.groups?.[g]||[],correct=results.groups?.[g]||[];
-    const hits=picks.filter(x=>correct.includes(x)).length;
-    if(hits===1)t+=2;if(hits===2)t+=5;
-  });
+  // Group picks — only after group stage is fully over
+  if(isGroupStageOver()){
+    Object.keys(GROUPS_2026).forEach(g=>{
+      const picks=bets.groups?.[g]||[],correct=results.groups?.[g]||[];
+      const hits=picks.filter(x=>correct.includes(x)).length;
+      if(hits===1)t+=2;if(hits===2)t+=5;
+    });
+  }
+  // Match scores — always, based on whatever results exist
   GROUP_MATCHES.forEach(m=>{
     const bet=bets.matches?.[m.id],real=results.matches?.[m.id];
     if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
@@ -240,8 +247,8 @@ function calcScore(bets={},results={},allP=[]){
       t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=3;
     }
   });
-  // KO match bets (same scoring as group: 1pt direction + 3pt exact)
-  if(bets.koMatches && results.koResults) {
+  // KO match bets
+  if(bets.koMatches && results.koResults){
     Object.keys(bets.koMatches).forEach(id=>{
       const bet=bets.koMatches[id];
       const real=results.koResults?.[id.replace("ko_","")];
@@ -251,12 +258,15 @@ function calcScore(bets={},results={},allP=[]){
       }
     });
   }
-  if(bets.champion&&bets.champion===results.champion)t+=12;
-  if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())t+=12;
-  if(bets.totalGoals!=null&&results.totalGoals!=null&&results.totalGoalsBonus!=null){
-    const myD=Math.abs(+bets.totalGoals-+results.totalGoals);
-    const diffs=allP.map(p=>Math.abs((p.bets?.totalGoals??9999)-+results.totalGoals));
-    if(myD===Math.min(...diffs))t+=+results.totalGoalsBonus;
+  // Champion, golden boot, total goals — only after tournament is over
+  if(isTournamentOver()){
+    if(bets.champion&&bets.champion===results.champion)t+=12;
+    if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())t+=12;
+    if(bets.totalGoals!=null&&results.totalGoals!=null&&results.totalGoalsBonus!=null){
+      const myD=Math.abs(+bets.totalGoals-+results.totalGoals);
+      const diffs=allP.map(p=>Math.abs((p.bets?.totalGoals??9999)-+results.totalGoals));
+      if(myD===Math.min(...diffs))t+=+results.totalGoalsBonus;
+    }
   }
   return t;
 }
