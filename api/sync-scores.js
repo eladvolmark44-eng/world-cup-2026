@@ -33,6 +33,14 @@ const TEAM_NAME_MAP = {
   "Gibraltar": "גיברלטר", "Cayman Islands": "קיימן", "Cayman": "קיימן",
   "Albania": "אלבניה", "Luxembourg": "לוקסמבורג",
   "Central Español": "סנטרל אספניול", "Racing Montevideo": "ראסינג מונטבידאו", "Racing Club de Montevideo": "ראסינג מונטבידאו",
+  "Comoros": "קומורו", "Comores": "קומורו",
+  "Rwanda": "רואנדה",
+  "El Salvador": "אל סלבדור",
+  "Jamaica": "ג'מייקה",
+  "Venezuela": "ונצואלה",
+  "Honduras": "הונדורס",
+  "Aruba": "ארובה",
+  "Curaçao": "קוראסאו",
 };
 
 function toHebrew(name) {
@@ -94,10 +102,17 @@ export default async function handler(req, res) {
       const isLive = ["1H", "2H", "HT", "ET", "BT", "P", "SUSP", "INT", "LIVE"].includes(status);
 
       if ((isFinished || isLive) && goals.home !== null && goals.away !== null) {
-        // Find our internal match ID by matching team names
+        // Store both orderings so we match regardless of how the API assigns home/away
         matches[`${homeName}_${awayName}`] = {
           home: goals.home,
           away: goals.away,
+          status,
+          live: isLive,
+          fixtureId: f.id,
+        };
+        matches[`${awayName}_${homeName}`] = {
+          home: goals.away,
+          away: goals.home,
           status,
           live: isLive,
           fixtureId: f.id,
@@ -111,7 +126,7 @@ export default async function handler(req, res) {
     }
 
     // Also fetch friendly/test match results by date (±3h window)
-    const TEST_DATES = ["2026-06-06"];
+    const TEST_DATES = ["2026-06-06", "2026-06-07"];
     for (const date of TEST_DATES) {
       const dayStart = new Date(date + "T00:00:00+03:00").getTime();
       const dayEnd   = new Date(date + "T23:59:00+03:00").getTime();
@@ -149,15 +164,22 @@ export default async function handler(req, res) {
       {id:"T0",home:"בלגיה",away:"תוניסיה"},
       {id:"T6",home:"סנטרל אספניול",away:"ראסינג מונטבידאו"},
       {id:"T4",home:"ארמניה",away:"קזחסטן"},
+      {id:"T12",home:"קומורו",away:"רואנדה"},
+      {id:"T10",home:"גיברלטר",away:"קיימן"},
       {id:"T5",home:"וויילס",away:"רומניה"},
       {id:"T1",home:"פורטוגל",away:"צ'ילה"},
-      {id:"T2",home:'ארה"ב',away:"גרמניה"},
-      {id:"T3",home:"אנגליה",away:"ניו זילנד"},
-      {id:"T7",home:"שוויץ",away:"אוסטרליה"},
-      {id:"T8",home:"בוליביה",away:"סקוטלנד"},
-      {id:"T9",home:"ברזיל",away:"מצרים"},
-      {id:"T10",home:"גיברלטר",away:"קיימן"},
       {id:"T11",home:"אלבניה",away:"לוקסמבורג"},
+      {id:"T2",home:'ארה"ב',away:"גרמניה"},
+      {id:"T7",home:"שוויץ",away:"אוסטרליה"},
+      {id:"T13",home:"פנמה",away:"בוסניה והרצגובינה"},
+      {id:"T3",home:"אנגליה",away:"ניו זילנד"},
+      {id:"T8",home:"בוליביה",away:"סקוטלנד"},
+      {id:"T14",home:"קטאר",away:"אל סלבדור"},
+      {id:"T15",home:"ג'מייקה",away:"דרום אפריקה"},
+      {id:"T9",home:"ברזיל",away:"מצרים"},
+      {id:"T16",home:"ונצואלה",away:"טורקיה"},
+      {id:"T17",home:"ארגנטינה",away:"הונדורס"},
+      {id:"T18",home:"קוראסאו",away:"ארובה"},
       {id:"A1",home:"מקסיקו",away:"דרום אפריקה"},
       {id:"A2",home:"קוריאה",away:"צ'כיה"},
       {id:"B1",home:"קנדה",away:"בוסניה והרצגובינה"},
