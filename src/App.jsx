@@ -1076,22 +1076,35 @@ export default function App(){
 
         // Fetch from multiple sources with fallback (ESPN→SofaScore→TheSportsDB→API-Football)
         const fetchWithFallback = async (espnSlugs, iso, ymd) => {
-          // 1. ESPN — try all slugs and merge, only skip if we got live/finished data
-          const espnMerged = {};
+          // 1. ESPN — try all slugs and merge scores
+          const result = {};
           for(const slug of espnSlugs){
             try{
               const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
               const d=await r.json();
-              if(d.events?.length) Object.assign(espnMerged, parseESPN(d.events));
+              if(d.events?.length) Object.assign(result, parseESPN(d.events));
             }catch(e){}
           }
-          if(Object.keys(espnMerged).length) return espnMerged;
-          // 2. SofaScore
+          // 2. SofaScore — always try, supplements ESPN with red cards; primary if ESPN empty
           try{
             const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,{headers:{"User-Agent":"Mozilla/5.0"}});
             const d=await r.json();
-            if(d.events?.length){ const p=parseSofaScore(d.events); if(Object.keys(p).length) return p; }
+            if(d.events?.length){
+              const sofa=parseSofaScore(d.events);
+              if(Object.keys(result).length){
+                // ESPN has scores — patch in red cards from SofaScore
+                for(const [key,val] of Object.entries(sofa)){
+                  if(result[key]){
+                    result[key].homeRedCards=val.homeRedCards;
+                    result[key].awayRedCards=val.awayRedCards;
+                  }
+                }
+              } else {
+                Object.assign(result, sofa);
+              }
+            }
           }catch(e){}
+          if(Object.keys(result).length) return result;
           // 3. TheSportsDB
           try{
             const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
