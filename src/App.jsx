@@ -289,11 +289,13 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
       <div className="team-grid">
         {teams.map(t=>{
           const idx=(picks||[]).indexOf(t);
+          const resolved=teamNames?.[t]||t;
+          const isUnknownPlayoff=resolved.startsWith("פלייאוף");
           return(
-            <button key={t} className={`team-btn ${idx>=0?"sel":""} ${locked?"locked":""}`} onClick={()=>toggle(t)}>
+            <button key={t} className={`team-btn ${idx>=0?"sel":""} ${locked||isUnknownPlayoff?"locked":""} ${isUnknownPlayoff?"playoff-tbd":""}`} onClick={()=>toggle(t)} disabled={isUnknownPlayoff}>
               {idx===0&&<span className="badge">1</span>}
               {idx===1&&<span className="badge">2</span>}
-              {withFlag(teamNames?.[t]||t)}
+              {withFlag(resolved)}
             </button>
           );
         })}
@@ -475,7 +477,11 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
       {tab==="matches"&&(
         <div className="scroll-area">
           <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה 5 דק׳ לפני כל משחק</p>
-          {GROUP_MATCHES.map(m=>(
+          {GROUP_MATCHES.filter(m=>{
+            const home=teamNames?.[m.home]||m.home;
+            const away=teamNames?.[m.away]||m.away;
+            return !home.startsWith("פלייאוף")&&!away.startsWith("פלייאוף");
+          }).map(m=>(
             <MatchBetRow key={m.id} match={m}
               savedBet={user.bets?.matches?.[m.id]}
               onSave={onSaveMatch}
@@ -1143,6 +1149,7 @@ const STYLES=`
   .team-btn.sel{background:rgba(0,216,127,.15);border-color:var(--green);color:var(--green);font-weight:700}
   .team-btn.sm{font-size:.73rem;padding:.32rem .35rem}
   .team-btn.locked,.team-btn.readonly{cursor:default}
+  .team-btn.playoff-tbd{opacity:.35;font-style:italic;border-style:dashed}
   .team-btn.correct{background:rgba(0,216,127,.2);border-color:var(--green);color:var(--green)}
   .badge{position:absolute;top:2px;left:4px;font-size:.58rem;color:var(--gold);font-weight:900}
   .hint{font-size:.72rem;color:var(--muted);margin-top:.4rem}
