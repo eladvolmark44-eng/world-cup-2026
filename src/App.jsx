@@ -807,8 +807,8 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
       {nothingRevealed ? (
         <div className="nothing-revealed">
           <div style={{fontSize:"2.5rem"}}>🔒</div>
-          <p>עדיין לא הסתיים אף משחק</p>
-          <p className="section-note">הימורים ייחשפו אוטומטית אחרי כל משחק</p>
+          <p>עדיין לא התחיל אף משחק</p>
+          <p className="section-note">הימורים ייחשפו אוטומטית בשריקת הפתיחה של כל משחק</p>
         </div>
       ) : (
         <>
