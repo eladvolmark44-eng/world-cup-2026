@@ -652,7 +652,7 @@ function Leaderboard({participants,results,onSelectPlayer}){
   );
 }
 
-function ScheduleView({results,teamNames}){
+function ScheduleView({results,teamNames,odds}){
   const [filter,setFilter]=useState("שלב בתים");
 
   // Knockout matches stored separately from API sync
@@ -669,6 +669,7 @@ function ScheduleView({results,teamNames}){
     const locked = m.kickoff ? isMatchLocked(m.kickoff) : true;
     const homeName = teamNames?.[m.home]||m.home||"?";
     const awayName = teamNames?.[m.away]||m.away||"?";
+    const matchOdds = !hasRes ? odds?.[`${m.home}_${m.away}`] : null;
     return(
       <div key={m.id||idx} className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
         <div className="sched-date">
@@ -682,6 +683,13 @@ function ScheduleView({results,teamNames}){
           {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>:<span className="sched-vs">vs</span>}
           <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}</span>
         </div>
+        {matchOdds&&(
+          <div className="match-odds" style={{marginTop:".3rem",marginBottom:0}}>
+            <span className="odds-cell"><span className="odds-label">בית</span><span className="odds-val">{matchOdds.home}</span></span>
+            <span className="odds-cell"><span className="odds-label">תיקו</span><span className="odds-val">{matchOdds.draw}</span></span>
+            <span className="odds-cell"><span className="odds-label">חוץ</span><span className="odds-val">{matchOdds.away}</span></span>
+          </div>
+        )}
       </div>
     );
   };
@@ -1154,7 +1162,7 @@ export default function App(){
                 <h2>📅 לוח משחקים</h2>
                 <span className="sync-badge">🔄 מתעדכן אוטומטית</span>
               </div>
-              <ScheduleView results={game.results||{}} teamNames={teamNames}/>
+              <ScheduleView results={game.results||{}} teamNames={teamNames} odds={odds}/>
             </div>
           )}
           {tab==="mybets"&&(
