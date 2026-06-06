@@ -999,35 +999,103 @@ export default function App(){
           syncedBy: uid,
         });
 
-        // ── ESPN API helper (no key, no daily limit) ───────────────
+        // ── Score source parsers ────────────────────────────────────
+        const now2 = new Date();
         const yyyymmdd = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-        const parseESPN = events => {
-          const res = {};
-          for (const ev of (events||[])) {
-            const comp = ev.competitions?.[0];
-            if (!comp) continue;
-            const state = comp.status?.type?.state;
-            const isFinished = state==="post";
-            const isLive = state==="in";
-            if (!isFinished && !isLive) continue;
-            const homeC = comp.competitors?.find(c=>c.homeAway==="home");
-            const awayC = comp.competitors?.find(c=>c.homeAway==="away");
-            if (!homeC||!awayC) continue;
-            const hg=parseInt(homeC.score,10), ag=parseInt(awayC.score,10);
-            if (isNaN(hg)||isNaN(ag)) continue;
-            const h=heb(homeC.team.displayName), a=heb(awayC.team.displayName);
-            const status=isFinished?"FT":"LIVE";
-            res[`${h}_${a}`]={home:hg,away:ag,status,live:isLive};
-            res[`${a}_${h}`]={home:ag,away:hg,status,live:isLive};
+        const isoDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+        const addBothKeys = (res, h, a, hg, ag, status, live) => {
+          res[`${h}_${a}`]={home:hg,away:ag,status,live};
+          res[`${a}_${h}`]={home:ag,away:hg,status,live};
+        };
+
+        const parseESPN = evs => {
+          const res={};
+          for(const ev of(evs||[])){
+            const comp=ev.competitions?.[0]; if(!comp)continue;
+            const state=comp.status?.type?.state;
+            const fin=state==="post", live=state==="in";
+            if(!fin&&!live)continue;
+            const hC=comp.competitors?.find(c=>c.homeAway==="home");
+            const aC=comp.competitors?.find(c=>c.homeAway==="away");
+            if(!hC||!aC)continue;
+            const hg=parseInt(hC.score,10),ag=parseInt(aC.score,10);
+            if(isNaN(hg)||isNaN(ag))continue;
+            addBothKeys(res,heb(hC.team.displayName),heb(aC.team.displayName),hg,ag,fin?"FT":"LIVE",live);
           }
           return res;
         };
 
-        const today = yyyymmdd(new Date());
+        const parseSofaScore = evs => {
+          const res={};
+          for(const ev of(evs||[])){
+            const t=ev.status?.type;
+            const fin=t==="finished", live=t==="inprogress";
+            if(!fin&&!live)continue;
+            const hg=ev.homeScore?.current, ag=ev.awayScore?.current;
+            if(hg==null||ag==null)continue;
+            addBothKeys(res,heb(ev.homeTeam?.name),heb(ev.awayTeam?.name),hg,ag,fin?"FT":"LIVE",live);
+          }
+          return res;
+        };
+
+        const parseSportsDB = evs => {
+          const res={};
+          for(const ev of(evs||[])){
+            const s=ev.strStatus;
+            const fin=["FT","AET","PEN"].includes(s), live=["1H","2H","HT","ET","P","LIVE"].includes(s);
+            if(!fin&&!live)continue;
+            const hg=parseInt(ev.intHomeScore,10),ag=parseInt(ev.intAwayScore,10);
+            if(isNaN(hg)||isNaN(ag))continue;
+            addBothKeys(res,heb(ev.strHomeTeam),heb(ev.strAwayTeam),hg,ag,fin?"FT":"LIVE",live);
+          }
+          return res;
+        };
+
+        // Fetch from multiple sources with fallback (ESPN→SofaScore→TheSportsDB→API-Football)
+        const fetchWithFallback = async (espnSlugs, iso, ymd) => {
+          // 1. ESPN
+          for(const slug of espnSlugs){
+            try{
+              const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
+              const d=await r.json();
+              if(d.events?.length) return parseESPN(d.events);
+            }catch(e){}
+          }
+          // 2. SofaScore
+          try{
+            const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,{headers:{"User-Agent":"Mozilla/5.0"}});
+            const d=await r.json();
+            if(d.events?.length) return parseSofaScore(d.events);
+          }catch(e){}
+          // 3. TheSportsDB
+          try{
+            const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
+            const d=await r.json();
+            if(d.events?.length) return parseSportsDB(d.events);
+          }catch(e){}
+          // 4. API-Football (last resort, uses daily quota)
+          try{
+            const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
+            const d=await r.json();
+            const res={};
+            for(const f of(d.response||[])){
+              const{fixture:fi,teams,goals}=f;
+              const s=fi.status.short;
+              const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
+              if((fin||live)&&goals.home!=null&&goals.away!=null)
+                addBothKeys(res,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live);
+            }
+            return res;
+          }catch(e){}
+          return {};
+        };
+
+        const today = yyyymmdd(now2);
+        const todayISO = isoDate(now2);
         const firstWCKickoff = Math.min(...GROUP_MATCHES.filter(m=>m.group!=="יזיזות").map(m=>new Date(m.kickoff).getTime()));
         const wcStarted = Date.now() >= firstWCKickoff - 2*60*60*1000;
 
-        let fixtures = [];
         let standingsData = { response: [] };
 
         const gameSnap = await getDoc(doc(db,"mundial2026","game"));
@@ -1036,27 +1104,17 @@ export default function App(){
         // ── MATCHES ────────────────────────────────────────────────
         const byKey = {};
 
-        // Friendly/test matches via ESPN (no rate limit)
+        // Friendly/test matches — ESPN→SofaScore→TheSportsDB→API-Football
         const hasFriendly = GROUP_MATCHES.some(m=>m.group==="יזיזות"&&Math.abs(Date.now()-new Date(m.kickoff).getTime())<3*60*60*1000);
         if (hasFriendly) {
-          for (const slug of ["fifa.friendly","intl.friendlies"]) {
-            try {
-              const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${today}`);
-              const d=await r.json();
-              if (d.events?.length) { Object.assign(byKey, parseESPN(d.events)); break; }
-            } catch(e) { console.warn(`ESPN ${slug}:`, e.message); }
-          }
+          Object.assign(byKey, await fetchWithFallback(["fifa.friendly","intl.friendlies"], todayISO, today));
         }
 
-        // WC matches via ESPN (after tournament starts)
+        // WC matches — ESPN→SofaScore→TheSportsDB→API-Football
         if (wcStarted) {
-          try {
-            const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${today}`);
-            const d=await r.json();
-            Object.assign(byKey, parseESPN(d.events||[]));
-          } catch(e) { console.warn("ESPN WC:", e.message); }
+          Object.assign(byKey, await fetchWithFallback(["fifa.world"], todayISO, today));
 
-          // Standings via API-Football, max once per hour to conserve quota
+          // Standings via API-Football, max once per hour
           const lastSS = syncData.lastStandingsSync ? new Date(syncData.lastStandingsSync).getTime() : 0;
           if (Date.now()-lastSS > 60*60*1000) {
             try {
@@ -1066,6 +1124,8 @@ export default function App(){
             } catch(e) {}
           }
         }
+
+        const fixtures = [];
         const curMatches = cur.results?.matches || {};
         const updatedMatches = {...curMatches};
         let matchChanged = false;
