@@ -966,15 +966,22 @@ export default function App(){
 
     const syncScores = async (uid) => {
       try {
-        // ── LEADER LOCK: only one user syncs at a time ──────────────
-        // Check if another client synced recently (within last 90 seconds)
+        // ── Only sync during active match windows ───────────────────
+        const now = Date.now();
+        const hasActiveMatch = GROUP_MATCHES.some(m => {
+          const t = new Date(m.kickoff).getTime();
+          return now >= t - 5*60*1000 && now <= t + 130*60*1000; // 5min before to 130min after
+        });
+        if (!hasActiveMatch) return;
+
+        // ── LEADER LOCK: only one client calls ESPN at a time ───────
         const syncSnap = await getDoc(doc(db,"mundial2026","sync"));
         const syncData = syncSnap.exists() ? syncSnap.data() : {};
         const lastSync = syncData.lastSync ? new Date(syncData.lastSync).getTime() : 0;
-        const secondsSinceLast = (Date.now() - lastSync) / 1000;
+        const secondsSinceLast = (now - lastSync) / 1000;
 
-        // If synced less than 5min ago by someone else, skip — read from Firebase instead
-        if (secondsSinceLast < 300 && syncData.syncedBy !== uid) return;
+        // If synced less than 45s ago by someone else, skip — read from Firebase instead
+        if (secondsSinceLast < 45 && syncData.syncedBy !== uid) return;
 
         // Claim the sync slot
         await setDoc(doc(db,"mundial2026","sync"), {
@@ -1144,7 +1151,7 @@ export default function App(){
     };
 
     syncScores(auth.currentUser?.uid||"anon");
-    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 5 * 60 * 1000);
+    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 60 * 1000);
     return()=>{u1();u2();clearInterval(poll);};
   },[]);
 
