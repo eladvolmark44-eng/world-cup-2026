@@ -717,7 +717,7 @@ function ScheduleView({results,teamNames,odds}){
       <div key={m.id||idx} className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
         <div className="sched-date">
           {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?groupLabel(m.group):m.stage||""}
-          {isLive&&<span className="live-badge"> 🔴 חי</span>}
+          {isLive&&<span className="live-badge"> 🔴 {res?.minute ? `${res.minute}'` : 'חי'}</span>}
           {isDone&&<span className="done-badge"> ✓ סיים</span>}
           {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
         </div>
@@ -1020,9 +1020,9 @@ export default function App(){
         const yyyymmdd = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
         const isoDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-        const addBothKeys = (res, h, a, hg, ag, status, live) => {
-          res[`${h}_${a}`]={home:hg,away:ag,status,live};
-          res[`${a}_${h}`]={home:ag,away:hg,status,live};
+        const addBothKeys = (res, h, a, hg, ag, status, live, minute) => {
+          res[`${h}_${a}`]={home:hg,away:ag,status,live,minute:minute??null};
+          res[`${a}_${h}`]={home:ag,away:hg,status,live,minute:minute??null};
         };
 
         const parseESPN = evs => {
@@ -1037,7 +1037,8 @@ export default function App(){
             if(!hC||!aC)continue;
             const hg=parseInt(hC.score,10),ag=parseInt(aC.score,10);
             if(isNaN(hg)||isNaN(ag))continue;
-            addBothKeys(res,heb(hC.team.displayName),heb(aC.team.displayName),hg,ag,fin?"FT":"LIVE",live);
+            const minute=live ? (parseInt(comp.status?.displayClock,10)||null) : null;
+            addBothKeys(res,heb(hC.team.displayName),heb(aC.team.displayName),hg,ag,fin?"FT":"LIVE",live,minute);
           }
           return res;
         };
@@ -1050,7 +1051,8 @@ export default function App(){
             if(!fin&&!live)continue;
             const hg=ev.homeScore?.current, ag=ev.awayScore?.current;
             if(hg==null||ag==null)continue;
-            addBothKeys(res,heb(ev.homeTeam?.name),heb(ev.awayTeam?.name),hg,ag,fin?"FT":"LIVE",live);
+            const minute=live ? (ev.time?.played??null) : null;
+            addBothKeys(res,heb(ev.homeTeam?.name),heb(ev.awayTeam?.name),hg,ag,fin?"FT":"LIVE",live,minute);
           }
           return res;
         };
@@ -1063,32 +1065,35 @@ export default function App(){
             if(!fin&&!live)continue;
             const hg=parseInt(ev.intHomeScore,10),ag=parseInt(ev.intAwayScore,10);
             if(isNaN(hg)||isNaN(ag))continue;
-            addBothKeys(res,heb(ev.strHomeTeam),heb(ev.strAwayTeam),hg,ag,fin?"FT":"LIVE",live);
+            const minute=live ? (parseInt(ev.intProgress,10)||null) : null;
+            addBothKeys(res,heb(ev.strHomeTeam),heb(ev.strAwayTeam),hg,ag,fin?"FT":"LIVE",live,minute);
           }
           return res;
         };
 
         // Fetch from multiple sources with fallback (ESPN→SofaScore→TheSportsDB→API-Football)
         const fetchWithFallback = async (espnSlugs, iso, ymd) => {
-          // 1. ESPN
+          // 1. ESPN — try all slugs and merge, only skip if we got live/finished data
+          const espnMerged = {};
           for(const slug of espnSlugs){
             try{
               const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
               const d=await r.json();
-              if(d.events?.length) return parseESPN(d.events);
+              if(d.events?.length) Object.assign(espnMerged, parseESPN(d.events));
             }catch(e){}
           }
+          if(Object.keys(espnMerged).length) return espnMerged;
           // 2. SofaScore
           try{
             const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,{headers:{"User-Agent":"Mozilla/5.0"}});
             const d=await r.json();
-            if(d.events?.length) return parseSofaScore(d.events);
+            if(d.events?.length){ const p=parseSofaScore(d.events); if(Object.keys(p).length) return p; }
           }catch(e){}
           // 3. TheSportsDB
           try{
             const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
             const d=await r.json();
-            if(d.events?.length) return parseSportsDB(d.events);
+            if(d.events?.length){ const p=parseSportsDB(d.events); if(Object.keys(p).length) return p; }
           }catch(e){}
           // 4. API-Football (last resort, uses daily quota)
           try{
@@ -1099,8 +1104,10 @@ export default function App(){
               const{fixture:fi,teams,goals}=f;
               const s=fi.status.short;
               const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
-              if((fin||live)&&goals.home!=null&&goals.away!=null)
-                addBothKeys(res,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live);
+              if((fin||live)&&goals.home!=null&&goals.away!=null){
+                const minute=live ? (fi.status.elapsed??null) : null;
+                addBothKeys(res,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+              }
             }
             return res;
           }catch(e){}
@@ -1149,7 +1156,7 @@ export default function App(){
           const key = `${m.home}_${m.away}`;
           if (byKey[key]) {
             const prev = curMatches[m.id], next = byKey[key];
-            if (!prev || prev.home!==next.home || prev.away!==next.away || prev.live!==next.live) {
+            if (!prev || prev.home!==next.home || prev.away!==next.away || prev.live!==next.live || prev.minute!==next.minute) {
               updatedMatches[m.id] = next; matchChanged = true;
             }
           }
@@ -1237,7 +1244,7 @@ export default function App(){
     };
 
     syncScores(auth.currentUser?.uid||"anon");
-    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 60 * 1000);
+    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 30 * 1000);
     return()=>{u1();u2();clearInterval(poll);};
   },[]);
 

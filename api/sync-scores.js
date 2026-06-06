@@ -103,11 +103,13 @@ export default async function handler(req, res) {
 
       if ((isFinished || isLive) && goals.home !== null && goals.away !== null) {
         // Store both orderings so we match regardless of how the API assigns home/away
+        const minute = isLive ? (f.status.elapsed ?? null) : null;
         matches[`${homeName}_${awayName}`] = {
           home: goals.home,
           away: goals.away,
           status,
           live: isLive,
+          minute,
           fixtureId: f.id,
         };
         matches[`${awayName}_${homeName}`] = {
@@ -115,6 +117,7 @@ export default async function handler(req, res) {
           away: goals.home,
           status,
           live: isLive,
+          minute,
           fixtureId: f.id,
         };
 
@@ -146,8 +149,9 @@ export default async function handler(req, res) {
             const isLive = ["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
             if ((isFinished || isLive) && goals.home !== null && goals.away !== null) {
               // Store both orderings so we match regardless of how API assigns home/away
-              matches[`${homeName}_${awayName}`] = { home: goals.home, away: goals.away, status, live: isLive, fixtureId: f.id };
-              matches[`${awayName}_${homeName}`] = { home: goals.away, away: goals.home, status, live: isLive, fixtureId: f.id };
+              const minute = isLive ? (f.status.elapsed ?? null) : null;
+              matches[`${homeName}_${awayName}`] = { home: goals.home, away: goals.away, status, live: isLive, minute, fixtureId: f.id };
+              matches[`${awayName}_${homeName}`] = { home: goals.away, away: goals.home, status, live: isLive, minute, fixtureId: f.id };
             }
           }
         }
@@ -265,6 +269,7 @@ export default async function handler(req, res) {
           away: matches[key].away,
           status: matches[key].status,
           live: matches[key].live || false,
+          minute: matches[key].minute ?? null,
         };
         updatedCount++;
       }
