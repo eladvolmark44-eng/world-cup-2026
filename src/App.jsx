@@ -982,68 +982,72 @@ export default function App(){
           syncedBy: uid,
         });
 
-        // Only call WC APIs once the tournament has started (saves daily quota)
+        // ── ESPN API helper (no key, no daily limit) ───────────────
+        const yyyymmdd = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+        const parseESPN = events => {
+          const res = {};
+          for (const ev of (events||[])) {
+            const comp = ev.competitions?.[0];
+            if (!comp) continue;
+            const state = comp.status?.type?.state;
+            const isFinished = state==="post";
+            const isLive = state==="in";
+            if (!isFinished && !isLive) continue;
+            const homeC = comp.competitors?.find(c=>c.homeAway==="home");
+            const awayC = comp.competitors?.find(c=>c.homeAway==="away");
+            if (!homeC||!awayC) continue;
+            const hg=parseInt(homeC.score,10), ag=parseInt(awayC.score,10);
+            if (isNaN(hg)||isNaN(ag)) continue;
+            const h=heb(homeC.team.displayName), a=heb(awayC.team.displayName);
+            const status=isFinished?"FT":"LIVE";
+            res[`${h}_${a}`]={home:hg,away:ag,status,live:isLive};
+            res[`${a}_${h}`]={home:ag,away:hg,status,live:isLive};
+          }
+          return res;
+        };
+
+        const today = yyyymmdd(new Date());
         const firstWCKickoff = Math.min(...GROUP_MATCHES.filter(m=>m.group!=="יזיזות").map(m=>new Date(m.kickoff).getTime()));
         const wcStarted = Date.now() >= firstWCKickoff - 2*60*60*1000;
 
         let fixtures = [];
         let standingsData = { response: [] };
 
-        if (wcStarted) {
-          // 1. Fetch fixtures (scores)
-          const res = await fetch(
-            "https://v3.football.api-sports.io/fixtures?league=1&season=2026",
-            { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
-          );
-          const data = await res.json();
-          fixtures = data.response || [];
-
-          // 2. Fetch standings (group qualifiers + playoff names)
-          const res2 = await fetch(
-            "https://v3.football.api-sports.io/standings?league=1&season=2026",
-            { headers: { "x-apisports-key": "2150fd15cbccf603f549914910637735" } }
-          );
-          standingsData = await res2.json();
-        }
-
         const gameSnap = await getDoc(doc(db,"mundial2026","game"));
         const cur = gameSnap.exists() ? gameSnap.data() : {};
 
         // ── MATCHES ────────────────────────────────────────────────
         const byKey = {};
-        for (const f of fixtures) {
-          const {fixture:fi, teams, goals} = f;
-          const status = fi.status.short;
-          const isFinished = ["FT","AET","PEN"].includes(status);
-          const isLive = ["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
-          if ((isFinished||isLive) && goals.home!=null && goals.away!=null) {
-            byKey[`${heb(teams.home.name)}_${heb(teams.away.name)}`] = {home:goals.home,away:goals.away,status,live:isLive};
+
+        // Friendly/test matches via ESPN (no rate limit)
+        const hasFriendly = GROUP_MATCHES.some(m=>m.group==="יזיזות"&&Math.abs(Date.now()-new Date(m.kickoff).getTime())<3*60*60*1000);
+        if (hasFriendly) {
+          for (const slug of ["fifa.friendly","intl.friendlies"]) {
+            try {
+              const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${today}`);
+              const d=await r.json();
+              if (d.events?.length) { Object.assign(byKey, parseESPN(d.events)); break; }
+            } catch(e) { console.warn(`ESPN ${slug}:`, e.message); }
           }
         }
-        // Fetch friendly/test match results by date (only during active window ±3h)
-        const testDates = [...new Set(
-          GROUP_MATCHES.filter(m=>m.group==="יזיזות").filter(m=>{
-            const t=new Date(m.kickoff).getTime();
-            return Date.now()>=t-3*60*60*1000 && Date.now()<=t+3*60*60*1000;
-          }).map(m=>m.kickoff.split("T")[0])
-        )];
-        for(const date of testDates){
-          try{
-            const rf=await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}`,{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
-            const df=await rf.json();
-            for(const f of (df.response||[])){
-              const {fixture:fi,teams,goals}=f;
-              const status=fi.status.short;
-              const isFinished=["FT","AET","PEN"].includes(status);
-              const isLive=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(status);
-              if((isFinished||isLive)&&goals.home!=null&&goals.away!=null){
-                const h=heb(teams.home.name), a=heb(teams.away.name);
-                // Store both orderings so we match regardless of how API assigns home/away
-                byKey[`${h}_${a}`]={home:goals.home,away:goals.away,status,live:isLive};
-                byKey[`${a}_${h}`]={home:goals.away,away:goals.home,status,live:isLive};
-              }
-            }
-          }catch(e){ console.warn("Date fixture fetch failed:", e.message); }
+
+        // WC matches via ESPN (after tournament starts)
+        if (wcStarted) {
+          try {
+            const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${today}`);
+            const d=await r.json();
+            Object.assign(byKey, parseESPN(d.events||[]));
+          } catch(e) { console.warn("ESPN WC:", e.message); }
+
+          // Standings via API-Football, max once per hour to conserve quota
+          const lastSS = syncData.lastStandingsSync ? new Date(syncData.lastStandingsSync).getTime() : 0;
+          if (Date.now()-lastSS > 60*60*1000) {
+            try {
+              const rs=await fetch("https://v3.football.api-sports.io/standings?league=1&season=2026",{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
+              standingsData=await rs.json();
+              await setDoc(doc(db,"mundial2026","sync"),{lastStandingsSync:new Date().toISOString()},{merge:true});
+            } catch(e) {}
+          }
         }
         const curMatches = cur.results?.matches || {};
         const updatedMatches = {...curMatches};
