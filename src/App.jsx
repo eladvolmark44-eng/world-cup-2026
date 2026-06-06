@@ -792,11 +792,11 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
       <div className="revealed-summary">
         <div className="revealed-item">
           <span className="rev-label">⚽ משחקים גלויים</span>
-          <span className="rev-count">{GROUP_MATCHES.length} / {revealedMatches.length}</span>
+          <span className="rev-count" dir="ltr">{revealedMatches.length} / {GROUP_MATCHES.length}</span>
         </div>
         <div className="revealed-item">
           <span className="rev-label">🏠 בתים גלויים</span>
-          <span className="rev-count">12 / {revealedGroups.length}</span>
+          <span className="rev-count" dir="ltr">{revealedGroups.length} / 12</span>
         </div>
         <div className="revealed-item">
           <span className="rev-label">🏆 אלופה ומלך שערים</span>
