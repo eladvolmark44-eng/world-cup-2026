@@ -385,8 +385,9 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
           const idx=(picks||[]).indexOf(t);
           const resolved=teamNames?.[t]||t;
           const isUnknownPlayoff=resolved.startsWith("פלייאוף");
+          const maxReached=(picks||[]).length>=2 && idx<0;
           return(
-            <button key={t} className={`team-btn ${idx>=0?"sel":""} ${locked||isUnknownPlayoff?"locked":""} ${isUnknownPlayoff?"playoff-tbd":""}`} onClick={()=>toggle(t)} disabled={isUnknownPlayoff}>
+            <button key={t} className={`team-btn ${idx>=0?"sel":""} ${locked||isUnknownPlayoff||maxReached?"locked":""} ${isUnknownPlayoff?"playoff-tbd":""}`} onClick={()=>toggle(t)} disabled={isUnknownPlayoff||maxReached}>
               {idx===0&&<span className="badge">1</span>}
               {idx===1&&<span className="badge">2</span>}
               {withFlag(resolved)}
