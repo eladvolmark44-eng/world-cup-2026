@@ -83,10 +83,10 @@ const GROUP_MATCHES = [
   {id:"A2",group:"A",home:"קוריאה",away:"צ'כיה",date:"12/06",kickoff:"2026-06-12T05:00:00+03:00"},
   {id:"B1",group:"B",home:"קנדה",away:"בוסניה והרצגובינה",date:"12/06",kickoff:"2026-06-12T22:00:00+03:00"},
   {id:"D1",group:"D",home:'ארה"ב',away:"פרגוואי",date:"13/06",kickoff:"2026-06-13T04:00:00+03:00"},
+  {id:"B2",group:"B",home:"קטאר",away:"שוויץ",date:"13/06",kickoff:"2026-06-13T22:00:00+03:00"},
   {id:"C1",group:"C",home:"ברזיל",away:"מרוקו",date:"14/06",kickoff:"2026-06-14T01:00:00+03:00"},
   {id:"D2",group:"D",home:"אוסטרליה",away:"טורקיה",date:"14/06",kickoff:"2026-06-14T01:00:00+03:00"},
   {id:"C2",group:"C",home:"האיטי",away:"סקוטלנד",date:"14/06",kickoff:"2026-06-14T04:00:00+03:00"},
-  {id:"B2",group:"B",home:"קטאר",away:"שוויץ",date:"13/06",kickoff:"2026-06-13T22:00:00+03:00"},
   {id:"E1",group:"E",home:"גרמניה",away:"קוראסאו",date:"14/06",kickoff:"2026-06-14T20:00:00+03:00"},
   {id:"E2",group:"E",home:"חוף השנהב",away:"אקוודור",date:"14/06",kickoff:"2026-06-14T23:00:00+03:00"},
   {id:"F1",group:"F",home:"הולנד",away:"יפן",date:"14/06",kickoff:"2026-06-14T23:00:00+03:00"},
@@ -119,32 +119,32 @@ const GROUP_MATCHES = [
   {id:"H3",group:"H",home:"ספרד",away:"ערב הסעודית",date:"21/06",kickoff:"2026-06-21T22:00:00+03:00"},
   {id:"H4",group:"H",home:"אורוגוואי",away:"כף ורדה",date:"22/06",kickoff:"2026-06-22T01:00:00+03:00"},
   {id:"G4",group:"G",home:"מצרים",away:"איראן",date:"22/06",kickoff:"2026-06-22T04:00:00+03:00"},
-  {id:"I3",group:"I",home:"צרפת",away:"עיראק",date:"23/06",kickoff:"2026-06-23T00:00:00+03:00"},
   {id:"J3",group:"J",home:"ארגנטינה",away:"אוסטריה",date:"22/06",kickoff:"2026-06-22T22:00:00+03:00"},
+  {id:"I3",group:"I",home:"צרפת",away:"עיראק",date:"23/06",kickoff:"2026-06-23T00:00:00+03:00"},
   {id:"J4",group:"J",home:"אלג'יריה",away:"ירדן",date:"23/06",kickoff:"2026-06-23T01:00:00+03:00"},
   {id:"I4",group:"I",home:"נורווגיה",away:"סנגל",date:"23/06",kickoff:"2026-06-23T03:00:00+03:00"},
   {id:"L3",group:"L",home:"אנגליה",away:"גאנה",date:"23/06",kickoff:"2026-06-23T19:00:00+03:00"},
   {id:"K3",group:"K",home:"פורטוגל",away:"אוזבקיסטן",date:"23/06",kickoff:"2026-06-23T20:00:00+03:00"},
-  {id:"K4",group:"K",home:"קולומביה",away:"קונגו דמוקרטית",date:"24/06",kickoff:"2026-06-24T05:00:00+03:00"},
   {id:"L4",group:"L",home:"קרואטיה",away:"פנמה",date:"24/06",kickoff:"2026-06-24T04:00:00+03:00"},
-  {id:"A5",group:"A",home:"מקסיקו",away:"צ'כיה",date:"25/06",kickoff:"2026-06-25T00:00:00+03:00"},
-  {id:"A6",group:"A",home:"קוריאה",away:"דרום אפריקה",date:"25/06",kickoff:"2026-06-25T00:00:00+03:00"},
+  {id:"K4",group:"K",home:"קולומביה",away:"קונגו דמוקרטית",date:"24/06",kickoff:"2026-06-24T05:00:00+03:00"},
   {id:"B5",group:"B",home:"שוויץ",away:"קנדה",date:"24/06",kickoff:"2026-06-24T22:00:00+03:00"},
   {id:"B6",group:"B",home:"בוסניה והרצגובינה",away:"קטאר",date:"24/06",kickoff:"2026-06-24T22:00:00+03:00"},
+  {id:"A5",group:"A",home:"מקסיקו",away:"צ'כיה",date:"25/06",kickoff:"2026-06-25T00:00:00+03:00"},
+  {id:"A6",group:"A",home:"קוריאה",away:"דרום אפריקה",date:"25/06",kickoff:"2026-06-25T00:00:00+03:00"},
   {id:"C5",group:"C",home:"ברזיל",away:"סקוטלנד",date:"26/06",kickoff:"2026-06-26T00:00:00+03:00"},
   {id:"C6",group:"C",home:"מרוקו",away:"האיטי",date:"26/06",kickoff:"2026-06-26T00:00:00+03:00"},
+  {id:"F5",group:"F",home:"יפן",away:"שוודיה",date:"26/06",kickoff:"2026-06-26T02:00:00+03:00"},
+  {id:"F6",group:"F",home:"תוניסיה",away:"הולנד",date:"26/06",kickoff:"2026-06-26T02:00:00+03:00"},
   {id:"D5",group:"D",home:'ארה"ב',away:"טורקיה",date:"26/06",kickoff:"2026-06-26T04:00:00+03:00"},
   {id:"D6",group:"D",home:"אוסטרליה",away:"פרגוואי",date:"26/06",kickoff:"2026-06-26T04:00:00+03:00"},
   {id:"E5",group:"E",home:"גרמניה",away:"אקוודור",date:"26/06",kickoff:"2026-06-26T22:00:00+03:00"},
   {id:"E6",group:"E",home:"חוף השנהב",away:"קוראסאו",date:"26/06",kickoff:"2026-06-26T22:00:00+03:00"},
-  {id:"F5",group:"F",home:"יפן",away:"שוודיה",date:"26/06",kickoff:"2026-06-26T02:00:00+03:00"},
-  {id:"F6",group:"F",home:"תוניסיה",away:"הולנד",date:"26/06",kickoff:"2026-06-26T02:00:00+03:00"},
+  {id:"I5",group:"I",home:"נורווגיה",away:"צרפת",date:"26/06",kickoff:"2026-06-26T22:00:00+03:00"},
+  {id:"I6",group:"I",home:"סנגל",away:"עיראק",date:"26/06",kickoff:"2026-06-26T22:00:00+03:00"},
   {id:"G5",group:"G",home:"בלגיה",away:"איראן",date:"27/06",kickoff:"2026-06-27T00:00:00+03:00"},
   {id:"G6",group:"G",home:"מצרים",away:"ניו זילנד",date:"27/06",kickoff:"2026-06-27T00:00:00+03:00"},
   {id:"H5",group:"H",home:"ספרד",away:"אורוגוואי",date:"27/06",kickoff:"2026-06-27T04:00:00+03:00"},
   {id:"H6",group:"H",home:"ערב הסעודית",away:"כף ורדה",date:"27/06",kickoff:"2026-06-27T04:00:00+03:00"},
-  {id:"I5",group:"I",home:"נורווגיה",away:"צרפת",date:"26/06",kickoff:"2026-06-26T22:00:00+03:00"},
-  {id:"I6",group:"I",home:"סנגל",away:"עיראק",date:"26/06",kickoff:"2026-06-26T22:00:00+03:00"},
   {id:"J5",group:"J",home:"ארגנטינה",away:"ירדן",date:"28/06",kickoff:"2026-06-28T02:00:00+03:00"},
   {id:"J6",group:"J",home:"אלג'יריה",away:"אוסטריה",date:"28/06",kickoff:"2026-06-28T02:00:00+03:00"},
   {id:"K5",group:"K",home:"קולומביה",away:"פורטוגל",date:"28/06",kickoff:"2026-06-28T02:30:00+03:00"},
@@ -1156,9 +1156,9 @@ const STYLES=`
   .match-row.locked-row{opacity:.75}
   .match-row.correct-row{border-right:3px solid var(--green)}
   .match-row.hidden-row{opacity:.6}
-  .match-meta{font-size:.7rem;color:var(--muted);margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem}
+  .match-meta{font-size:.85rem;color:var(--muted);margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem}
   .match-body{display:flex;align-items:center;gap:.5rem}
-  .team-name{font-size:.8rem;font-weight:600;flex:1;text-align:right}
+  .team-name{font-size:.95rem;font-weight:600;flex:1;text-align:right}
   .team-name.winner{color:var(--green)}
   .score-area{display:flex;align-items:center;gap:.35rem}
   .colon{font-weight:800;color:var(--muted)}
@@ -1204,8 +1204,8 @@ const STYLES=`
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .sched-score-live{background:rgba(255,77,109,.15);color:var(--red) !important}
   .sched-winning{color:var(--gold) !important}
-  .sched-date{font-size:.68rem;color:var(--muted);margin-bottom:.28rem}
-  .sched-teams{display:flex;align-items:center;gap:.5rem;font-size:.85rem;font-weight:600}
+  .sched-date{font-size:.82rem;color:var(--muted);margin-bottom:.28rem}
+  .sched-teams{display:flex;align-items:center;gap:.5rem;font-size:1rem;font-weight:600}
   .sched-teams>span:first-child,.sched-teams>span:last-child{flex:1;text-align:right}
   .sched-vs{background:var(--card);border-radius:6px;padding:.12rem .45rem;font-size:.7rem;color:var(--muted)}
   .sched-score{background:rgba(0,216,127,.15);color:var(--green);border-radius:7px;padding:.12rem .65rem;font-weight:800;font-size:.88rem}
