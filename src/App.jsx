@@ -209,9 +209,14 @@ function formatKickoffTime(kickoff) {
 }
 
 // ── Betting Odds (The Odds API) ─────────────────────────────────────────────
-const ODDS_API_KEY = "91d6f91ae83212b240af46baba466379";
-const ODDS_SPORT   = "soccer_fifa_world_cup";
-const ODDS_TTL_MS  = 2 * 60 * 60 * 1000; // 2-hour localStorage cache
+const ODDS_API_KEY    = "91d6f91ae83212b240af46baba466379";
+const ODDS_SPORT      = "soccer_fifa_world_cup";
+const ODDS_TTL_NORMAL = 2 * 60 * 60 * 1000;  // 2h when no match soon
+const ODDS_TTL_SOON   = 5 * 60 * 1000;        // 5min when match within 1h
+function hasMatchWithinHour(){
+  const n=Date.now();
+  return GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;const t=new Date(m.kickoff).getTime();return t>n&&t-n<=60*60*1000;});
+}
 const ODDS_TEAM_MAP = {
   "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה",
   "Czech Republic":"צ'כיה","Czechia":"צ'כיה",
@@ -252,8 +257,9 @@ function parseOddsData(fixtures){
 }
 async function fetchOdds(){
   try{
+    const ttl=hasMatchWithinHour()?ODDS_TTL_SOON:ODDS_TTL_NORMAL;
     const cached=localStorage.getItem("wc2026_odds_v1");
-    if(cached){const{data,ts}=JSON.parse(cached);if(Date.now()-ts<ODDS_TTL_MS)return parseOddsData(data);}
+    if(cached){const{data,ts}=JSON.parse(cached);if(Date.now()-ts<ttl)return parseOddsData(data);}
     const res=await fetch(`https://api.the-odds-api.com/v4/sports/${ODDS_SPORT}/odds/?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`);
     if(!res.ok) return {};
     const data=await res.json();
@@ -876,7 +882,11 @@ export default function App(){
   const toastRef=useRef(null);
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
-  useEffect(()=>{ fetchOdds().then(setOdds); },[]);
+  useEffect(()=>{
+    fetchOdds().then(setOdds);
+    const p=setInterval(()=>fetchOdds().then(setOdds), 5*60*1000);
+    return()=>clearInterval(p);
+  },[]);
 
   useEffect(()=>{
     return onAuthStateChanged(auth,async user=>{
