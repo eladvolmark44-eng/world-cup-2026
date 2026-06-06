@@ -87,6 +87,9 @@ const GROUP_MATCHES = [
   {id:"T1",group:"יזיזות",home:"פורטוגל",away:"צ'ילה",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
   {id:"T2",group:"יזיזות",home:'ארה"ב',away:"גרמניה",date:"06/06",kickoff:"2026-06-06T21:30:00+03:00"},
   {id:"T3",group:"יזיזות",home:"אנגליה",away:"ניו זילנד",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
+  {id:"T7",group:"יזיזות",home:"שוויץ",away:"אוסטרליה",date:"06/06",kickoff:"2026-06-06T22:00:00+03:00"},
+  {id:"T8",group:"יזיזות",home:"בוליביה",away:"סקוטלנד",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
+  {id:"T9",group:"יזיזות",home:"ברזיל",away:"מצרים",date:"07/06",kickoff:"2026-06-07T01:00:00+03:00"},
   // --- June 11 ---
   {id:"A1",group:"A",home:"מקסיקו",away:"דרום אפריקה",date:"11/06",kickoff:"2026-06-11T22:00:00+03:00"},
   // --- June 12 ---
@@ -206,6 +209,7 @@ const FLAG_MAP = {
   "בוסניה והרצגובינה":"🇧🇦","שוודיה":"🇸🇪",
   "צ'ילה":"🇨🇱",
   "ארמניה":"🇦🇲","קזחסטן":"🇰🇿","וויילס":"🏴󠁧󠁢󠁷󠁬󠁳󠁿","רומניה":"🇷🇴",
+  "בוליביה":"🇧🇴",
 };
 function withFlag(name) {
   if (!name) return name;
@@ -962,6 +966,7 @@ export default function App(){
       "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
       "Chile":"צ'ילה",
       "Armenia":"ארמניה","Kazakhstan":"קזחסטן","Wales":"וויילס","Romania":"רומניה",
+      "Bolivia":"בוליביה",
       "Central Español":"סנטרל אספניול","Racing Montevideo":"ראסינג מונטבידאו","Racing Club de Montevideo":"ראסינג מונטבידאו",
     };
     const heb = n => TEAM_MAP[n]||n;
