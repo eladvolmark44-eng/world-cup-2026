@@ -543,7 +543,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
                   <span className="team-name">{withFlag(teamNames?.[m.home]||m.home)}</span>
                   <div className="score-area">
                     {visible&&bet?.home!=null
-                      ?<span className={`bet-score ${exact?"exact":correct?"dir-ok":""}`}>{bet.home}:{bet.away}{exact?" 🎯":correct?" ✓":""}</span>
+                      ?<span className={`bet-score ${exact?"exact":correct?"dir-ok":""}`}>{bet.away}:{bet.home}{exact?" 🎯":correct?" ✓":""}</span>
                       :<span className="hidden-score">{visible?"—":"🔒"}</span>
                     }
                   </div>
@@ -708,7 +708,7 @@ function ScheduleView({results,teamNames,odds}){
         </div>
         <div className="sched-teams">
           <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}</span>
-          {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>:<span className="sched-vs">vs</span>}
+          {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
           <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}</span>
         </div>
         {matchOdds&&(
@@ -842,7 +842,7 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
                   <div key={m.id} className="revealed-match-block">
                     <div className="rev-match-header">
                       <span>{withFlag(teamNames?.[m.home]||m.home)}</span>
-                      {hasReal?<span className="sched-score">{real.home} – {real.away}</span>:<span className="sched-vs">vs</span>}
+                      {hasReal?<span className="sched-score">{real.away} – {real.home}</span>:<span className="sched-vs">vs</span>}
                       <span>{withFlag(teamNames?.[m.away]||m.away)}</span>
                     </div>
                     <div className="rev-bets-row">
@@ -854,7 +854,7 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
                         return(
                           <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                             <span className="chip-name">{p.name.split(" ")[0]}</span>
-                            <span className="chip-score">{bet.home}:{bet.away}</span>
+                            <span className="chip-score">{bet.away}:{bet.home}</span>
                             {exact&&<span>🎯</span>}
                             {!exact&&correct&&<span>✓</span>}
                             {hasReal&&!correct&&<span>✗</span>}
