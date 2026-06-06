@@ -1414,7 +1414,7 @@ const STYLES=`
   .revealed-summary{display:flex;flex-wrap:wrap;gap:.5rem}
   .revealed-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.5rem .8rem;display:flex;flex-direction:column;gap:.2rem;flex:1;min-width:120px}
   .rev-label{font-size:.72rem;color:var(--muted)}
-  .rev-count{font-weight:800;font-size:.95rem}
+  .rev-count{font-weight:800;font-size:.95rem;direction:ltr;unicode-bidi:embed}
   .rev-count.green{color:var(--green)}
   .nothing-revealed{text-align:center;padding:2rem;color:var(--muted);display:flex;flex-direction:column;gap:.5rem;align-items:center}
   .revealed-match-block{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.7rem .9rem;margin-bottom:.5rem}
