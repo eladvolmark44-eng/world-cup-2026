@@ -1328,7 +1328,8 @@ const STYLES=`
   .sched-winning{color:var(--gold) !important}
   .sched-date{font-size:.82rem;color:var(--muted);margin-bottom:.28rem}
   .sched-teams{display:flex;align-items:center;gap:.5rem;font-size:1rem;font-weight:600}
-  .sched-teams>span:first-child,.sched-teams>span:last-child{flex:1;text-align:right}
+  .sched-teams>span:first-child{flex:1;text-align:right}
+  .sched-teams>span:last-child{flex:1;text-align:left}
   .sched-vs{background:var(--card);border-radius:6px;padding:.12rem .45rem;font-size:.7rem;color:var(--muted)}
   .sched-score{background:rgba(0,216,127,.15);color:var(--green);border-radius:7px;padding:.12rem .65rem;font-weight:800;font-size:.88rem}
   .sched-winner{color:var(--green)}
