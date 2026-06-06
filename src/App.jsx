@@ -1175,8 +1175,12 @@ export default function App(){
           const key = `${m.home}_${m.away}`;
           if (byKey[key]) {
             const prev = curMatches[m.id], next = byKey[key];
-            if (!prev || prev.home!==next.home || prev.away!==next.away || prev.live!==next.live || prev.minute!==next.minute || prev.homeRedCards!==next.homeRedCards || prev.awayRedCards!==next.awayRedCards) {
-              updatedMatches[m.id] = next; matchChanged = true;
+            // Preserve red card counts from Firebase if new source returned 0
+            const homeRC = next.homeRedCards || prev?.homeRedCards || 0;
+            const awayRC = next.awayRedCards || prev?.awayRedCards || 0;
+            const merged = {...next, homeRedCards: homeRC, awayRedCards: awayRC};
+            if (!prev || prev.home!==merged.home || prev.away!==merged.away || prev.live!==merged.live || prev.minute!==merged.minute || prev.homeRedCards!==merged.homeRedCards || prev.awayRedCards!==merged.awayRedCards) {
+              updatedMatches[m.id] = merged; matchChanged = true;
             }
           }
         }
