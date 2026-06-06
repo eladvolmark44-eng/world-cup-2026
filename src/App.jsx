@@ -1104,7 +1104,19 @@ export default function App(){
               }
             }
           }catch(e){}
-          if(Object.keys(result).length) return result;
+          // 3. /api/red-cards — server-side SofaScore proxy (no CORS), patch red cards
+          if(Object.keys(result).length){
+            try{
+              const rcResp=await fetch(`/api/red-cards?date=${iso}`);
+              if(rcResp.ok){
+                const rcData=await rcResp.json();
+                for(const [key,val] of Object.entries(rcData)){
+                  if(result[key]){result[key].homeRedCards=val.homeRedCards;result[key].awayRedCards=val.awayRedCards;}
+                }
+              }
+            }catch(e){}
+            return result;
+          }
           // 3. TheSportsDB
           try{
             const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
