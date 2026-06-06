@@ -221,7 +221,8 @@ const ODDS_TEAM_MAP = {
   "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה",
   "Czech Republic":"צ'כיה","Czechia":"צ'כיה",
   "Canada":"קנדה","Switzerland":"שוויץ","Qatar":"קטאר",
-  "Bosnia and Herzegovina":"בוסניה והרצגובינה","Bosnia":"בוסניה והרצגובינה",
+  "Bosnia and Herzegovina":"בוסניה והרצגובינה","Bosnia & Herzegovina":"בוסניה והרצגובינה",
+  "Bosnia-Herzegovina":"בוסניה והרצגובינה","Bosnia":"בוסניה והרצגובינה",
   "Brazil":"ברזיל","Morocco":"מרוקו","Scotland":"סקוטלנד","Haiti":"האיטי",
   "United States":"ארה\"ב","USA":"ארה\"ב","Australia":"אוסטרליה",
   "Paraguay":"פרגוואי","Turkey":"טורקיה","Türkiye":"טורקיה",
@@ -260,7 +261,10 @@ async function fetchOdds(){
     const ttl=hasMatchWithinHour()?ODDS_TTL_SOON:ODDS_TTL_NORMAL;
     const cached=localStorage.getItem("wc2026_odds_v1");
     if(cached){const{data,ts}=JSON.parse(cached);if(Date.now()-ts<ttl)return parseOddsData(data);}
-    const res=await fetch(`https://api.the-odds-api.com/v4/sports/${ODDS_SPORT}/odds/?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`);
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),8000);
+    const res=await fetch(`https://api.the-odds-api.com/v4/sports/${ODDS_SPORT}/odds/?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`,{signal:ctrl.signal});
+    clearTimeout(t);
     if(!res.ok) return {};
     const data=await res.json();
     if(Array.isArray(data)){localStorage.setItem("wc2026_odds_v1",JSON.stringify({data,ts:Date.now()}));return parseOddsData(data);}
