@@ -208,6 +208,60 @@ function formatKickoffTime(kickoff) {
   return m ? m[1] : "";
 }
 
+// ── Betting Odds (The Odds API) ─────────────────────────────────────────────
+const ODDS_API_KEY = "91d6f91ae83212b240af46baba466379";
+const ODDS_SPORT   = "soccer_fifa_world_cup";
+const ODDS_TTL_MS  = 2 * 60 * 60 * 1000; // 2-hour localStorage cache
+const ODDS_TEAM_MAP = {
+  "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה",
+  "Czech Republic":"צ'כיה","Czechia":"צ'כיה",
+  "Canada":"קנדה","Switzerland":"שוויץ","Qatar":"קטאר",
+  "Bosnia and Herzegovina":"בוסניה והרצגובינה","Bosnia":"בוסניה והרצגובינה",
+  "Brazil":"ברזיל","Morocco":"מרוקו","Scotland":"סקוטלנד","Haiti":"האיטי",
+  "United States":"ארה\"ב","USA":"ארה\"ב","Australia":"אוסטרליה",
+  "Paraguay":"פרגוואי","Turkey":"טורקיה","Türkiye":"טורקיה",
+  "Germany":"גרמניה","Ecuador":"אקוודור","Ivory Coast":"חוף השנהב",
+  "Cote d'Ivoire":"חוף השנהב","Côte d'Ivoire":"חוף השנהב",
+  "Curacao":"קוראסאו","Curaçao":"קוראסאו",
+  "Netherlands":"הולנד","Japan":"יפן","Tunisia":"תוניסיה","Sweden":"שוודיה",
+  "Spain":"ספרד","Saudi Arabia":"ערב הסעודית","Uruguay":"אורוגוואי","Cape Verde":"כף ורדה",
+  "Belgium":"בלגיה","Iran":"איראן","Egypt":"מצרים","New Zealand":"ניו זילנד",
+  "France":"צרפת","Senegal":"סנגל","Norway":"נורווגיה","Iraq":"עיראק",
+  "Argentina":"ארגנטינה","Algeria":"אלג'יריה","Austria":"אוסטריה","Jordan":"ירדן",
+  "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
+  "DR Congo":"קונגו דמוקרטית","Congo DR":"קונגו דמוקרטית",
+  "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
+};
+function oddsHeb(n){ return ODDS_TEAM_MAP[n]||n; }
+function parseOddsData(fixtures){
+  const map={};
+  for(const f of fixtures){
+    const homeH=oddsHeb(f.home_team), awayH=oddsHeb(f.away_team);
+    let hS=0,dS=0,aS=0,cnt=0;
+    for(const bk of (f.bookmakers||[])){
+      const mkt=(bk.markets||[]).find(m=>m.key==="h2h");
+      if(!mkt) continue;
+      const hO=mkt.outcomes.find(o=>o.name===f.home_team);
+      const dO=mkt.outcomes.find(o=>o.name==="Draw");
+      const aO=mkt.outcomes.find(o=>o.name===f.away_team);
+      if(hO&&dO&&aO){hS+=hO.price;dS+=dO.price;aS+=aO.price;cnt++;}
+    }
+    if(cnt>0) map[`${homeH}_${awayH}`]={home:(hS/cnt).toFixed(2),draw:(dS/cnt).toFixed(2),away:(aS/cnt).toFixed(2)};
+  }
+  return map;
+}
+async function fetchOdds(){
+  try{
+    const cached=localStorage.getItem("wc2026_odds_v1");
+    if(cached){const{data,ts}=JSON.parse(cached);if(Date.now()-ts<ODDS_TTL_MS)return parseOddsData(data);}
+    const res=await fetch(`https://api.the-odds-api.com/v4/sports/${ODDS_SPORT}/odds/?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`);
+    if(!res.ok) return {};
+    const data=await res.json();
+    if(Array.isArray(data)){localStorage.setItem("wc2026_odds_v1",JSON.stringify({data,ts:Date.now()}));return parseOddsData(data);}
+    return {};
+  }catch{return {};}
+}
+
 function now() { return Date.now(); }
 
 function isMatchLocked(kickoff) { return now() >= new Date(kickoff).getTime() - LOCK_MS; }
@@ -335,8 +389,9 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
   );
 }
 
-function MatchBetRow({match, savedBet, onSave, teamNames}){
+function MatchBetRow({match, savedBet, onSave, teamNames, odds}){
   const locked = isMatchLocked(match.kickoff);
+  const matchOdds = odds?.[`${match.home}_${match.away}`];
   const [h, setH] = useState(savedBet?.home ?? null);
   const [a, setA] = useState(savedBet?.away ?? null);
   const [saving, setSaving] = useState(false);
@@ -364,6 +419,13 @@ function MatchBetRow({match, savedBet, onSave, teamNames}){
         {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · בית {match.group}
         {locked ? <span className="lock-badge-sm"> 🔒</span> : <span className="open-badge-sm"> ✏️</span>}
       </div>
+      {matchOdds && (
+        <div className="match-odds">
+          <span className="odds-cell"><span className="odds-label">בית</span><span className="odds-val">{matchOdds.home}</span></span>
+          <span className="odds-cell"><span className="odds-label">תיקו</span><span className="odds-val">{matchOdds.draw}</span></span>
+          <span className="odds-cell"><span className="odds-label">חוץ</span><span className="odds-val">{matchOdds.away}</span></span>
+        </div>
+      )}
       <div className="match-body">
         <div className={`team-name ${dir==="home"?"winner":""}`}>{withFlag(teamNames?.[match.home]||match.home)}</div>
         <div className="score-area">
@@ -476,7 +538,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
   );
 }
 
-function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNames}){
+function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNames, odds}){
   const [bets, setBets] = useState(user.bets||{});
   const [tab, setTab] = useState("groups");
   const globalLocked = isGlobalLocked();
@@ -511,7 +573,8 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
             <MatchBetRow key={m.id} match={m}
               savedBet={user.bets?.matches?.[m.id]}
               onSave={onSaveMatch}
-              teamNames={teamNames}/>
+              teamNames={teamNames}
+              odds={odds}/>
           ))}
         </div>
       )}
@@ -529,7 +592,8 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
                   <MatchBetRow key={m.id||i} match={m}
                     savedBet={user.bets?.koMatches?.[m.id]}
                     onSave={(id,bet)=>onSaveKoMatch(id,bet)}
-                    teamNames={teamNames}/>
+                    teamNames={teamNames}
+                    odds={odds}/>
                 ))}
               </>
           }
@@ -808,8 +872,11 @@ export default function App(){
   const [tab,setTab]=useState("lb");
   const [selectedPlayer,setSelectedPlayer]=useState(null);
   const [toast,setToast]=useState(null);
+  const [odds,setOdds]=useState({});
   const toastRef=useRef(null);
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
+
+  useEffect(()=>{ fetchOdds().then(setOdds); },[]);
 
   useEffect(()=>{
     return onAuthStateChanged(auth,async user=>{
@@ -1083,7 +1150,7 @@ export default function App(){
           {tab==="mybets"&&(
             <div className="section">
               <h2>🎯 ההימורים שלי</h2>
-              {me?<BetForm user={me} onSave={handleSaveBets} onSaveMatch={handleSaveMatchBet} onSaveKoMatch={handleSaveKoMatchBet} koMatchesBet={game.results?.knockoutMatches||[]} teamNames={teamNames}/>:<p className="section-note">טוען...</p>}
+              {me?<BetForm user={me} onSave={handleSaveBets} onSaveMatch={handleSaveMatchBet} onSaveKoMatch={handleSaveKoMatchBet} koMatchesBet={game.results?.knockoutMatches||[]} teamNames={teamNames} odds={odds}/>:<p className="section-note">טוען...</p>}
             </div>
           )}
 
@@ -1184,6 +1251,10 @@ const STYLES=`
   .match-row.locked-row{opacity:.75}
   .match-row.correct-row{border-right:3px solid var(--green)}
   .match-row.hidden-row{opacity:.6}
+  .match-odds{display:flex;justify-content:center;gap:.5rem;margin-bottom:.4rem;direction:rtl}
+  .odds-cell{display:flex;flex-direction:column;align-items:center;background:rgba(255,206,0,.08);border:1px solid rgba(255,206,0,.2);border-radius:8px;padding:.2rem .55rem;min-width:3.2rem}
+  .odds-label{font-size:.6rem;color:var(--muted);font-weight:600}
+  .odds-val{font-size:.85rem;font-weight:800;color:#f0c040}
   .match-meta{font-size:.85rem;color:var(--muted);margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem}
   .match-body{display:flex;align-items:center;gap:.5rem}
   .team-name{font-size:.95rem;font-weight:600;flex:1;text-align:right}
