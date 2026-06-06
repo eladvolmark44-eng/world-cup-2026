@@ -695,46 +695,47 @@ function Leaderboard({participants,results,onSelectPlayer}){
   );
 }
 
+function MatchRow({m, res, teamNames, odds}){
+  const hasRes = res?.home!=null && res?.away!=null;
+  const isLive = res?.live===true;
+  const isDone = hasRes && !isLive;
+  const locked = m.kickoff ? isMatchLocked(m.kickoff) : true;
+  const homeName = teamNames?.[m.home]||m.home||"?";
+  const awayName = teamNames?.[m.away]||m.away||"?";
+  const matchOdds = !hasRes && odds ? odds[`${m.home}_${m.away}`] : null;
+  return(
+    <div className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
+      <div className="sched-date">
+        {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?groupLabel(m.group):m.stage||""}
+        {isLive&&<span className="live-badge"> 🔴 {res?.minute ? `${res.minute}'` : 'חי'}</span>}
+        {isDone&&<span className="done-badge"> ✓ סיים</span>}
+        {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
+      </div>
+      <div className="sched-teams">
+        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}</span>
+        {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
+        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}</span>
+      </div>
+      {matchOdds&&(
+        <div className="match-odds" style={{marginTop:".3rem",marginBottom:0}}>
+          <span className="odds-cell"><span className="odds-label">בית</span><span className="odds-val">{matchOdds.home}</span></span>
+          <span className="odds-cell"><span className="odds-label">תיקו</span><span className="odds-val">{matchOdds.draw}</span></span>
+          <span className="odds-cell"><span className="odds-label">חוץ</span><span className="odds-val">{matchOdds.away}</span></span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScheduleView({results,teamNames,odds}){
   const [filter,setFilter]=useState("שלב בתים");
-
-  // Knockout matches stored separately from API sync
   const koMatches = results.knockoutMatches || [];
-
   const STAGES = ["שלב בתים","יזיזות","32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
   const GROUP_FILTERS = Object.keys(GROUPS_2026);
 
   const renderMatch = (m, idx) => {
     const res = results.matches?.[m.id] || (m.apiId ? results.koResults?.[m.apiId] : null);
-    const hasRes = res?.home!=null && res?.away!=null;
-    const isLive = res?.live===true;
-    const isDone = hasRes && !isLive;
-    const locked = m.kickoff ? isMatchLocked(m.kickoff) : true;
-    const homeName = teamNames?.[m.home]||m.home||"?";
-    const awayName = teamNames?.[m.away]||m.away||"?";
-    const matchOdds = !hasRes ? odds?.[`${m.home}_${m.away}`] : null;
-    return(
-      <div key={m.id||idx} className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
-        <div className="sched-date">
-          {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?groupLabel(m.group):m.stage||""}
-          {isLive&&<span className="live-badge"> 🔴 {res?.minute ? `${res.minute}'` : 'חי'}</span>}
-          {isDone&&<span className="done-badge"> ✓ סיים</span>}
-          {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
-        </div>
-        <div className="sched-teams">
-          <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}</span>
-          {hasRes?<span className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
-          <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}</span>
-        </div>
-        {matchOdds&&(
-          <div className="match-odds" style={{marginTop:".3rem",marginBottom:0}}>
-            <span className="odds-cell"><span className="odds-label">בית</span><span className="odds-val">{matchOdds.home}</span></span>
-            <span className="odds-cell"><span className="odds-label">תיקו</span><span className="odds-val">{matchOdds.draw}</span></span>
-            <span className="odds-cell"><span className="odds-label">חוץ</span><span className="odds-val">{matchOdds.away}</span></span>
-          </div>
-        )}
-      </div>
-    );
+    return <MatchRow key={m.id||idx} m={m} res={res} teamNames={teamNames} odds={odds}/>;
   };
 
   return(
@@ -853,13 +854,10 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
               {revealedMatches.map(m=>{
                 const real=results.matches?.[m.id];
                 const hasReal=real?.home!=null&&real?.away!=null;
+                const isLive=real?.live===true;
                 return(
-                  <div key={m.id} className="revealed-match-block">
-                    <div className="rev-match-header">
-                      <span>{withFlag(teamNames?.[m.home]||m.home)}</span>
-                      {hasReal?<span className="sched-score">{real.away} – {real.home}</span>:<span className="sched-vs">vs</span>}
-                      <span>{withFlag(teamNames?.[m.away]||m.away)}</span>
-                    </div>
+                  <div key={m.id}>
+                    <MatchRow m={m} res={real} teamNames={teamNames}/>
                     <div className="rev-bets-row">
                       {participants.map(p=>{
                         const bet=p.bets?.matches?.[m.id];
