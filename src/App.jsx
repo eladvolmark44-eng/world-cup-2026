@@ -68,7 +68,7 @@ const STRIKER_FLAGS = {
 };
 function withStrikerFlag(name){ return name ? `${STRIKER_FLAGS[name]||""} ${name}`.trim() : "—"; }
 
-const ADMIN_EMAIL = "eladvolm@gmail.com";
+const ADMIN_UID = "8tDgIRJQDFZyiTvaR0pP8nXShgH2";
 
 const GROUP_MATCHES = [
   // --- June 6 (יזיזות — dry run) ---
@@ -1809,7 +1809,7 @@ export default function App(){
 
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
-  const isAdmin=authUser?.email===ADMIN_EMAIL;
+  const isAdmin=authUser?.uid===ADMIN_UID;
   const n=participants.length;
 
   if(authLoading||gameLoading)return(<div className="app loading-screen"><div className="loading-ball">⚽</div><p>טוען...</p></div>);
