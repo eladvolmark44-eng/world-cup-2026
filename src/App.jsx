@@ -201,6 +201,25 @@ const GROUP_MATCHES = [
   {id:"J6",group:"J",home:"ירדן",away:"ארגנטינה",date:"28/06",kickoff:"2026-06-28T05:00:00+03:00"},
 ];
 
+// Sorted unique dates from GROUP_MATCHES (for date navigation)
+const ALL_MATCH_DATES = [...new Set(GROUP_MATCHES.filter(m=>m.date).map(m=>m.date))]
+  .sort((a,b)=>{
+    const aT=Math.min(...GROUP_MATCHES.filter(m=>m.date===a&&m.kickoff).map(m=>new Date(m.kickoff).getTime()));
+    const bT=Math.min(...GROUP_MATCHES.filter(m=>m.date===b&&m.kickoff).map(m=>new Date(m.kickoff).getTime()));
+    return aT-bT;
+  });
+
+function getDefaultMatchDate(){
+  const now=Date.now();
+  for(const d of ALL_MATCH_DATES){
+    const ms=GROUP_MATCHES.filter(m=>m.date===d&&m.kickoff);
+    if(!ms.length)continue;
+    const last=Math.max(...ms.map(m=>new Date(m.kickoff).getTime()));
+    if(last+10*60*60*1000>=now)return d;
+  }
+  return ALL_MATCH_DATES[ALL_MATCH_DATES.length-1]||"";
+}
+
 const GROUP_LAST_MATCH = {};
 Object.keys(GROUPS_2026).forEach(g => {
   const gm = GROUP_MATCHES.filter(m => m.group === g);
@@ -604,6 +623,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
 function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNames, odds}){
   const [bets, setBets] = useState(user.bets||{});
   const [tab, setTab] = useState("groups");
+  const [betDate,setBetDate]=useState(getDefaultMatchDate);
   const globalLocked = isGlobalLocked();
 
   // Keep local bets in sync when user.bets updates from Firebase
@@ -631,8 +651,9 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
       )}
       {tab==="matches"&&(
         <div className="scroll-area">
+          <DateNav selectedDate={betDate} onChange={setBetDate}/>
           <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה בשריקת הפתיחה</p>
-          {GROUP_MATCHES.map(m=>(
+          {GROUP_MATCHES.filter(m=>m.date===betDate).map(m=>(
             <MatchBetRow key={m.id} match={m}
               savedBet={user.bets?.matches?.[m.id]}
               onSave={onSaveMatch}
@@ -741,36 +762,61 @@ function MatchRow({m, res, teamNames, odds}){
   );
 }
 
+function DateNav({selectedDate,onChange}){
+  const idx=ALL_MATCH_DATES.indexOf(selectedDate);
+  const [dd,mm]=(selectedDate||"").split("/");
+  const MONTHS=["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+  const label=dd&&mm?`${parseInt(dd)} ${MONTHS[parseInt(mm)]}`:selectedDate;
+  const now=Date.now();
+  const isToday=(()=>{
+    const ms=GROUP_MATCHES.filter(m=>m.date===selectedDate&&m.kickoff);
+    if(!ms.length)return false;
+    const first=Math.min(...ms.map(m=>new Date(m.kickoff).getTime()));
+    const last=Math.max(...ms.map(m=>new Date(m.kickoff).getTime()));
+    return first<=now+8*60*60*1000&&last+10*60*60*1000>=now;
+  })();
+  return(
+    <div className="date-nav">
+      <button className="date-nav-arrow" disabled={idx<=0} onClick={()=>idx>0&&onChange(ALL_MATCH_DATES[idx-1])}>‹</button>
+      <div className="date-nav-center">
+        <span className="date-nav-label">{label}</span>
+        {isToday&&<span className="date-today-pill">היום</span>}
+      </div>
+      <button className="date-nav-arrow" disabled={idx>=ALL_MATCH_DATES.length-1} onClick={()=>idx<ALL_MATCH_DATES.length-1&&onChange(ALL_MATCH_DATES[idx+1])}>›</button>
+    </div>
+  );
+}
+
 function ScheduleView({results,teamNames,odds}){
-  const [filter,setFilter]=useState("שלב בתים");
-  const koMatches = results.knockoutMatches || [];
-  const STAGES = ["שלב בתים","יזיזות","32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
-  const GROUP_FILTERS = Object.keys(GROUPS_2026);
-
-  const renderMatch = (m, idx) => {
-    const res = results.matches?.[m.id] || (m.apiId ? results.koResults?.[m.apiId] : null);
-    return <MatchRow key={m.id||idx} m={m} res={res} teamNames={teamNames} odds={odds}/>;
+  const [selDate,setSelDate]=useState(getDefaultMatchDate);
+  const [koStage,setKoStage]=useState(null);
+  const koMatches=results.knockoutMatches||[];
+  const KO_STAGES=["32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
+  const hasKo=koMatches.length>0;
+  const dateMatches=GROUP_MATCHES.filter(m=>m.date===selDate);
+  const renderMatch=(m,i)=>{
+    const res=results.matches?.[m.id]||(m.apiId?results.koResults?.[m.apiId]:null);
+    return <MatchRow key={m.id||i} m={m} res={res} teamNames={teamNames} odds={odds}/>;
   };
-
   return(
     <div>
-      <div className="filter-row">
-        {STAGES.map(s=>(
-          <button key={s} className={`filter-btn ${filter===s?"active":""}`} onClick={()=>setFilter(s)}>{s}</button>
-        ))}
-        <span className="filter-sep">|</span>
-        {GROUP_FILTERS.map(g=>(
-          <button key={g} className={`filter-btn ${filter===g?"active":""}`} onClick={()=>setFilter(g)}>{`בית ${g}`}</button>
-        ))}
-      </div>
+      <DateNav selectedDate={selDate} onChange={d=>{setSelDate(d);setKoStage(null);}}/>
+      {hasKo&&(
+        <div className="filter-row" style={{marginTop:".3rem"}}>
+          {KO_STAGES.map(s=>(
+            <button key={s} className={`filter-btn ${koStage===s?"active":""}`} onClick={()=>setKoStage(p=>p===s?null:s)}>{s}</button>
+          ))}
+        </div>
+      )}
       <div className="scroll-area">
-        {filter==="שלב בתים"&&GROUP_MATCHES.filter(m=>m.group!=="יזיזות").map((m,i)=>renderMatch(m,i))}
-        {filter==="יזיזות"&&GROUP_MATCHES.filter(m=>m.group==="יזיזות").map((m,i)=>renderMatch(m,i))}
-        {GROUP_FILTERS.includes(filter)&&GROUP_MATCHES.filter(m=>m.group===filter).map((m,i)=>renderMatch(m,i))}
-        {["32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"].includes(filter)&&(
-          koMatches.filter(m=>m.stage===filter).length > 0
-            ? koMatches.filter(m=>m.stage===filter).map((m,i)=>renderMatch(m,i))
-            : <div className="empty-msg">⏳ השלב טרם החל</div>
+        {koStage?(
+          koMatches.filter(m=>m.stage===koStage).length>0
+            ?koMatches.filter(m=>m.stage===koStage).map((m,i)=>renderMatch(m,i))
+            :<div className="empty-msg">⏳ השלב טרם החל</div>
+        ):(
+          dateMatches.length>0
+            ?dateMatches.map((m,i)=>renderMatch(m,i))
+            :<div className="empty-msg">אין משחקים בתאריך זה</div>
         )}
       </div>
     </div>
@@ -799,6 +845,7 @@ function PlayoffEditor({playoffNames,onSave}){
 function RevealedBetsView({participants, viewerUid, results, teamNames}){
   const [activePlayer, setActivePlayer] = useState(null);
   const [subTab, setSubTab] = useState("matches");
+  const [revDate,setRevDate]=useState(getDefaultMatchDate);
 
   // What's currently revealed?
   const revealedMatches = GROUP_MATCHES.filter(m => canSeeMatchBet(m.id, "other", viewerUid));
@@ -864,8 +911,9 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
 
           {subTab==="matches"&&(
             <div className="scroll-area">
-              {revealedMatches.length===0&&<div className="empty-msg">עדיין אין משחקים שהסתיימו</div>}
-              {revealedMatches.map(m=>{
+              <DateNav selectedDate={revDate} onChange={setRevDate}/>
+              {revealedMatches.filter(m=>m.date===revDate).length===0&&<div className="empty-msg">אין הימורים גלויים לתאריך זה</div>}
+              {revealedMatches.filter(m=>m.date===revDate).map(m=>{
                 const real=results.matches?.[m.id];
                 const hasReal=real?.home!=null&&real?.away!=null;
                 const isLive=real?.live===true;
@@ -1581,4 +1629,11 @@ const STYLES=`
   .btn-back-sm:hover{color:var(--text);border-color:var(--text)}
   .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--green);color:#060e1a;font-weight:800;border-radius:100px;padding:.65rem 1.6rem;font-size:.92rem;z-index:999;box-shadow:0 8px 30px rgba(0,216,127,.4);animation:fadeUp .3s ease}
   @keyframes fadeUp{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+  .date-nav{display:flex;align-items:center;justify-content:space-between;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.5rem .8rem;margin-bottom:.5rem}
+  .date-nav-arrow{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;width:2rem;height:2rem;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:sans-serif}
+  .date-nav-arrow:disabled{opacity:.3;cursor:default}
+  .date-nav-arrow:not(:disabled):hover{border-color:var(--green)}
+  .date-nav-center{display:flex;flex-direction:column;align-items:center;gap:.15rem}
+  .date-nav-label{font-size:1rem;font-weight:700}
+  .date-today-pill{font-size:.6rem;background:var(--green);color:#000;border-radius:10px;padding:.1rem .45rem;font-weight:800}
 `;
