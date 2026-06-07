@@ -422,14 +422,28 @@ function Toast({msg}){return msg?<div className="toast">{msg}</div>:null;}
 function SignInScreen({onSignIn,loading}){
   return(
     <div className="signin-screen">
-      <div style={{fontSize:"4rem",marginBottom:"1rem"}}>⚽</div>
-      <h1 className="home-title">מונדיאל<span>BET</span><small>2026</small></h1>
-      <p className="home-sub">קנדה · מקסיקו · ארה״ב · 11 יוני – 19 יולי</p>
-      <div className="signin-card">
-        <p className="signin-desc">כניסה אחת — זוכר אותך לתמיד</p>
-        <button className="btn-google" onClick={onSignIn} disabled={loading}>
-          {loading?"מתחבר...":<><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.7l-6.2-5.2C29.3 35.6 26.8 36 24 36c-5.2 0-9.6-2.9-11.3-7l-6.5 5C9.5 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.4 35.7 44 30.3 44 24c0-1.3-.1-2.7-.4-4z"/></svg>התחבר עם Google</>}
-        </button>
+      <div className="signin-bg-glow"/>
+      <div className="signin-content">
+        <div className="signin-ball">⚽</div>
+        <div className="signin-tournament">WORLD CUP</div>
+        <h1 className="signin-title">מונדיאל<span>BET</span></h1>
+        <div className="signin-year">2026</div>
+        <div className="signin-hosts">
+          <span>🇨🇦 קנדה</span>
+          <span className="signin-dot">·</span>
+          <span>🇲🇽 מקסיקו</span>
+          <span className="signin-dot">·</span>
+          <span>🇺🇸 ארה״ב</span>
+        </div>
+        <div className="signin-dates">11 יוני — 19 יולי 2026</div>
+        <div className="signin-divider"/>
+        <div className="signin-card">
+          <p className="signin-desc">הצטרף לליגת ההימורים של החברים</p>
+          <button className="btn-google" onClick={onSignIn} disabled={loading}>
+            {loading?"מתחבר...":<><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.7l-6.2-5.2C29.3 35.6 26.8 36 24 36c-5.2 0-9.6-2.9-11.3-7l-6.5 5C9.5 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.4 35.7 44 30.3 44 24c0-1.3-.1-2.7-.4-4z"/></svg>כניסה עם Google</>}
+          </button>
+          <p className="signin-note">כניסה אחת — זוכר אותך לתמיד</p>
+        </div>
       </div>
     </div>
   );
@@ -1811,15 +1825,24 @@ const STYLES=`
   body{background:var(--bg);color:var(--text);font-family:'Heebo',sans-serif;min-height:100vh}
   .app{min-height:100vh;direction:rtl;background:radial-gradient(ellipse at 15% 0%,rgba(0,216,127,.07) 0%,transparent 55%),radial-gradient(ellipse at 85% 100%,rgba(255,206,0,.05) 0%,transparent 55%),var(--bg);}
   .loading-screen,.signin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:1.2rem;padding:2rem;text-align:center}
+  .signin-screen{position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,rgba(0,216,127,.13) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(255,206,0,.08) 0%,transparent 50%),var(--bg)}
+  .signin-bg-glow{position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:500px;height:500px;background:radial-gradient(circle,rgba(0,216,127,.15) 0%,transparent 65%);pointer-events:none}
+  .signin-content{display:flex;flex-direction:column;align-items:center;gap:.6rem;position:relative;z-index:1}
+  .signin-ball{font-size:5rem;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 30px rgba(0,216,127,.4))}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .signin-tournament{font-size:.75rem;font-weight:800;letter-spacing:.35em;color:var(--green);margin-bottom:-.4rem}
+  .signin-title{font-size:3.8rem;font-weight:900;letter-spacing:-2px;line-height:1;margin:0}
+  .signin-title span{color:var(--green)}
+  .signin-year{font-size:1.4rem;font-weight:900;color:var(--gold);letter-spacing:.15em;margin-top:-.3rem}
+  .signin-hosts{display:flex;align-items:center;gap:.6rem;font-size:.95rem;font-weight:600;margin-top:.4rem;color:var(--text)}
+  .signin-dot{color:var(--muted)}
+  .signin-dates{font-size:.82rem;color:var(--muted);font-weight:600;letter-spacing:.05em}
+  .signin-divider{width:60px;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);margin:.4rem 0}
+  .signin-card{background:rgba(15,25,41,.8);border:1px solid rgba(0,216,127,.2);border-radius:24px;padding:1.6rem 2rem;display:flex;flex-direction:column;gap:1rem;align-items:center;width:100%;max-width:340px;backdrop-filter:blur(12px);box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 0 1px rgba(0,216,127,.08)}
+  .signin-desc{color:var(--text);font-size:1rem;font-weight:700}
   .loading-ball{font-size:3rem;animation:sway 1s ease-in-out infinite}
   .loading-screen p{color:var(--muted)}
   @keyframes sway{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
-  .home-title{font-size:2.8rem;font-weight:900;letter-spacing:-1px;line-height:1}
-  .home-title span{color:var(--green)}
-  .home-title small{display:block;font-size:1.1rem;color:var(--gold);font-weight:700;letter-spacing:2px;margin-top:.2rem}
-  .home-sub{color:var(--muted);font-size:.95rem}
-  .signin-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.5rem 2rem;display:flex;flex-direction:column;gap:1rem;align-items:center;width:100%;max-width:320px}
-  .signin-desc{color:var(--muted);font-size:.9rem}
   .btn-google{display:flex;align-items:center;gap:.7rem;background:#fff;color:#333;font-weight:700;font-family:'Heebo',sans-serif;border:none;border-radius:12px;padding:.85rem 1.4rem;font-size:1rem;cursor:pointer;transition:transform .15s;width:100%;justify-content:center}
   .btn-google:hover{transform:translateY(-2px)}
   .btn-google:disabled{opacity:.6;cursor:default}
