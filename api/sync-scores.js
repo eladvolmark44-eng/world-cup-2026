@@ -176,7 +176,6 @@ export default async function handler(req, res) {
     // Map API results to our match IDs using team names
     const GROUP_MATCHES = [
       {id:"T0",home:"בלגיה",away:"תוניסיה"},
-      {id:"T6",home:"סנטרל אספניול",away:"ראסינג מונטבידאו"},
       {id:"T4",home:"ארמניה",away:"קזחסטן"},
       {id:"T12",home:"קומורו",away:"רואנדה"},
       {id:"T10",home:"גיברלטר",away:"קיימן"},
