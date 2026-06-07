@@ -1713,7 +1713,7 @@ export default function App(){
   const n=participants.length;
 
   if(authLoading||gameLoading)return(<div className="app loading-screen"><div className="loading-ball">⚽</div><p>טוען...</p></div>);
-  if(!authUser)return(<div className="app"><SignInScreen onSignIn={handleSignIn} loading={signingIn}/></div>);
+  if(!authUser)return(<div className="app"><SignInScreen onSignIn={handleSignIn} loading={signingIn}/><style>{STYLES}</style></div>);
 
   if(selectedPlayer)return(
     <div className="app" dir="rtl">
