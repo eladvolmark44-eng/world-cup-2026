@@ -975,7 +975,7 @@ function LiveBar({results, teamNames}){
         const res=results.matches[m.id];
         return(
           <span key={m.id} className="live-now-item">
-            🔴 {withFlag(teamNames?.[m.home]||m.home)} <b><span dir="ltr">{res.home}:{res.away}</span></b> {withFlag(teamNames?.[m.away]||m.away)}
+            🔴 {withFlag(teamNames?.[m.home]||m.home)} <b><span dir="ltr">{res.away}:{res.home}</span></b> {withFlag(teamNames?.[m.away]||m.away)}
             {res.minute?<span className="live-min"> {res.minute}'</span>:null}
           </span>
         );
