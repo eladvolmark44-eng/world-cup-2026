@@ -911,7 +911,7 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
                         return(
                           <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                             <span className="chip-name">{p.name.split(" ")[0]}</span>
-                            <span className="chip-score">{bet.home}:{bet.away}</span>
+                            <span className="chip-score">{bet.away}:{bet.home}</span>
                             {pts!==null&&<span className="chip-pts">{pts} נק׳</span>}
                             {exact&&<span>🎯</span>}
                             {!exact&&correct&&<span>✓</span>}
@@ -1087,7 +1087,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                     return(
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">{bet.home}:{bet.away}</span>
+                        <span className="chip-score">{bet.away}:{bet.home}</span>
                         {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
                         {exact&&<span>🎯</span>}
                         {!exact&&correct&&<span>✓</span>}
@@ -1181,7 +1181,7 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
                     return(
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">{bet.home}:{bet.away}</span>
+                        <span className="chip-score">{bet.away}:{bet.home}</span>
                         {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
                         {exact&&<span>🎯</span>}
                         {!exact&&correct&&<span>✓</span>}
