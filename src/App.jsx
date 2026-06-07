@@ -1730,9 +1730,7 @@ export default function App(){
             {authUser.photoURL&&<img src={authUser.photoURL} className="header-avatar" alt=""/>}
             <span className="header-name">{authUser.displayName?.split(" ")[0]}</span>
           </div>
-     <h1 className="signin-title">מונדיאל<span>BET</span></h1>
-        <div className="signin-year">2026</div>
-        <p className="signin-sub">אתר ההימורים של גביע העולם על שם נייל קלארק</p>
+          <div className="header-title">⚽ Betמונדיאל 2026 על שם נייל קלארק</div>
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
