@@ -1842,8 +1842,9 @@ const STYLES=`
   .header-user{display:flex;align-items:center;gap:.5rem}
   .header-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover}
   .header-name{font-weight:700;font-size:.9rem;color:var(--green)}
-  .header-title{flex:1;font-weight:800;font-size:.9rem;text-align:center;line-height:1.2}
-  .header-subtitle{font-size:.62rem;color:var(--muted);font-weight:600;margin-top:.1rem}
+  .header-title{flex:1;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.05rem}
+  .header-title>div:first-child{font-weight:900;font-size:1.05rem;letter-spacing:-.3px;line-height:1.1}
+  .header-subtitle{font-size:.68rem;color:var(--muted);font-weight:500;line-height:1}
   .back-btn{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:.2rem .5rem}
   .btn-signout{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .7rem;font-size:.75rem;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap}
   .btn-signout:hover{color:var(--red);border-color:var(--red)}
