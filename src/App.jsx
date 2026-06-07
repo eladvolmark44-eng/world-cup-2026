@@ -210,14 +210,8 @@ const ALL_MATCH_DATES = [...new Set(GROUP_MATCHES.filter(m=>m.date).map(m=>m.dat
   });
 
 function getDefaultMatchDate(){
-  const now=Date.now();
-  for(const d of ALL_MATCH_DATES){
-    const ms=GROUP_MATCHES.filter(m=>m.date===d&&m.kickoff);
-    if(!ms.length)continue;
-    const last=Math.max(...ms.map(m=>new Date(m.kickoff).getTime()));
-    if(last+10*60*60*1000>=now)return d;
-  }
-  return ALL_MATCH_DATES[ALL_MATCH_DATES.length-1]||"";
+  const d=new Date();
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 
 const GROUP_LAST_MATCH = {};
