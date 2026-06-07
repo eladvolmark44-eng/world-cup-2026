@@ -1059,42 +1059,111 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer}){
 }
 
 // ─── RESULTS VIEW ─────────────────────────────────────────────────────────────
-function ResultsView({participants, viewerUid, results, teamNames}){
+function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMatch, onSaveBets, odds}){
+  const [subTab,setSubTab]=useState("matches");
   const [revDate,setRevDate]=useState(getDefaultMatchDate);
-  const revealedMatches=GROUP_MATCHES.filter(m=>canSeeMatchBet(m.id,"other",viewerUid));
-  const dateMatches=revealedMatches.filter(m=>m.date===revDate);
+  const [groupBets,setGroupBets]=useState(me?.bets?.groups||{});
+  useEffect(()=>{setGroupBets(me?.bets?.groups||{});},[JSON.stringify(me?.bets?.groups)]);
+  const globalLocked=isGlobalLocked();
+  const dateMatches=GROUP_MATCHES.filter(m=>m.date===revDate);
   return(
     <div className="section">
       <LiveBar results={results} teamNames={teamNames}/>
-      <DateNav selectedDate={revDate} onChange={setRevDate}/>
-      {dateMatches.length===0&&<div className="empty-msg">אין הימורים גלויים לתאריך זה</div>}
-      {dateMatches.map(m=>{
-        const real=results.matches?.[m.id];
-        const hasReal=real?.home!=null&&real?.away!=null;
-        return(
-          <div key={m.id} className="results-match-block">
-            <MatchRow m={m} res={real} teamNames={teamNames}/>
-            <div className="rev-bets-row">
-              {participants.map(p=>{
-                const bet=p.bets?.matches?.[m.id];
-                if(!bet||bet.home==null)return null;
-                const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
-                const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
-                const pts=hasReal?(exact?4:correct?1:0):null;
-                return(
-                  <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
-                    <span className="chip-name">{p.name.split(" ")[0]}</span>
-                    <span className="chip-score">{bet.away}:{bet.home}</span>
-                    {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
-                    {exact&&<span>🎯</span>}
-                    {!exact&&correct&&<span>✓</span>}
+      <div className="sub-tabs">
+        {[["matches","⚽ משחקים"],["groups","🏠 בתים"]].map(([k,l])=>(
+          <button key={k} className={`sub-tab ${subTab===k?"active":""}`} onClick={()=>setSubTab(k)}>{l}</button>
+        ))}
+      </div>
+      {subTab==="matches"&&(
+        <>
+          <DateNav selectedDate={revDate} onChange={setRevDate}/>
+          {dateMatches.length===0&&<div className="empty-msg">No games on this date</div>}
+          {dateMatches.map(m=>{
+            const locked=isMatchLocked(m.kickoff);
+            const real=results.matches?.[m.id];
+            const hasReal=real?.home!=null&&real?.away!=null;
+            if(!locked){
+              return(
+                <div key={m.id} className="results-match-block">
+                  <MatchBetRow match={m} savedBet={me?.bets?.matches?.[m.id]} onSave={onSaveMatch} teamNames={teamNames} odds={odds}/>
+                  <div className="rev-bets-row">
+                    {participants.filter(p=>p.uid!==viewerUid).map(p=>(
+                      <div key={p.uid} className="rev-bet-chip locked-chip">
+                        <span className="chip-name">{p.name.split(" ")[0]}</span>
+                        <span className="chip-score">🔒</span>
+                      </div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+                </div>
+              );
+            }
+            return(
+              <div key={m.id} className="results-match-block">
+                <MatchRow m={m} res={real} teamNames={teamNames}/>
+                <div className="rev-bets-row">
+                  {participants.map(p=>{
+                    const bet=p.bets?.matches?.[m.id];
+                    if(!bet||bet.home==null)return null;
+                    const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
+                    const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
+                    const pts=hasReal?(exact?4:correct?1:0):null;
+                    return(
+                      <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
+                        <span className="chip-name">{p.name.split(" ")[0]}</span>
+                        <span className="chip-score">{bet.away}:{bet.home}</span>
+                        {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
+                        {exact&&<span>🎯</span>}
+                        {!exact&&correct&&<span>✓</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
+      {subTab==="groups"&&(
+        <div className="scroll-area">
+          {globalLocked?(
+            Object.entries(GROUPS_2026).map(([g,teams])=>{
+              const correct=results.groups?.[g]||[];
+              return(
+                <div key={g} className="group-box">
+                  <div className="group-label">
+                    בית {g}
+                    {correct.length>0&&<span style={{color:"var(--green)",marginRight:".5rem"}}>עלו: {correct.map(t=>withFlag(teamNames?.[t]||t)).join(", ")}</span>}
+                  </div>
+                  <div className="rev-bets-row wrap" style={{marginTop:".4rem"}}>
+                    {participants.map(p=>{
+                      const picks=p.bets?.groups?.[g]||[];
+                      if(!picks.length)return null;
+                      const hits=picks.filter(t=>correct.includes(t)).length;
+                      const pts=hits===2?5:hits===1?2:0;
+                      return(
+                        <div key={p.uid} className={`rev-bet-chip ${hits===2?"exact":hits===1?"correct":correct.length?"wrong":""}`}>
+                          <span className="chip-name">{p.name.split(" ")[0]}</span>
+                          <span className="chip-score">{picks.map(t=>withFlag(teamNames?.[t]||t)).join(", ")}</span>
+                          {correct.length>0&&<span>{pts>0?`+${pts}נק׳`:"✗"}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          ):(
+            <>
+              <p className="section-note">בחר 2 קבוצות לכל בית · 2נק׳ לאחת | 5נק׳ לשתיים</p>
+              {Object.entries(GROUPS_2026).map(([g,teams])=>(
+                <GroupPicker key={g} groupId={g} teams={teams} picks={groupBets[g]}
+                  onChange={p=>setGroupBets(prev=>({...prev,[g]:p}))} locked={false} teamNames={teamNames}/>
+              ))}
+              <button className="btn-green" onClick={()=>onSaveBets({...me?.bets,groups:groupBets})}>💾 שמור הימורי בתים</button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1578,7 +1647,7 @@ export default function App(){
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
-          {[["home","🏠 בית"],["results","📊 תוצאות"],["ranking","🏆 דירוג"],["mybets","🎯 שלי"],["rules","📜 חוקים"]].map(([k,l])=>(
+          {[["home","🏠 בית"],["results","📊 תוצאות"],["rules","📜 חוקים"]].map(([k,l])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
           ))}
         </div>
@@ -1599,21 +1668,11 @@ export default function App(){
               viewerUid={authUser.uid}
               results={game.results||{}}
               teamNames={teamNames}
+              me={me}
+              onSaveMatch={handleSaveMatchBet}
+              onSaveBets={handleSaveBets}
+              odds={odds}
             />
-          )}
-          {tab==="ranking"&&(
-            <RankingView
-              participants={participants}
-              results={game.results||{}}
-              teamNames={teamNames}
-              onSelectPlayer={setSelectedPlayer}
-            />
-          )}
-          {tab==="mybets"&&(
-            <div className="section">
-              <h2>🎯 ההימורים שלי</h2>
-              {me?<BetForm user={me} onSave={handleSaveBets} onSaveMatch={handleSaveMatchBet} onSaveKoMatch={handleSaveKoMatchBet} koMatchesBet={game.results?.knockoutMatches||[]} teamNames={teamNames} odds={odds}/>:<p className="section-note">טוען...</p>}
-            </div>
           )}
 
           {tab==="rules"&&(
@@ -1677,7 +1736,7 @@ const STYLES=`
   .back-btn{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:.2rem .5rem}
   .btn-signout{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .7rem;font-size:.75rem;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap}
   .btn-signout:hover{color:var(--red);border-color:var(--red)}
-  .main-tabs{display:flex;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--border);padding:0 .5rem;flex-shrink:0;scrollbar-width:none}
+  .main-tabs{display:flex;justify-content:center;background:var(--card);border-bottom:1px solid var(--border);padding:0 .5rem;flex-shrink:0;scrollbar-width:none}
   .main-tabs::-webkit-scrollbar{display:none}
   .main-tab{background:none;border:none;color:var(--muted);font-family:'Heebo',sans-serif;font-size:.83rem;font-weight:600;padding:.7rem .75rem;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s}
   .main-tab.active{color:var(--green);border-bottom-color:var(--green)}
@@ -1832,6 +1891,7 @@ const STYLES=`
   .live-now-item{font-size:.8rem;color:var(--red);font-weight:700;display:flex;align-items:center;gap:.25rem}
   .live-min{color:var(--muted);font-weight:400}
   /* ── Results tab ── */
+  .rev-bet-chip.locked-chip{opacity:.35}
   .results-match-block{margin-bottom:.85rem}
   /* ── Ranking breakdown ── */
   .lb-expand{color:var(--muted);font-size:.72rem;min-width:1.2rem;text-align:center}
