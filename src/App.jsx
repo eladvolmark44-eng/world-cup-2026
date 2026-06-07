@@ -1127,27 +1127,32 @@ export default function App(){
           return res;
         };
 
-        // Fetch from multiple sources with fallback (ESPN→SofaScore→TheSportsDB→API-Football)
+        // Fetch from multiple sources — merge all to avoid ESPN early-return missing small matches
         const fetchWithFallback = async (espnSlugs, iso, ymd) => {
-          // 1. ESPN
+          const merged = {};
+          // 1. ESPN — collect all slugs, don't stop on first hit
           for(const slug of espnSlugs){
             try{
               const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
               const d=await r.json();
-              if(d.events?.length) return parseESPN(d.events);
+              if(d.events?.length) Object.assign(merged, parseESPN(d.events));
             }catch(e){}
           }
-          // 2. SofaScore
+          // 2. TheSportsDB — always supplement (covers small matches ESPN misses)
+          try{
+            const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
+            const d=await r.json();
+            if(d.events?.length){
+              const p=parseSportsDB(d.events);
+              for(const [k,v] of Object.entries(p)) if(!merged[k]) merged[k]=v;
+            }
+          }catch(e){}
+          if(Object.keys(merged).length) return merged;
+          // 3. SofaScore fallback
           try{
             const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,{headers:{"User-Agent":"Mozilla/5.0"}});
             const d=await r.json();
             if(d.events?.length) return parseSofaScore(d.events);
-          }catch(e){}
-          // 3. TheSportsDB
-          try{
-            const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
-            const d=await r.json();
-            if(d.events?.length){ const p=parseSportsDB(d.events); if(Object.keys(p).length) return p; }
           }catch(e){}
           // 4. API-Football (last resort, uses daily quota)
           try{
