@@ -1011,11 +1011,10 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
     setTimeout(()=>setSaved(false),2000);
   };
   const nowTs=Date.now();
-  const liveMatch=GROUP_MATCHES.find(m=>results.matches?.[m.id]?.live===true);
-  const nextMatch=!liveMatch&&GROUP_MATCHES
+  const liveMatches=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
+  const nextMatch=liveMatches.length===0&&GROUP_MATCHES
     .filter(m=>m.kickoff&&new Date(m.kickoff).getTime()>nowTs)
     .sort((a,b)=>new Date(a.kickoff).getTime()-new Date(b.kickoff).getTime())[0];
-  const featuredMatch=liveMatch||nextMatch;
   const groupsPickedCount=Object.keys(GROUPS_2026).filter(g=>(myBets.groups?.[g]||[]).length===2).length;
   const ranked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},results,participants)})).sort((a,b)=>b.score-a.score);
   const medals=["🥇","🥈","🥉"];
@@ -1077,10 +1076,41 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
           )}
         </div>
       )}
-      {featuredMatch&&(
+      {liveMatches.length>0?(
         <div className="home-card">
-          <div className="home-card-title">{liveMatch?"🔴 משחק חי עכשיו":"⏰ המשחק הבא"}</div>
-          <MatchRow m={featuredMatch} res={results.matches?.[featuredMatch.id]} teamNames={teamNames} odds={!liveMatch?odds:null}/>
+          <div className="home-card-title">🔴 משחקים חיים</div>
+          {liveMatches.map(m=>{
+            const real=results.matches[m.id];
+            const hasReal=real?.home!=null&&real?.away!=null;
+            return(
+              <div key={m.id} className="results-match-block">
+                <MatchRow m={m} res={real} teamNames={teamNames}/>
+                <div className="rev-bets-row">
+                  {participants.map(p=>{
+                    const bet=p.bets?.matches?.[m.id];
+                    if(!bet||bet.home==null)return null;
+                    const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
+                    const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
+                    const pts=hasReal?(exact?4:correct?1:0):null;
+                    return(
+                      <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
+                        <span className="chip-name">{p.name.split(" ")[0]}</span>
+                        <span className="chip-score">{bet.away}:{bet.home}</span>
+                        {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
+                        {exact&&<span>🎯</span>}
+                        {!exact&&correct&&<span>✓</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ):nextMatch&&(
+        <div className="home-card">
+          <div className="home-card-title">⏰ המשחק הבא</div>
+          <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds}/>
         </div>
       )}
       <div className="home-card">
@@ -1376,7 +1406,7 @@ export default function App(){
         const secondsSinceLast = (now - lastSync) / 1000;
 
         // If synced less than 45s ago by someone else, skip — read from Firebase instead
-        if (secondsSinceLast < 45 && syncData.syncedBy !== uid) return;
+        if (secondsSinceLast < 20 && syncData.syncedBy !== uid) return;
 
         // Claim the sync slot
         await setDoc(doc(db,"mundial2026","sync"), {
@@ -1462,28 +1492,32 @@ export default function App(){
           }catch(e){}
           // 3. SofaScore — always supplement (covers obscure matches ESPN/TheSportsDB miss)
           try{
-            const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,{headers:{"User-Agent":"Mozilla/5.0"}});
+            const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
             const d=await r.json();
             if(d.events?.length){
               const p=parseSofaScore(d.events);
               for(const [k,v] of Object.entries(p)) if(!merged[k]) merged[k]=v;
             }
           }catch(e){}
-          // 4. API-Football — always supplement (last resort, uses daily quota)
-          try{
-            const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
-            const d=await r.json();
-            for(const f of(d.response||[])){
-              const{fixture:fi,teams,goals}=f;
-              const s=fi.status.short;
-              const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
-              if((fin||live)&&goals.home!=null&&goals.away!=null){
-                const minute=live ? (fi.status.elapsed??null) : null;
-                const k1=`${heb(teams.home.name)}_${heb(teams.away.name)}`;
-                if(!merged[k1]) addBothKeys(merged,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+          // 4. API-Football — rate-limited to once per hour to preserve 100/day quota
+          const lastAF = syncData.lastApiFootballSync ? new Date(syncData.lastApiFootballSync).getTime() : 0;
+          if (Date.now() - lastAF > 60 * 60 * 1000) {
+            try{
+              const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
+              const d=await r.json();
+              for(const f of(d.response||[])){
+                const{fixture:fi,teams,goals}=f;
+                const s=fi.status.short;
+                const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
+                if((fin||live)&&goals.home!=null&&goals.away!=null){
+                  const minute=live ? (fi.status.elapsed??null) : null;
+                  const k1=`${heb(teams.home.name)}_${heb(teams.away.name)}`;
+                  if(!merged[k1]) addBothKeys(merged,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+                }
               }
-            }
-          }catch(e){}
+              await setDoc(doc(db,"mundial2026","sync"),{lastApiFootballSync:new Date().toISOString()},{merge:true});
+            }catch(e){}
+          }
           return merged;
         };
 
@@ -1536,6 +1570,16 @@ export default function App(){
             } catch(e) {}
           }
         }
+
+        // Extra: SofaScore live events — catches obscure matches missed by ESPN date-based calls
+        try{
+          const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/live`);
+          const d=await r.json();
+          if(d.events?.length){
+            const p=parseSofaScore(d.events);
+            for(const [k,v] of Object.entries(p)) if(!byKey[k]) byKey[k]=v;
+          }
+        }catch(e){}
 
         const fixtures = [];
         const curMatches = cur.results?.matches || {};
@@ -1633,7 +1677,7 @@ export default function App(){
     };
 
     syncScores(auth.currentUser?.uid||"anon");
-    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 30 * 1000);
+    const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 15 * 1000);
     return()=>{u1();u2();clearInterval(poll);};
   },[]);
 
