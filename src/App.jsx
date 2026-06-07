@@ -1847,21 +1847,22 @@ export default function App(){
   };
   const handleSaveBets=async bets=>{
     if(!authUser)return;
-    await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets});
+    const cur=participants.find(p=>p.uid===authUser.uid)||{};
+    await saveParticipant({...cur,uid:authUser.uid,bets});
     showToast("✅ הימורים נשמרו!");
   };
 
   const handleSaveMatchBet=async(matchId, matchBet)=>{
     if(!authUser)return;
-    const curBets=participants.find(p=>p.uid===authUser.uid)?.bets||{};
-    const updatedBets={...curBets,matches:{...curBets.matches,[matchId]:matchBet}};
-    await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets:updatedBets});
+    const cur=participants.find(p=>p.uid===authUser.uid)||{};
+    const updatedBets={...cur.bets,matches:{...cur.bets?.matches,[matchId]:matchBet}};
+    await saveParticipant({...cur,uid:authUser.uid,bets:updatedBets});
   };
   const handleSaveKoMatchBet=async(matchId, matchBet)=>{
     if(!authUser)return;
-    const curBets=participants.find(p=>p.uid===authUser.uid)?.bets||{};
-    const updatedBets={...curBets,koMatches:{...curBets.koMatches,[matchId]:matchBet}};
-    await saveParticipant({uid:authUser.uid,name:authUser.displayName,photoURL:authUser.photoURL||null,bets:updatedBets});
+    const cur=participants.find(p=>p.uid===authUser.uid)||{};
+    const updatedBets={...cur.bets,koMatches:{...cur.bets?.koMatches,[matchId]:matchBet}};
+    await saveParticipant({...cur,uid:authUser.uid,bets:updatedBets});
   };
 
   const teamNames=game.playoffNames||{};
