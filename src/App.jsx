@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBdD-8CkgpIKpyWWJvcdmf17ZmLD-cfxLo",
@@ -14,6 +15,7 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
+const storage = getStorage(fbApp);
 const googleProvider = new GoogleAuthProvider();
 
 const GROUPS_2026 = {
@@ -1415,6 +1417,60 @@ function AdminPanel({ participants, game, showToast }) {
   );
 }
 
+function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
+  const [name,setName]=useState(currentParticipant?.name||authUser.displayName||"");
+  const [photoFile,setPhotoFile]=useState(null);
+  const [preview,setPreview]=useState(currentParticipant?.photoURL||authUser.photoURL||null);
+  const [saving,setSaving]=useState(false);
+
+  function handleFileChange(e){
+    const f=e.target.files[0];
+    if(!f)return;
+    setPhotoFile(f);
+    setPreview(URL.createObjectURL(f));
+  }
+
+  async function handleSave(){
+    setSaving(true);
+    try{
+      let photoURL=currentParticipant?.photoURL||authUser.photoURL||null;
+      if(photoFile){
+        const ref=storageRef(storage,`avatars/${authUser.uid}`);
+        await uploadBytes(ref,photoFile);
+        photoURL=await getDownloadURL(ref);
+      }
+      await saveParticipant({...(currentParticipant||{}),uid:authUser.uid,name:name.trim()||authUser.displayName,photoURL});
+      showToast("הפרופיל עודכן ✓");
+      onClose();
+    }catch(e){
+      showToast("שגיאה בשמירה");
+    }finally{
+      setSaving(false);
+    }
+  }
+
+  return(
+    <div className="admin-overlay" onClick={onClose}>
+      <div className="admin-confirm profile-modal" onClick={e=>e.stopPropagation()}>
+        <div className="admin-confirm-title">עריכת פרופיל</div>
+        <div className="profile-avatar-wrap">
+          {preview?<img src={preview} className="profile-avatar-lg" alt=""/>:<div className="profile-avatar-placeholder">👤</div>}
+          <label className="btn-upload">
+            שנה תמונה
+            <input type="file" accept="image/*" onChange={handleFileChange} style={{display:"none"}}/>
+          </label>
+        </div>
+        <div className="profile-label">שם תצוגה</div>
+        <input className="profile-input" value={name} onChange={e=>setName(e.target.value)} maxLength={30}/>
+        <div className="admin-confirm-btns">
+          <button className="btn-confirm-admin" style={{background:"var(--green)",color:"#000"}} onClick={handleSave} disabled={saving}>{saving?"שומר...":"שמור"}</button>
+          <button className="btn-cancel-admin" onClick={onClose}>ביטול</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App(){
   const [authUser,setAuthUser]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
@@ -1427,6 +1483,7 @@ export default function App(){
   const [selectedPlayer,setSelectedPlayer]=useState(null);
   const [toast,setToast]=useState(null);
   const [odds,setOdds]=useState({});
+  const [showProfileEdit,setShowProfileEdit]=useState(false);
   const toastRef=useRef(null);
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
@@ -1443,8 +1500,8 @@ export default function App(){
       if(user){
         const snap=await getDoc(doc(db,"mundial2026","game","participants",user.uid));
         const existing=snap.exists()?snap.data():{};
-        if(!snap.exists()||existing.name!==user.displayName)
-          await saveParticipant({uid:user.uid,name:user.displayName,photoURL:user.photoURL||null,bets:existing.bets||{}});
+        if(!snap.exists())
+          await saveParticipant({uid:user.uid,name:user.displayName,photoURL:user.photoURL||null,bets:{}});
       }
     });
   },[]);
@@ -1836,9 +1893,9 @@ export default function App(){
       <Toast msg={toast}/>
       <div className="main-screen">
         <div className="main-header">
-          <div className="header-user">
-            {authUser.photoURL&&<img src={authUser.photoURL} className="header-avatar" alt=""/>}
-            <span className="header-name">{authUser.displayName?.split(" ")[0]}</span>
+          <div className="header-user" onClick={()=>setShowProfileEdit(true)} style={{cursor:"pointer"}} title="עריכת פרופיל">
+            {(me?.photoURL||authUser.photoURL)&&<img src={me?.photoURL||authUser.photoURL} className="header-avatar" alt=""/>}
+            <span className="header-name">{(me?.name||authUser.displayName)?.split(" ")[0]}</span>
           </div>
           <div className="header-title">
             <div>מונדיאל<span style={{color:"var(--green)"}}>Bet</span><span style={{color:"var(--gold)"}}>2026</span></div>
@@ -1916,6 +1973,14 @@ export default function App(){
           )}
         </div>
       </div>
+      {showProfileEdit&&authUser&&(
+        <ProfileEditModal
+          authUser={authUser}
+          currentParticipant={me}
+          onClose={()=>setShowProfileEdit(false)}
+          showToast={showToast}
+        />
+      )}
       <style>{STYLES}</style>
     </div>
   );
@@ -2166,4 +2231,12 @@ const STYLES=`
   .btn-cancel-admin{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.5rem 1.2rem;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Heebo',sans-serif}
   .btn-confirm-admin{background:var(--red);border:none;color:#fff;border-radius:8px;padding:.5rem 1.4rem;font-size:.85rem;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif}
   .btn-confirm-admin:disabled,.btn-cancel-admin:disabled{opacity:.5;cursor:not-allowed}
+  .profile-modal{align-items:center;min-width:260px}
+  .profile-avatar-wrap{display:flex;flex-direction:column;align-items:center;gap:.5rem}
+  .profile-avatar-lg{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--green)}
+  .profile-avatar-placeholder{width:80px;height:80px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:2rem}
+  .btn-upload{background:var(--card2);border:1px solid var(--border);border-radius:.4rem;padding:.3rem .8rem;cursor:pointer;font-size:.85rem;color:var(--text);font-family:'Heebo',sans-serif}
+  .profile-label{font-size:.85rem;color:var(--muted);align-self:flex-start;width:100%}
+  .profile-input{width:100%;padding:.5rem .7rem;border-radius:.4rem;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:1rem;box-sizing:border-box;text-align:right;font-family:'Heebo',sans-serif}
+  .header-user:hover .header-name{color:var(--text)}
 `;
