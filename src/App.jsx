@@ -1730,7 +1730,10 @@ export default function App(){
             {authUser.photoURL&&<img src={authUser.photoURL} className="header-avatar" alt=""/>}
             <span className="header-name">{authUser.displayName?.split(" ")[0]}</span>
           </div>
-          <div className="header-title">⚽ Betמונדיאל 2026 על שם נייל קלארק</div>
+          <div className="header-title">
+            <div>מונדיאל<span style={{color:"var(--green)"}}>Bet</span><span style={{color:"var(--gold)"}}>2026</span></div>
+            <div className="header-subtitle">על שם נייל קלארק</div>
+          </div>
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
@@ -1839,7 +1842,8 @@ const STYLES=`
   .header-user{display:flex;align-items:center;gap:.5rem}
   .header-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover}
   .header-name{font-weight:700;font-size:.9rem;color:var(--green)}
-  .header-title{flex:1;font-weight:800;font-size:.82rem;text-align:center;line-height:1.2}
+  .header-title{flex:1;font-weight:800;font-size:.9rem;text-align:center;line-height:1.2}
+  .header-subtitle{font-size:.62rem;color:var(--muted);font-weight:600;margin-top:.1rem}
   .back-btn{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:.2rem .5rem}
   .btn-signout{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .7rem;font-size:.75rem;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap}
   .btn-signout:hover{color:var(--red);border-color:var(--red)}
