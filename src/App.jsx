@@ -1740,13 +1740,18 @@ export default function App(){
             {authUser.photoURL&&<img src={authUser.photoURL} className="header-avatar" alt=""/>}
             <span className="header-name">{authUser.displayName?.split(" ")[0]}</span>
           </div>
-          <div className="header-title"><span>⚽ מונדיאל 2026 BET</span><small>על שם נייל קלארק</small></div>
+          <div className="header-title">⚽ מונדיאלBet 2026 על שם נייל קלארק</div>
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
-          {[["home","🏠","בית"],["results","📊","תוצאות"],["rules","📜","חוקים"]].map(([k,icon,label])=>(
+          {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"]].map(([k,icon,label])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>
-              <span className="tab-icon">{icon}</span>
+              {icon==="score"
+                ? <span className="tab-icon tab-score">3:2</span>
+                : icon==="ref"
+                ? <span className="tab-icon"><img src="/referee.webp" className="tab-ref-img" alt="referee"/></span>
+                : <span className="tab-icon">{icon}</span>
+              }
               <span className="tab-label">{label}</span>
             </button>
           ))}
@@ -1841,8 +1846,7 @@ const STYLES=`
   .header-user{display:flex;align-items:center;gap:.5rem}
   .header-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover}
   .header-name{font-weight:700;font-size:.9rem;color:var(--green)}
-  .header-title{flex:1;font-weight:800;font-size:.9rem;text-align:center;display:flex;flex-direction:column;gap:.05rem;line-height:1.2}
-  .header-title small{font-size:.65rem;color:var(--muted);font-weight:600}
+  .header-title{flex:1;font-weight:800;font-size:.82rem;text-align:center;line-height:1.2}
   .back-btn{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:.2rem .5rem}
   .btn-signout{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .7rem;font-size:.75rem;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap}
   .btn-signout:hover{color:var(--red);border-color:var(--red)}
@@ -1850,7 +1854,9 @@ const STYLES=`
   .main-tabs::-webkit-scrollbar{display:none}
   .main-tab{background:none;border:none;color:var(--muted);font-family:'Heebo',sans-serif;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.55rem 1.4rem}
   .tab-icon{font-size:1.6rem;line-height:1}
-  .tab-label{font-size:.72rem;font-weight:700}
+  .tab-score{font-size:1.1rem;font-weight:900;font-family:'Heebo',sans-serif;color:inherit;background:var(--card2);border:1.5px solid var(--border);border-radius:7px;padding:.1rem .4rem;letter-spacing:-.5px}
+  .main-tab.active .tab-score{border-color:var(--green);color:var(--green)}
+  .tab-ref-img{width:1.8rem;height:1.8rem;object-fit:contain}
   .main-tab.active{color:var(--green);border-bottom-color:var(--green)}
   .main-body{flex:1;overflow-y:auto;padding:1rem}
   .section{display:flex;flex-direction:column;gap:1rem;max-width:680px;margin:0 auto}
