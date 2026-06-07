@@ -68,6 +68,8 @@ const STRIKER_FLAGS = {
 };
 function withStrikerFlag(name){ return name ? `${STRIKER_FLAGS[name]||""} ${name}`.trim() : "—"; }
 
+const ADMIN_EMAIL = "eladvolm@gmail.com";
+
 const GROUP_MATCHES = [
   // --- June 6 (יזיזות — dry run) ---
   {id:"T0",group:"יזיזות",home:"בלגיה",away:"תוניסיה",date:"06/06",kickoff:"2026-06-06T16:00:00+03:00"},
@@ -1305,6 +1307,114 @@ function RankingView({participants, results, teamNames, onSelectPlayer}){
   );
 }
 
+function AdminPanel({ participants, game, showToast }) {
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [running, setRunning] = useState(false);
+
+  const friendlyIds = new Set(GROUP_MATCHES.filter(m => m.id.startsWith("T")).map(m => m.id));
+
+  const actions = [
+    {
+      id: "friendlyBets",
+      label: "אפס הימורי ידידות",
+      desc: `מוחק ניחושים על ${friendlyIds.size} משחקי יזיזות מכל המשתתפים`,
+      icon: "🗑️",
+      danger: false,
+      run: async () => {
+        for (const p of participants) {
+          const newMatches = Object.fromEntries(Object.entries(p.bets?.matches||{}).filter(([k])=>!friendlyIds.has(k)));
+          await saveParticipant({...p, bets: {...p.bets, matches: newMatches}});
+        }
+      }
+    },
+    {
+      id: "friendlyResults",
+      label: "אפס תוצאות יזיזות",
+      desc: `מוחק ${friendlyIds.size} תוצאות משחקי יזיזות מהמערכת`,
+      icon: "📊",
+      danger: false,
+      run: async () => {
+        const newMatches = Object.fromEntries(Object.entries(game.results?.matches||{}).filter(([k])=>!friendlyIds.has(k)));
+        await saveGame({results: {...game.results, matches: newMatches}});
+      }
+    },
+    {
+      id: "allMatchBets",
+      label: "אפס כל הימורי המשחקים",
+      desc: "מוחק ניחושי משחקים של כולם — ידידות + מונדיאל (הימורים כלליים נשארים)",
+      icon: "🧹",
+      danger: true,
+      run: async () => {
+        for (const p of participants) {
+          await saveParticipant({...p, bets: {...p.bets, matches: {}}});
+        }
+      }
+    },
+    {
+      id: "allBets",
+      label: "אפס הכל לחלוטין",
+      desc: "מוחק כל ההימורים של כולם (משחקים + כלליים) + כל התוצאות",
+      icon: "☠️",
+      danger: true,
+      run: async () => {
+        for (const p of participants) {
+          await saveParticipant({...p, bets: {}});
+        }
+        await saveGame({results: {}});
+      }
+    }
+  ];
+
+  const execute = async () => {
+    if (!confirmAction) return;
+    setRunning(true);
+    try {
+      await confirmAction.run();
+      showToast(`✅ ${confirmAction.label} — בוצע!`);
+    } catch(e) {
+      showToast("❌ שגיאה: " + e.message);
+    }
+    setRunning(false);
+    setConfirmAction(null);
+  };
+
+  return (
+    <div className="section admin-panel">
+      <h2>⚙️ פאנל מנהל</h2>
+      <div className="admin-stats">
+        <div className="admin-stat"><span className="admin-stat-val">{participants.length}</span><span>משתתפים</span></div>
+        <div className="admin-stat"><span className="admin-stat-val">{Object.keys(game.results?.matches||{}).length}</span><span>תוצאות שמורות</span></div>
+        <div className="admin-stat"><span className="admin-stat-val">{friendlyIds.size}</span><span>משחקי יזיזות</span></div>
+      </div>
+      <div className="admin-actions">
+        {actions.map(a=>(
+          <div key={a.id} className={`admin-action-row ${a.danger?"admin-action-danger":""}`}>
+            <div className="admin-action-info">
+              <span className="admin-action-label">{a.icon} {a.label}</span>
+              <span className="admin-action-desc">{a.desc}</span>
+            </div>
+            <button className={`btn-admin-act ${a.danger?"btn-admin-red":""}`} onClick={()=>setConfirmAction(a)}>אפס</button>
+          </div>
+        ))}
+      </div>
+      {confirmAction&&(
+        <div className="admin-overlay" onClick={()=>setConfirmAction(null)}>
+          <div className="admin-confirm" onClick={e=>e.stopPropagation()}>
+            <div className="admin-confirm-title">אישור פעולה</div>
+            <div className="admin-confirm-action">{confirmAction.icon} {confirmAction.label}</div>
+            <div className="admin-confirm-desc">{confirmAction.desc}</div>
+            <div className="admin-confirm-warn">⚠️ פעולה זו בלתי הפיכה!</div>
+            <div className="admin-confirm-btns">
+              <button className="btn-cancel-admin" onClick={()=>setConfirmAction(null)} disabled={running}>ביטול</button>
+              <button className="btn-confirm-admin" onClick={execute} disabled={running}>{running?"מבצע...":"כן, אפס!"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App(){
   const [authUser,setAuthUser]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
@@ -1699,6 +1809,7 @@ export default function App(){
 
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
+  const isAdmin=authUser?.email===ADMIN_EMAIL;
   const n=participants.length;
 
   if(authLoading||gameLoading)return(<div className="app loading-screen"><div className="loading-ball">⚽</div><p>טוען...</p></div>);
@@ -1736,7 +1847,7 @@ export default function App(){
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
-          {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"]].map(([k,icon,label])=>(
+          {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"],...(isAdmin?[["admin","⚙️","מנהל"]]:[])].map(([k,icon,label])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>
               {icon==="score"
                 ? <span className="tab-icon tab-score">3:2</span>
@@ -1799,6 +1910,9 @@ export default function App(){
                 <div key={t} className="rule-row"><div className="rule-title">{t}</div><div className="rule-text">{v}</div></div>
               ))}
             </div>
+          )}
+          {tab==="admin"&&isAdmin&&(
+            <AdminPanel participants={participants} game={game} showToast={showToast}/>
           )}
         </div>
       </div>
@@ -2027,4 +2141,29 @@ const STYLES=`
   .bd-empty{color:var(--muted);font-size:.8rem;text-align:center;padding:.4rem 0}
   .bd-all-link{color:var(--green);font-size:.78rem;cursor:pointer;text-align:center;padding:.35rem 0 0;border-top:1px solid var(--border);margin-top:.15rem}
   .bd-all-link:hover{text-decoration:underline}
+  .admin-panel{display:flex;flex-direction:column;gap:1.2rem}
+  .admin-stats{display:flex;gap:.8rem;flex-wrap:wrap}
+  .admin-stat{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.6rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.1rem;min-width:80px}
+  .admin-stat-val{font-size:1.4rem;font-weight:800;color:var(--green)}
+  .admin-stat span:last-child{font-size:.72rem;color:var(--muted)}
+  .admin-actions{display:flex;flex-direction:column;gap:.6rem}
+  .admin-action-row{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  .admin-action-danger{border-color:rgba(255,77,109,.3)}
+  .admin-action-info{display:flex;flex-direction:column;gap:.2rem;flex:1}
+  .admin-action-label{font-size:.9rem;font-weight:700}
+  .admin-action-desc{font-size:.75rem;color:var(--muted)}
+  .btn-admin-act{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.4rem .9rem;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap;flex-shrink:0}
+  .btn-admin-act:hover{border-color:var(--green);color:var(--green)}
+  .btn-admin-red{border-color:rgba(255,77,109,.4);color:var(--red)}
+  .btn-admin-red:hover{background:rgba(255,77,109,.1);border-color:var(--red)}
+  .admin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem}
+  .admin-confirm{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;width:100%;max-width:360px;display:flex;flex-direction:column;gap:.8rem;text-align:center}
+  .admin-confirm-title{font-size:1rem;font-weight:800;color:var(--gold)}
+  .admin-confirm-action{font-size:1.05rem;font-weight:700}
+  .admin-confirm-desc{font-size:.8rem;color:var(--muted)}
+  .admin-confirm-warn{font-size:.82rem;color:var(--red);font-weight:600}
+  .admin-confirm-btns{display:flex;gap:.7rem;justify-content:center;margin-top:.3rem}
+  .btn-cancel-admin{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.5rem 1.2rem;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Heebo',sans-serif}
+  .btn-confirm-admin{background:var(--red);border:none;color:#fff;border-radius:8px;padding:.5rem 1.4rem;font-size:.85rem;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif}
+  .btn-confirm-admin:disabled,.btn-cancel-admin:disabled{opacity:.5;cursor:not-allowed}
 `;
