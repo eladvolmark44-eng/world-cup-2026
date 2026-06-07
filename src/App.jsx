@@ -1123,15 +1123,31 @@ export default function App(){
         // ── MATCHES ────────────────────────────────────────────────
         const byKey = {};
 
-        // Friendly/test matches — ESPN→SofaScore→TheSportsDB→API-Football
-        const hasFriendly = GROUP_MATCHES.some(m=>m.group==="יזיזות"&&Math.abs(Date.now()-new Date(m.kickoff).getTime())<3*60*60*1000);
-        if (hasFriendly) {
-          Object.assign(byKey, await fetchWithFallback(["fifa.friendly","intl.friendlies"], todayISO, today));
+        // Friendly/test matches — fetch by the actual kickoff dates of active friendlies
+        // (avoids midnight bug: after 00:00, new Date() returns next day but matches are still from prev day)
+        const activeFriendlyDates = [...new Set(
+          GROUP_MATCHES
+            .filter(m => m.group==="יזיזות" && Math.abs(now - new Date(m.kickoff).getTime()) < 3*60*60*1000)
+            .map(m => isoDate(new Date(m.kickoff)))
+        )];
+        for (const iso of activeFriendlyDates) {
+          const ymd = iso.replace(/-/g, '');
+          Object.assign(byKey, await fetchWithFallback(["fifa.friendly","intl.friendlies"], iso, ymd));
         }
 
         // WC matches — ESPN→SofaScore→TheSportsDB→API-Football
         if (wcStarted) {
-          Object.assign(byKey, await fetchWithFallback(["fifa.world"], todayISO, today));
+          // Also derive date from active WC match kickoffs to handle midnight crossing
+          const activeWCDates = [...new Set(
+            GROUP_MATCHES
+              .filter(m => m.group!=="יזיזות" && Math.abs(now - new Date(m.kickoff).getTime()) < 3*60*60*1000)
+              .map(m => isoDate(new Date(m.kickoff)))
+          )];
+          const wcDates = activeWCDates.length ? activeWCDates : [todayISO];
+          for (const iso of wcDates) {
+            const ymd = iso.replace(/-/g, '');
+            Object.assign(byKey, await fetchWithFallback(["fifa.world"], iso, ymd));
+          }
 
           // Standings via API-Football, max once per hour
           const lastSS = syncData.lastStandingsSync ? new Date(syncData.lastStandingsSync).getTime() : 0;
