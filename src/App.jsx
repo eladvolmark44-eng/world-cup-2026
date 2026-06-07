@@ -36,47 +36,37 @@ const REAL_TEAMS = ALL_TEAMS.filter(t => !t.startsWith("פלייאוף"));
 
 // Top strikers / goal threats for World Cup 2026
 const STRIKERS = [
-  // ארגנטינה
-  "ליאונל מסי","חוליאן אלבארז","לאוטרו מרטינס",
-  // צרפת
-  "קיליאן מבאפה","אוליביה ז'ירו","מרכוס תוראם",
-  // אנגליה
-  "הארי קיין","בוקאיו סאקה","פיל פודן","ג'ודה בלינגהאם",
-  // פורטוגל
-  "קריסטיאנו רונאלדו","ברונו פרננדש","ז'ואאו פליקס","גונסאלו ראמוש",
-  // ברזיל
-  "וינישיוס ג'וניור","רודריגו","ראפיניה","אנדריק",
-  // ספרד
-  "לאמין יאמל","ניקו וויליאמס","אלוורו מוראטה","פדרי",
-  // גרמניה
-  "פלוריאן וירץ","ג'מאל מוסיאלה","קאי האברץ","תומאס מולר",
-  // הולנד
-  "קודי גאקפו","ממפיס דיפאי","דאהווי קלאסן",
-  // בלגיה
-  "רומלו לוקאקו","לואיס אופנדה",
-  // נורווגיה
-  "ארלינג הולאנד",
-  // אורוגוואי
-  "דרווין נונייס","לואיס סוארס","פדרו דה לה וגה",
-  // מקסיקו
-  "חיאן לוזאנו","הנרי מרטין","סנטיאגו חימנז",
-  // ארה"ב
-  "כריסטיאן פוליסיץ","פולקר הרוש","ריקי פוסה",
-  // קנדה
-  "אלפונסו דאוויס","תאדאוס סאלאה",
-  // סנגל
-  "סאדיו מאנה","ישחק קויאטה",
-  // מרוקו
-  "עיאש ח'מכוני","ופאד אח'יארד","יוסף אנסאפלה",
-  // קוריאה
-  "סון הון-מין",
-  // יפן
-  "דאיצ'י מיינו","ריוואטה אוסאקו",
-  // אקוודור
-  "אנר ואלנציה","גונסאלו פלאסיו",
-  // פולאנד / צ'כיה
-  "אדם הלוסה",
-].sort((a,b)=>a.localeCompare(b,"he"));
+  "קיליאן אמבפה",
+  "הארי קיין",
+  "ליונל מסי",
+  "ארלינג האלנד",
+  "למין יאמאל",
+  "כריסטיאנו רונאלדו",
+  "ניק וולטמאדה",
+  "עוסמאן דמבלה",
+  "לאוטרו מרטינז",
+  "ויניסיוס ג'וניור",
+  "בוקאיו סאקה",
+  "ראפיניה",
+  "מיקל אויארסבאל",
+];
+
+const STRIKER_FLAGS = {
+  "קיליאן אמבפה":       "🇫🇷",
+  "הארי קיין":          "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+  "ליונל מסי":          "🇦🇷",
+  "ארלינג האלנד":       "🇳🇴",
+  "למין יאמאל":         "🇪🇸",
+  "כריסטיאנו רונאלדו":  "🇵🇹",
+  "ניק וולטמאדה":       "🇩🇪",
+  "עוסמאן דמבלה":       "🇫🇷",
+  "לאוטרו מרטינז":      "🇦🇷",
+  "ויניסיוס ג'וניור":   "🇧🇷",
+  "בוקאיו סאקה":        "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+  "ראפיניה":            "🇧🇷",
+  "מיקל אויארסבאל":     "🇪🇸",
+};
+function withStrikerFlag(name){ return name ? `${STRIKER_FLAGS[name]||""} ${name}`.trim() : "—"; }
 
 const GROUP_MATCHES = [
   // --- June 6 (יזיזות — dry run) ---
@@ -608,7 +598,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
           ].map(({label,key,can})=>(
             <div key={key} className="special-row">
               <label>{label}</label>
-              <div className={`special-val ${!can?"hidden-val":""}`}>{can?(bets[key]||"—"):"🔒 יחשף בשריקת הפתיחה של המשחק הראשון"}</div>
+              <div className={`special-val ${!can?"hidden-val":""}`}>{can?(key==="goldenBoot"?withStrikerFlag(bets[key]):bets[key]||"—"):"🔒 יחשף בשריקת הפתיחה של המשחק הראשון"}</div>
             </div>
           ))}
         </div>
@@ -693,7 +683,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
             <label>👟 מלך השערים (12נק׳) {globalLocked&&"🔒"}</label>
             <select disabled={globalLocked} value={bets.goldenBoot||""} onChange={e=>setBets(p=>({...p,goldenBoot:e.target.value}))}>
               <option value="">— בחר שחקן —</option>
-              {STRIKERS.map(s=><option key={s} value={s}>{s}</option>)}
+              {STRIKERS.map(s=><option key={s} value={s}>{STRIKER_FLAGS[s]||""} {s}</option>)}
             </select>
           </div>
           <div className="special-row">
@@ -1037,7 +1027,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
               </div>
               <div className="home-bet-item">
                 <span className="home-bet-label">👟 מלך שערים</span>
-                <span className="home-bet-val">{myBets.goldenBoot||"—"}</span>
+                <span className="home-bet-val">{withStrikerFlag(myBets.goldenBoot)||"—"}</span>
               </div>
               <div className="home-bet-item">
                 <span className="home-bet-label">⚽ ניחוש שערים</span>
@@ -1061,7 +1051,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                 <label>👟 מלך שערים <span className="pts-hint">(12נק׳)</span></label>
                 <select value={goldenBoot} onChange={e=>setGoldenBoot(e.target.value)}>
                   <option value="">— בחר שחקן —</option>
-                  {STRIKERS.map(s=><option key={s} value={s}>{s}</option>)}
+                  {STRIKERS.map(s=><option key={s} value={s}>{STRIKER_FLAGS[s]||""} {s}</option>)}
                 </select>
               </div>
               <div className="special-row">
