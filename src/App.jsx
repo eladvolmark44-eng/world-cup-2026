@@ -767,14 +767,9 @@ function DateNav({selectedDate,onChange}){
   const [dd,mm]=(selectedDate||"").split("/");
   const MONTHS=["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
   const label=dd&&mm?`${parseInt(dd)} ${MONTHS[parseInt(mm)]}`:selectedDate;
-  const now=Date.now();
-  const isToday=(()=>{
-    const ms=GROUP_MATCHES.filter(m=>m.date===selectedDate&&m.kickoff);
-    if(!ms.length)return false;
-    const first=Math.min(...ms.map(m=>new Date(m.kickoff).getTime()));
-    const last=Math.max(...ms.map(m=>new Date(m.kickoff).getTime()));
-    return first<=now+8*60*60*1000&&last+10*60*60*1000>=now;
-  })();
+  const _td=new Date();
+  const todayStr=`${String(_td.getDate()).padStart(2,'0')}/${String(_td.getMonth()+1).padStart(2,'0')}`;
+  const isToday=selectedDate===todayStr;
   return(
     <div className="date-nav">
       <button className="date-nav-arrow" disabled={idx<=0} onClick={()=>idx>0&&onChange(ALL_MATCH_DATES[idx-1])}>‹</button>
