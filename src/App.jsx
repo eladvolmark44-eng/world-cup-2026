@@ -204,7 +204,13 @@ const ALL_MATCH_DATES = [...new Set(GROUP_MATCHES.filter(m=>m.date).map(m=>m.dat
 
 function getDefaultMatchDate(){
   const d=new Date();
-  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+  const todayStr=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+  if(ALL_MATCH_DATES.includes(todayStr))return todayStr;
+  // snap to closest past date, or first future date if nothing in the past
+  const todayMs=d.setHours(0,0,0,0);
+  const parse=s=>{const [dd,mm]=s.split('/');return new Date(2026,parseInt(mm)-1,parseInt(dd)).getTime();};
+  const past=ALL_MATCH_DATES.filter(s=>parse(s)<=todayMs);
+  return past.length?past[past.length-1]:ALL_MATCH_DATES[0];
 }
 
 const GROUP_LAST_MATCH = {};
