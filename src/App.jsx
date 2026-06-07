@@ -1890,6 +1890,7 @@ export default function App(){
   );
 
   return(
+    <>
     <div className="app" dir="rtl">
       <Toast msg={toast}/>
       <div className="main-screen">
@@ -1974,16 +1975,17 @@ export default function App(){
           )}
         </div>
       </div>
-      {showProfileEdit&&authUser&&(
-        <ProfileEditModal
-          authUser={authUser}
-          currentParticipant={me}
-          onClose={()=>setShowProfileEdit(false)}
-          showToast={showToast}
-        />
-      )}
       <style>{STYLES}</style>
     </div>
+    {showProfileEdit&&authUser&&(
+      <ProfileEditModal
+        authUser={authUser}
+        currentParticipant={me}
+        onClose={()=>setShowProfileEdit(false)}
+        showToast={showToast}
+      />
+    )}
+  </>
   );
 }
 
