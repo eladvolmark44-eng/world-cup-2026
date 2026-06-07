@@ -733,7 +733,7 @@ function MatchRow({m, res, teamNames, odds}){
       <div className="sched-date">
         {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?groupLabel(m.group):m.stage||""}
         {isLive&&<span className="live-badge"> 🔴 {res?.minute ? `${res.minute}'` : 'חי'}</span>}
-        {isDone&&<span className="done-badge"> ✓ סיים</span>}
+        {isDone&&<span className="done-badge"> ✓ הסתיים</span>}
         {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
       </div>
       <div className="sched-teams">
