@@ -427,7 +427,7 @@ function SignInScreen({onSignIn,loading}){
         <div className="signin-welcome">ברוכים הבאים</div>
         <h1 className="signin-title">מונדיאל<span>BET</span></h1>
         <div className="signin-year">2026</div>
-        <p className="signin-sub">אתר ההימורים של קאפ העולם</p>
+        <p className="signin-sub">אתר ההימורים של גביע העולם על שם נייל קלארק</p>
         <div className="signin-sep"/>
         <button className="signin-btn-google" onClick={onSignIn} disabled={loading}>
           {loading?"מתחבר...":<><svg width="22" height="22" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.7l-6.2-5.2C29.3 35.6 26.8 36 24 36c-5.2 0-9.6-2.9-11.3-7l-6.5 5C9.5 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.4 35.7 44 30.3 44 24c0-1.3-.1-2.7-.4-4z"/></svg>כניסה עם Google</>}
@@ -1740,7 +1740,7 @@ export default function App(){
             {authUser.photoURL&&<img src={authUser.photoURL} className="header-avatar" alt=""/>}
             <span className="header-name">{authUser.displayName?.split(" ")[0]}</span>
           </div>
-          <span className="header-title">⚽ מונדיאל BET 2026</span>
+          <div className="header-title"><span>⚽ מונדיאל 2026 BET</span><small>על שם נייל קלארק</small></div>
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
@@ -1841,7 +1841,8 @@ const STYLES=`
   .header-user{display:flex;align-items:center;gap:.5rem}
   .header-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover}
   .header-name{font-weight:700;font-size:.9rem;color:var(--green)}
-  .header-title{flex:1;font-weight:800;font-size:.9rem;text-align:center}
+  .header-title{flex:1;font-weight:800;font-size:.9rem;text-align:center;display:flex;flex-direction:column;gap:.05rem;line-height:1.2}
+  .header-title small{font-size:.65rem;color:var(--muted);font-weight:600}
   .back-btn{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:.2rem .5rem}
   .btn-signout{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .7rem;font-size:.75rem;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap}
   .btn-signout:hover{color:var(--red);border-color:var(--red)}
