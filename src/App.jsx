@@ -577,7 +577,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
                   <span className="team-name">{withFlag(teamNames?.[m.home]||m.home)}</span>
                   <div className="score-area">
                     {visible&&bet?.home!=null
-                      ?<span dir="ltr" className={`bet-score ${exact?"exact":correct?"dir-ok":""}`}>{bet.home}:{bet.away}{exact?" 🎯":correct?" ✓":""}</span>
+                      ?<span dir="ltr" className={`bet-score ${exact?"exact":correct?"dir-ok":""}`}>{bet.away}:{bet.home}{exact?" 🎯":correct?" ✓":""}</span>
                       :<span className="hidden-score">{visible?"—":"🔒"}</span>
                     }
                   </div>
@@ -734,7 +734,7 @@ function MatchRow({m, res, teamNames, odds}){
       </div>
       <div className="sched-teams">
         <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}</span>
-        {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.home} – {res.away}</span>:<span className="sched-vs">vs</span>}
+        {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
         <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}</span>
       </div>
       {matchOdds&&(
@@ -911,7 +911,7 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
                         return(
                           <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                             <span className="chip-name">{p.name.split(" ")[0]}</span>
-                            <span className="chip-score">{bet.home}:{bet.away}</span>
+                            <span className="chip-score">{bet.away}:{bet.home}</span>
                             {pts!==null&&<span className="chip-pts">{pts} נק׳</span>}
                             {exact&&<span>🎯</span>}
                             {!exact&&correct&&<span>✓</span>}
@@ -973,7 +973,7 @@ function LiveBar({results, teamNames}){
         const res=results.matches[m.id];
         return(
           <span key={m.id} className="live-now-item">
-            🔴 {withFlag(teamNames?.[m.home]||m.home)} <b>{res.home}:{res.away}</b> {withFlag(teamNames?.[m.away]||m.away)}
+            🔴 {withFlag(teamNames?.[m.home]||m.home)} <b><span dir="ltr">{res.home}:{res.away}</span></b> {withFlag(teamNames?.[m.away]||m.away)}
             {res.minute?<span className="live-min"> {res.minute}'</span>:null}
           </span>
         );
@@ -1087,7 +1087,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                     return(
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">{bet.home}:{bet.away}</span>
+                        <span className="chip-score">{bet.away}:{bet.home}</span>
                         {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
                         {exact&&<span>🎯</span>}
                         {!exact&&correct&&<span>✓</span>}
@@ -1181,7 +1181,7 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
                     return(
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">{bet.home}:{bet.away}</span>
+                        <span className="chip-score">{bet.away}:{bet.home}</span>
                         {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
                         {exact&&<span>🎯</span>}
                         {!exact&&correct&&<span>✓</span>}
@@ -1283,7 +1283,7 @@ function RankingView({participants, results, teamNames, onSelectPlayer}){
                       <div key={m.id} className="breakdown-row">
                         <span className="bd-match">{withFlag(teamNames?.[m.home]||m.home)} vs {withFlag(teamNames?.[m.away]||m.away)}</span>
                         <span className="bd-detail">
-                          <span className="bd-bet">{bet.home}:{bet.away}</span>
+                          <span className="bd-bet">{bet.away}:{bet.home}</span>
                           <span className="bd-sep">→</span>
                           <span className={`bd-real${real.live?" live":""}`}>{real.home}:{real.away}</span>
                         </span>
