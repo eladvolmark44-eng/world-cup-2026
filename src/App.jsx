@@ -713,9 +713,7 @@ function MatchRow({m, res, teamNames, odds}){
       </div>
       <div className="sched-teams">
         <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}</span>
-        {hasRes && res.homeRedCards > 0 && <span className="red-card-icons">{Array.from({length:res.homeRedCards}).map((_,i)=><span key={i} className="red-card"/>)}</span>}
         {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
-        {hasRes && res.awayRedCards > 0 && <span className="red-card-icons">{Array.from({length:res.awayRedCards}).map((_,i)=><span key={i} className="red-card"/>)}</span>}
         <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}</span>
       </div>
       {matchOdds&&(
@@ -1020,9 +1018,9 @@ export default function App(){
         const yyyymmdd = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
         const isoDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-        const addBothKeys = (res, h, a, hg, ag, status, live, minute, hrc=0, arc=0) => {
-          res[`${h}_${a}`]={home:hg,away:ag,status,live,minute:minute??null,homeRedCards:hrc,awayRedCards:arc};
-          res[`${a}_${h}`]={home:ag,away:hg,status,live,minute:minute??null,homeRedCards:arc,awayRedCards:hrc};
+        const addBothKeys = (res, h, a, hg, ag, status, live, minute) => {
+          res[`${h}_${a}`]={home:hg,away:ag,status,live,minute:minute??null};
+          res[`${a}_${h}`]={home:ag,away:hg,status,live,minute:minute??null};
         };
 
         const parseESPN = evs => {
@@ -1038,9 +1036,7 @@ export default function App(){
             const hg=parseInt(hC.score,10),ag=parseInt(aC.score,10);
             if(isNaN(hg)||isNaN(ag))continue;
             const minute=live ? (parseInt(comp.status?.displayClock,10)||null) : null;
-            const hrc=(hC.statistics||[]).find(s=>s.name==="redCards")?.value??0;
-            const arc=(aC.statistics||[]).find(s=>s.name==="redCards")?.value??0;
-            addBothKeys(res,heb(hC.team.displayName),heb(aC.team.displayName),hg,ag,fin?"FT":"LIVE",live,minute,hrc,arc);
+            addBothKeys(res,heb(hC.team.displayName),heb(aC.team.displayName),hg,ag,fin?"FT":"LIVE",live,minute);
           }
           return res;
         };
@@ -1054,8 +1050,7 @@ export default function App(){
             const hg=ev.homeScore?.current, ag=ev.awayScore?.current;
             if(hg==null||ag==null)continue;
             const minute=live ? (ev.time?.played??null) : null;
-            const hrc=ev.homeRedCards??0, arc=ev.awayRedCards??0;
-            addBothKeys(res,heb(ev.homeTeam?.name),heb(ev.awayTeam?.name),hg,ag,fin?"FT":"LIVE",live,minute,hrc,arc);
+            addBothKeys(res,heb(ev.homeTeam?.name),heb(ev.awayTeam?.name),hg,ag,fin?"FT":"LIVE",live,minute);
           }
           return res;
         };
@@ -1069,54 +1064,27 @@ export default function App(){
             const hg=parseInt(ev.intHomeScore,10),ag=parseInt(ev.intAwayScore,10);
             if(isNaN(hg)||isNaN(ag))continue;
             const minute=live ? (parseInt(ev.intProgress,10)||null) : null;
-            addBothKeys(res,heb(ev.strHomeTeam),heb(ev.strAwayTeam),hg,ag,fin?"FT":"LIVE",live,minute,0,0);
+            addBothKeys(res,heb(ev.strHomeTeam),heb(ev.strAwayTeam),hg,ag,fin?"FT":"LIVE",live,minute);
           }
           return res;
         };
 
         // Fetch from multiple sources with fallback (ESPN→SofaScore→TheSportsDB→API-Football)
         const fetchWithFallback = async (espnSlugs, iso, ymd) => {
-          // 1. ESPN — try all slugs and merge scores
-          const result = {};
+          // 1. ESPN
           for(const slug of espnSlugs){
             try{
               const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
               const d=await r.json();
-              if(d.events?.length) Object.assign(result, parseESPN(d.events));
+              if(d.events?.length) return parseESPN(d.events);
             }catch(e){}
           }
-          // 2. SofaScore — always try, supplements ESPN with red cards; primary if ESPN empty
+          // 2. SofaScore
           try{
             const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,{headers:{"User-Agent":"Mozilla/5.0"}});
             const d=await r.json();
-            if(d.events?.length){
-              const sofa=parseSofaScore(d.events);
-              if(Object.keys(result).length){
-                // ESPN has scores — patch in red cards from SofaScore
-                for(const [key,val] of Object.entries(sofa)){
-                  if(result[key]){
-                    result[key].homeRedCards=val.homeRedCards;
-                    result[key].awayRedCards=val.awayRedCards;
-                  }
-                }
-              } else {
-                Object.assign(result, sofa);
-              }
-            }
+            if(d.events?.length) return parseSofaScore(d.events);
           }catch(e){}
-          // 3. /api/red-cards — server-side SofaScore proxy (no CORS), patch red cards
-          if(Object.keys(result).length){
-            try{
-              const rcResp=await fetch(`/api/red-cards?date=${iso}`);
-              if(rcResp.ok){
-                const rcData=await rcResp.json();
-                for(const [key,val] of Object.entries(rcData)){
-                  if(result[key]){result[key].homeRedCards=val.homeRedCards;result[key].awayRedCards=val.awayRedCards;}
-                }
-              }
-            }catch(e){}
-            return result;
-          }
           // 3. TheSportsDB
           try{
             const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
@@ -1134,10 +1102,7 @@ export default function App(){
               const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
               if((fin||live)&&goals.home!=null&&goals.away!=null){
                 const minute=live ? (fi.status.elapsed??null) : null;
-                const isRC = e => (e.type==="Card")&&(e.detail==="Red Card"||e.detail==="Yellow Red Card");
-                const hrc=(f.events||[]).filter(e=>isRC(e)&&e.team?.id===teams.home.id).length;
-                const arc=(f.events||[]).filter(e=>isRC(e)&&e.team?.id===teams.away.id).length;
-                addBothKeys(res,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute,hrc,arc);
+                addBothKeys(res,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
               }
             }
             return res;
@@ -1187,12 +1152,8 @@ export default function App(){
           const key = `${m.home}_${m.away}`;
           if (byKey[key]) {
             const prev = curMatches[m.id], next = byKey[key];
-            // Preserve red card counts from Firebase if new source returned 0
-            const homeRC = next.homeRedCards || prev?.homeRedCards || 0;
-            const awayRC = next.awayRedCards || prev?.awayRedCards || 0;
-            const merged = {...next, homeRedCards: homeRC, awayRedCards: awayRC};
-            if (!prev || prev.home!==merged.home || prev.away!==merged.away || prev.live!==merged.live || prev.minute!==merged.minute || prev.homeRedCards!==merged.homeRedCards || prev.awayRedCards!==merged.awayRedCards) {
-              updatedMatches[m.id] = merged; matchChanged = true;
+            if (!prev || prev.home!==next.home || prev.away!==next.away || prev.live!==next.live || prev.minute!==next.minute) {
+              updatedMatches[m.id] = next; matchChanged = true;
             }
           }
         }
@@ -1527,8 +1488,7 @@ const STYLES=`
   .sched-open{border-color:rgba(0,216,127,.2)}
   .live-badge{font-size:.65rem;color:var(--red);font-weight:800;animation:pulse 1s ease-in-out infinite}
   .done-badge{font-size:.65rem;color:var(--green)}
-  .red-card-icons{display:inline-flex;align-items:center;gap:2px;margin:0 3px}
-  .red-card{display:inline-block;width:.35em;height:.5em;background:#e53935;border-radius:1px;vertical-align:middle}
+
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .sched-score-live{background:rgba(255,77,109,.15);color:var(--red) !important}
   .sched-winning{color:var(--gold) !important}
