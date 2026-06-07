@@ -1749,7 +1749,7 @@ export default function App(){
               {icon==="score"
                 ? <span className="tab-icon tab-score">3:2</span>
                 : icon==="ref"
-                ? <span className="tab-icon"><img src="/referee.webp" className="tab-ref-img" alt="referee"/></span>
+                ? <span className="tab-icon"><img src="/referee.png" className="tab-ref-img" alt="referee"/></span>
                 : <span className="tab-icon">{icon}</span>
               }
               <span className="tab-label">{label}</span>
