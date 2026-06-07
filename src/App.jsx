@@ -759,21 +759,25 @@ function MatchRow({m, res, teamNames, odds}){
 }
 
 function DateNav({selectedDate,onChange}){
-  const idx=ALL_MATCH_DATES.indexOf(selectedDate);
-  const [dd,mm]=(selectedDate||"").split("/");
   const MONTHS=["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+  const parseDate=s=>{const [d,m]=s.split('/');return new Date(2026,parseInt(m)-1,parseInt(d)).getTime();};
+  const selMs=selectedDate?parseDate(selectedDate):0;
+  // find effective prev/next by timestamp, not just array index
+  const prevDate=ALL_MATCH_DATES.filter(d=>parseDate(d)<selMs).at(-1)||null;
+  const nextDate=ALL_MATCH_DATES.find(d=>parseDate(d)>selMs)||null;
+  const [dd,mm]=(selectedDate||"").split("/");
   const label=dd&&mm?`${parseInt(dd)} ${MONTHS[parseInt(mm)]}`:selectedDate;
   const _td=new Date();
   const todayStr=`${String(_td.getDate()).padStart(2,'0')}/${String(_td.getMonth()+1).padStart(2,'0')}`;
   const isToday=selectedDate===todayStr;
   return(
     <div className="date-nav">
-      <button className="date-nav-arrow" disabled={idx<=0} onClick={()=>idx>0&&onChange(ALL_MATCH_DATES[idx-1])}>‹</button>
+      <button className="date-nav-arrow" disabled={!prevDate} onClick={()=>prevDate&&onChange(prevDate)}>‹</button>
       <div className="date-nav-center">
         <span className="date-nav-label">{label}</span>
         {isToday&&<span className="date-today-pill">היום</span>}
       </div>
-      <button className="date-nav-arrow" disabled={idx>=ALL_MATCH_DATES.length-1} onClick={()=>idx<ALL_MATCH_DATES.length-1&&onChange(ALL_MATCH_DATES[idx+1])}>›</button>
+      <button className="date-nav-arrow" disabled={!nextDate} onClick={()=>nextDate&&onChange(nextDate)}>›</button>
     </div>
   );
 }
