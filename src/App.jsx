@@ -991,8 +991,25 @@ function LiveBar({results, teamNames}){
 }
 
 // ─── HOME VIEW ────────────────────────────────────────────────────────────────
-function HomeView({me, participants, results, teamNames, odds, onSelectPlayer}){
+function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, onSaveBets}){
   const myBets=me?.bets||{};
+  const globalLocked=isGlobalLocked();
+  const [champion,setChampion]=useState(myBets.champion||"");
+  const [goldenBoot,setGoldenBoot]=useState(myBets.goldenBoot||"");
+  const [totalGoals,setTotalGoals]=useState(myBets.totalGoals||"");
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  useEffect(()=>{
+    setChampion(myBets.champion||"");
+    setGoldenBoot(myBets.goldenBoot||"");
+    setTotalGoals(myBets.totalGoals||"");
+  },[myBets.champion,myBets.goldenBoot,myBets.totalGoals]);
+  const handleSaveSpecial=async()=>{
+    setSaving(true);
+    await onSaveBets({...myBets,champion,goldenBoot,totalGoals});
+    setSaving(false);setSaved(true);
+    setTimeout(()=>setSaved(false),2000);
+  };
   const nowTs=Date.now();
   const liveMatch=GROUP_MATCHES.find(m=>results.matches?.[m.id]?.live===true);
   const nextMatch=!liveMatch&&GROUP_MATCHES
@@ -1006,25 +1023,58 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer}){
     <div className="section">
       {me&&(
         <div className="home-card">
-          <div className="home-card-title">🎯 ההימורים הכלליים שלי</div>
-          <div className="home-bets-grid">
-            <div className="home-bet-item">
-              <span className="home-bet-label">🏆 אלופה</span>
-              <span className="home-bet-val">{myBets.champion?withFlag(teamNames?.[myBets.champion]||myBets.champion):"—"}</span>
-            </div>
-            <div className="home-bet-item">
-              <span className="home-bet-label">👟 מלך שערים</span>
-              <span className="home-bet-val">{myBets.goldenBoot||"—"}</span>
-            </div>
-            <div className="home-bet-item">
-              <span className="home-bet-label">⚽ ניחוש שערים</span>
-              <span className="home-bet-val">{myBets.totalGoals!=null?myBets.totalGoals:"—"}</span>
-            </div>
-            <div className="home-bet-item">
-              <span className="home-bet-label">🏠 בתים שנבחרו</span>
-              <span className="home-bet-val">{groupsPickedCount}/12</span>
-            </div>
+          <div className="home-card-title">
+            🎯 ההימורים הכלליים שלי
+            {globalLocked&&<span className="lock-badge-sm"> 🔒 נעול</span>}
           </div>
+          {globalLocked?(
+            <div className="home-bets-grid">
+              <div className="home-bet-item">
+                <span className="home-bet-label">🏆 אלופה</span>
+                <span className="home-bet-val">{myBets.champion?withFlag(teamNames?.[myBets.champion]||myBets.champion):"—"}</span>
+              </div>
+              <div className="home-bet-item">
+                <span className="home-bet-label">👟 מלך שערים</span>
+                <span className="home-bet-val">{myBets.goldenBoot||"—"}</span>
+              </div>
+              <div className="home-bet-item">
+                <span className="home-bet-label">⚽ ניחוש שערים</span>
+                <span className="home-bet-val">{myBets.totalGoals!=null?myBets.totalGoals:"—"}</span>
+              </div>
+              <div className="home-bet-item">
+                <span className="home-bet-label">🏠 בתים שנבחרו</span>
+                <span className="home-bet-val">{groupsPickedCount}/12</span>
+              </div>
+            </div>
+          ):(
+            <div className="home-special-form">
+              <div className="special-row">
+                <label>🏆 אלופה <span className="pts-hint">(12נק׳)</span></label>
+                <select value={champion} onChange={e=>setChampion(e.target.value)}>
+                  <option value="">— בחר קבוצה —</option>
+                  {REAL_TEAMS.map(t=><option key={t} value={t}>{withFlag(teamNames?.[t]||t)}</option>)}
+                </select>
+              </div>
+              <div className="special-row">
+                <label>👟 מלך שערים <span className="pts-hint">(12נק׳)</span></label>
+                <select value={goldenBoot} onChange={e=>setGoldenBoot(e.target.value)}>
+                  <option value="">— בחר שחקן —</option>
+                  {STRIKERS.map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div className="special-row">
+                <label>⚽ ניחוש סה״כ שערים <span className="pts-hint">(קרוב ביותר מנצח)</span></label>
+                <input type="number" placeholder="כמה שערים?" value={totalGoals} onChange={e=>setTotalGoals(e.target.value)}/>
+              </div>
+              <div className="home-groups-indicator">
+                <span>🏠 בתים שנבחרו</span>
+                <span className={groupsPickedCount===12?"val-green":"val-muted"}>{groupsPickedCount}/12 — ערוך בלשונית תוצאות</span>
+              </div>
+              <button className="btn-green" onClick={handleSaveSpecial} disabled={saving}>
+                {saved?"✅ נשמר!":saving?"...":"💾 שמור הימורים"}
+              </button>
+            </div>
+          )}
         </div>
       )}
       {featuredMatch&&(
@@ -1647,8 +1697,11 @@ export default function App(){
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
         <div className="main-tabs">
-          {[["home","🏠 בית"],["results","📊 תוצאות"],["rules","📜 חוקים"]].map(([k,l])=>(
-            <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
+          {[["home","🏠","בית"],["results","📊","תוצאות"],["rules","📜","חוקים"]].map(([k,icon,label])=>(
+            <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>
+              <span className="tab-icon">{icon}</span>
+              <span className="tab-label">{label}</span>
+            </button>
           ))}
         </div>
         <div className="main-body">
@@ -1660,6 +1713,7 @@ export default function App(){
               teamNames={teamNames}
               odds={odds}
               onSelectPlayer={setSelectedPlayer}
+              onSaveBets={handleSaveBets}
             />
           )}
           {tab==="results"&&(
@@ -1738,7 +1792,9 @@ const STYLES=`
   .btn-signout:hover{color:var(--red);border-color:var(--red)}
   .main-tabs{display:flex;justify-content:center;background:var(--card);border-bottom:1px solid var(--border);padding:0 .5rem;flex-shrink:0;scrollbar-width:none}
   .main-tabs::-webkit-scrollbar{display:none}
-  .main-tab{background:none;border:none;color:var(--muted);font-family:'Heebo',sans-serif;font-size:.83rem;font-weight:600;padding:.7rem .75rem;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s}
+  .main-tab{background:none;border:none;color:var(--muted);font-family:'Heebo',sans-serif;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.55rem 1.4rem}
+  .tab-icon{font-size:1.6rem;line-height:1}
+  .tab-label{font-size:.72rem;font-weight:700}
   .main-tab.active{color:var(--green);border-bottom-color:var(--green)}
   .main-body{flex:1;overflow-y:auto;padding:1rem}
   .section{display:flex;flex-direction:column;gap:1rem;max-width:680px;margin:0 auto}
@@ -1886,6 +1942,10 @@ const STYLES=`
   .home-bet-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.55rem .75rem;display:flex;flex-direction:column;gap:.25rem}
   .home-bet-label{font-size:.68rem;color:var(--muted)}
   .home-bet-val{font-weight:800;font-size:.88rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .home-special-form{display:flex;flex-direction:column;gap:.75rem}
+  .home-groups-indicator{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:.55rem .75rem;font-size:.82rem}
+  .val-green{color:var(--green);font-weight:700}
+  .val-muted{color:var(--muted)}
   /* ── Live bar ── */
   .live-now-bar{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.35);border-radius:10px;padding:.5rem .85rem;display:flex;flex-wrap:wrap;gap:.55rem;margin-bottom:.55rem}
   .live-now-item{font-size:.8rem;color:var(--red);font-weight:700;display:flex;align-items:center;gap:.25rem}
