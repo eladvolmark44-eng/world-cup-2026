@@ -1138,7 +1138,7 @@ export default function App(){
               if(d.events?.length) Object.assign(merged, parseESPN(d.events));
             }catch(e){}
           }
-          // 2. TheSportsDB — always supplement (covers small matches ESPN misses)
+          // 2. TheSportsDB — always supplement
           try{
             const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
             const d=await r.json();
@@ -1147,30 +1147,31 @@ export default function App(){
               for(const [k,v] of Object.entries(p)) if(!merged[k]) merged[k]=v;
             }
           }catch(e){}
-          if(Object.keys(merged).length) return merged;
-          // 3. SofaScore fallback
+          // 3. SofaScore — always supplement (covers obscure matches ESPN/TheSportsDB miss)
           try{
             const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,{headers:{"User-Agent":"Mozilla/5.0"}});
             const d=await r.json();
-            if(d.events?.length) return parseSofaScore(d.events);
+            if(d.events?.length){
+              const p=parseSofaScore(d.events);
+              for(const [k,v] of Object.entries(p)) if(!merged[k]) merged[k]=v;
+            }
           }catch(e){}
-          // 4. API-Football (last resort, uses daily quota)
+          // 4. API-Football — always supplement (last resort, uses daily quota)
           try{
             const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
             const d=await r.json();
-            const res={};
             for(const f of(d.response||[])){
               const{fixture:fi,teams,goals}=f;
               const s=fi.status.short;
               const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
               if((fin||live)&&goals.home!=null&&goals.away!=null){
                 const minute=live ? (fi.status.elapsed??null) : null;
-                addBothKeys(res,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+                const k1=`${heb(teams.home.name)}_${heb(teams.away.name)}`;
+                if(!merged[k1]) addBothKeys(merged,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
               }
             }
-            return res;
           }catch(e){}
-          return {};
+          return merged;
         };
 
         const today = yyyymmdd(now2);
