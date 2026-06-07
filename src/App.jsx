@@ -991,10 +991,12 @@ export default function App(){
     const syncScores = async (uid) => {
       try {
         // ── Only sync during active match windows ───────────────────
+        // 10h window: covers live play (2h) + overnight catchup if midnight sync was missed
         const now = Date.now();
+        const SYNC_WINDOW = 10 * 60 * 60 * 1000;
         const hasActiveMatch = GROUP_MATCHES.some(m => {
           const t = new Date(m.kickoff).getTime();
-          return now >= t - 5*60*1000 && now <= t + 130*60*1000; // 5min before to 130min after
+          return now >= t - 5*60*1000 && now <= t + SYNC_WINDOW;
         });
         if (!hasActiveMatch) return;
 
@@ -1127,7 +1129,7 @@ export default function App(){
         // (avoids midnight bug: after 00:00, new Date() returns next day but matches are still from prev day)
         const activeFriendlyDates = [...new Set(
           GROUP_MATCHES
-            .filter(m => m.group==="יזיזות" && Math.abs(now - new Date(m.kickoff).getTime()) < 3*60*60*1000)
+            .filter(m => { const t=new Date(m.kickoff).getTime(); return m.group==="יזיזות" && now >= t - 5*60*1000 && now <= t + SYNC_WINDOW; })
             .map(m => isoDate(new Date(m.kickoff)))
         )];
         for (const iso of activeFriendlyDates) {
@@ -1140,7 +1142,7 @@ export default function App(){
           // Also derive date from active WC match kickoffs to handle midnight crossing
           const activeWCDates = [...new Set(
             GROUP_MATCHES
-              .filter(m => m.group!=="יזיזות" && Math.abs(now - new Date(m.kickoff).getTime()) < 3*60*60*1000)
+              .filter(m => { const t=new Date(m.kickoff).getTime(); return m.group!=="יזיזות" && now >= t - 5*60*1000 && now <= t + SYNC_WINDOW; })
               .map(m => isoDate(new Date(m.kickoff)))
           )];
           const wcDates = activeWCDates.length ? activeWCDates : [todayISO];
