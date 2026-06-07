@@ -422,16 +422,15 @@ function Toast({msg}){return msg?<div className="toast">{msg}</div>:null;}
 function SignInScreen({onSignIn,loading}){
   return(
     <div className="signin-screen">
-      <div className="signin-glow-top"/>
-      <div className="signin-glow-bot"/>
       <div className="signin-inner">
-        <div className="signin-icon">⚽</div>
-        <div className="signin-label">ברוכים הבאים</div>
-        <h1 className="signin-title">אתר ההימורים של<br/><span>מונדיאל 2026</span></h1>
-        <p className="signin-sub">קנדה · מקסיקו · ארה״ב &nbsp;|&nbsp; 11 יוני – 19 יולי</p>
+        <div className="signin-ball">⚽</div>
+        <div className="signin-welcome">ברוכים הבאים</div>
+        <h1 className="signin-title">מונדיאל<span>BET</span></h1>
+        <div className="signin-year">2026</div>
+        <p className="signin-sub">אתר ההימורים של קאפ העולם</p>
         <div className="signin-sep"/>
-        <button className="btn-google" onClick={onSignIn} disabled={loading}>
-          {loading?"מתחבר...":<><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.7l-6.2-5.2C29.3 35.6 26.8 36 24 36c-5.2 0-9.6-2.9-11.3-7l-6.5 5C9.5 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.4 35.7 44 30.3 44 24c0-1.3-.1-2.7-.4-4z"/></svg>כניסה עם Google</>}
+        <button className="signin-btn-google" onClick={onSignIn} disabled={loading}>
+          {loading?"מתחבר...":<><svg width="22" height="22" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.7l-6.2-5.2C29.3 35.6 26.8 36 24 36c-5.2 0-9.6-2.9-11.3-7l-6.5 5C9.5 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.4 35.7 44 30.3 44 24c0-1.3-.1-2.7-.4-4z"/></svg>כניסה עם Google</>}
         </button>
         <p className="signin-note">כניסה אחת — זוכר אותך לתמיד</p>
       </div>
@@ -1818,18 +1817,20 @@ const STYLES=`
   .loading-ball{font-size:3rem;animation:sway 1s ease-in-out infinite}
   .loading-screen p{color:var(--muted)}
   @keyframes sway{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
-  .signin-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;position:relative;overflow:hidden;background:var(--bg)}
-  .signin-glow-top{position:absolute;top:-160px;left:50%;transform:translateX(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(0,216,127,.12) 0%,transparent 60%);pointer-events:none}
-  .signin-glow-bot{position:absolute;bottom:-200px;right:-100px;width:450px;height:450px;background:radial-gradient(circle,rgba(255,206,0,.07) 0%,transparent 60%);pointer-events:none}
-  .signin-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.9rem;width:100%;max-width:360px}
-  .signin-icon{font-size:4rem;line-height:1;filter:drop-shadow(0 0 20px rgba(0,216,127,.5));animation:float 3s ease-in-out infinite}
-  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-  .signin-label{font-size:.72rem;font-weight:800;letter-spacing:.3em;color:var(--green);text-transform:uppercase;margin-bottom:-.3rem}
-  .signin-title{font-size:1.7rem;font-weight:900;line-height:1.3;margin:0;color:var(--text)}
-  .signin-title span{color:var(--green);font-size:2.4rem;display:block;line-height:1.1}
-  .signin-sub{color:var(--muted);font-size:.83rem;font-weight:600;margin:0}
-  .signin-sep{width:44px;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px}
-  .signin-note{color:var(--muted);font-size:.75rem;margin-top:-.3rem}
+  .signin-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,rgba(0,216,127,.12) 0%,transparent 55%),radial-gradient(ellipse at 80% 90%,rgba(255,206,0,.07) 0%,transparent 45%),#080e1d;z-index:999}
+  .signin-inner{display:flex;flex-direction:column;align-items:center;text-align:center;gap:1.1rem;padding:2.5rem 2rem;width:100%;max-width:400px}
+  .signin-ball{font-size:5.5rem;line-height:1;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 28px rgba(0,216,127,.45))}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .signin-welcome{font-family:'Heebo',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.25em;color:var(--green);text-transform:uppercase}
+  .signin-title{font-family:'Heebo',sans-serif;font-size:4rem;font-weight:900;line-height:1;margin:0;color:var(--text);letter-spacing:-2px}
+  .signin-title span{color:var(--green)}
+  .signin-year{font-family:'Heebo',sans-serif;font-size:1.6rem;font-weight:900;color:var(--gold);letter-spacing:.1em;margin-top:-.5rem}
+  .signin-sub{font-family:'Heebo',sans-serif;color:var(--muted);font-size:1rem;font-weight:600;margin:0}
+  .signin-sep{width:60px;height:3px;background:linear-gradient(90deg,transparent,var(--green),transparent);border-radius:2px}
+  .signin-btn-google{display:flex;align-items:center;justify-content:center;gap:.8rem;background:#fff;color:#1a1a1a;font-weight:800;font-family:'Heebo',sans-serif;border:none;border-radius:14px;padding:1rem 2rem;font-size:1.05rem;cursor:pointer;transition:transform .15s,box-shadow .15s;width:100%;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+  .signin-btn-google:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+  .signin-btn-google:disabled{opacity:.6;cursor:default}
+  .signin-note{font-family:'Heebo',sans-serif;color:var(--muted);font-size:.82rem}
   .btn-google{display:flex;align-items:center;gap:.7rem;background:#fff;color:#333;font-weight:700;font-family:'Heebo',sans-serif;border:none;border-radius:12px;padding:.85rem 1.4rem;font-size:1rem;cursor:pointer;transition:transform .15s;width:100%;justify-content:center}
   .btn-google:hover{transform:translateY(-2px)}
   .btn-google:disabled{opacity:.6;cursor:default}
