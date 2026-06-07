@@ -984,7 +984,7 @@ function LiveBar({results, teamNames}){
 }
 
 // ─── HOME VIEW ────────────────────────────────────────────────────────────────
-function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, onSaveBets}){
+function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, onSaveBets, onGoToGroups}){
   const myBets=me?.bets||{};
   const globalLocked=isGlobalLocked();
   const [champion,setChampion]=useState(myBets.champion||"");
@@ -1058,9 +1058,9 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                 <label>⚽ ניחוש סה״כ שערים <span className="pts-hint">(קרוב ביותר מנצח)</span></label>
                 <input type="number" placeholder="כמה שערים?" value={totalGoals} onChange={e=>setTotalGoals(e.target.value)}/>
               </div>
-              <div className="home-groups-indicator">
+              <div className="home-groups-indicator" onClick={onGoToGroups} style={{cursor:"pointer"}}>
                 <span>🏠 בתים שנבחרו</span>
-                <span className={groupsPickedCount===12?"val-green":"val-muted"}>{groupsPickedCount}/12 — ערוך בלשונית תוצאות</span>
+                <span className={groupsPickedCount===12?"val-green":"val-muted"}>{groupsPickedCount}/12 — לחץ לעריכה</span>
               </div>
               <button className="btn-green" onClick={handleSaveSpecial} disabled={saving}>
                 {saved?"✅ נשמר!":saving?"...":"💾 שמור הימורים"}
@@ -1132,8 +1132,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
 }
 
 // ─── RESULTS VIEW ─────────────────────────────────────────────────────────────
-function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMatch, onSaveBets, odds}){
-  const [subTab,setSubTab]=useState("matches");
+function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMatch, onSaveBets, odds, subTab, setSubTab}){
   const [revDate,setRevDate]=useState(getDefaultMatchDate);
   const [groupBets,setGroupBets]=useState(me?.bets?.groups||{});
   useEffect(()=>{setGroupBets(me?.bets?.groups||{});},[JSON.stringify(me?.bets?.groups)]);
@@ -1315,6 +1314,7 @@ export default function App(){
   const [participants,setParticipants]=useState([]);
   const [gameLoading,setGameLoading]=useState(true);
   const [tab,setTab]=useState("home");
+  const [resultsSubTab,setResultsSubTab]=useState("matches");
   const [selectedPlayer,setSelectedPlayer]=useState(null);
   const [toast,setToast]=useState(null);
   const [odds,setOdds]=useState({});
@@ -1756,6 +1756,7 @@ export default function App(){
               odds={odds}
               onSelectPlayer={setSelectedPlayer}
               onSaveBets={handleSaveBets}
+              onGoToGroups={()=>{setTab("results");setResultsSubTab("groups");}}
             />
           )}
           {tab==="results"&&(
@@ -1768,6 +1769,8 @@ export default function App(){
               onSaveMatch={handleSaveMatchBet}
               onSaveBets={handleSaveBets}
               odds={odds}
+              subTab={resultsSubTab}
+              setSubTab={setResultsSubTab}
             />
           )}
 
