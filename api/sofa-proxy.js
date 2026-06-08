@@ -1,5 +1,8 @@
 // Vercel Serverless Function — SofaScore proxy
-// SofaScore blocks browser requests via CORS but allows server-to-server.
+// SofaScore blocks Vercel/AWS IPs directly.
+// When SOFA_WORKER_URL is set (pointing to a Cloudflare Worker), requests are
+// relayed through Cloudflare's edge — a different IP range that SofaScore allows.
+// See cloudflare-sofa-worker.js for the Worker code to deploy.
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET");
@@ -10,25 +13,27 @@ export default async function handler(req, res) {
   if (!path) return res.status(400).json({ error: "missing path" });
 
   try {
-    const url = `https://api.sofascore.com/api/v1${path.startsWith("/") ? "" : "/"}${path}`;
-    const r = await fetch(url, {
+    const normalizedPath = `${path.startsWith("/") ? "" : "/"}${path}`;
+    let targetUrl;
+
+    if (process.env.SOFA_WORKER_URL) {
+      // Route through Cloudflare Worker (bypasses IP block)
+      targetUrl = `${process.env.SOFA_WORKER_URL.replace(/\/$/, "")}?path=${encodeURIComponent(normalizedPath)}`;
+    } else {
+      // Direct fallback — may be blocked depending on Vercel region
+      targetUrl = `https://api.sofascore.com/api/v1${normalizedPath}`;
+    }
+
+    const r = await fetch(targetUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
         "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
         "Referer": "https://www.sofascore.com/",
         "Origin": "https://www.sofascore.com",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "sec-ch-ua": '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"macOS"',
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-site",
-      }
+      },
     });
+
     const data = await r.json();
     res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate");
     res.status(r.status).json(data);
