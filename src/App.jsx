@@ -1414,14 +1414,19 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
           <span>🥇 {participants.length*50} ₪ ראשון</span>
           <span>🥈 מקום אחרון משלם 50₪</span>
         </div>
-        {/* Column headers — RTL: first in DOM = rightmost */}
+        {/* Column headers */}
         <div className="lb-header">
-          <span className="lb-h-rank"/>
-          <span className="lb-h-name">שחקן</span>
-          <span className="lb-h-col">שערים</span>
-          <span className="lb-h-col">מלך השערים</span>
-          <span className="lb-h-col">הזוכה</span>
-          <span className="lb-h-pts">נקודות</span>
+          {/* right side: spacer for rank + name */}
+          <div className="lb-h-identity"/>
+          {/* left side: circles labels + score label */}
+          <div className="lb-h-fill">
+            <div className="lb-h-circles">
+              <span>שערים</span>
+              <span>מלך השערים</span>
+              <span>הזוכה</span>
+            </div>
+            <span className="lb-h-pts">נקודות</span>
+          </div>
         </div>
         <div className="lb-list">
           {ranked.map((p,i)=>{
@@ -1432,7 +1437,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
             const bootFlag=bootBet?(STRIKER_FLAGS[bootBet]||"👟"):null;
             return(
               <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
-                {/* RTL: first in DOM = rightmost visually */}
+                {/* RIGHT: rank + name glued to right edge */}
                 <span className="lb-rank">{medals[i]||i+1}</span>
                 <div className="lb-name-col">
                   {p.photoURL
@@ -1440,26 +1445,27 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                     :<div className="lb-avatar-ph">{p.name[0]}</div>}
                   <span className="lb-name">{p.name}</span>
                 </div>
-                {/* Goals circle */}
-                <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
-                  {globalLocked&&goalsBet!=null&&goalsBet!==""
-                    ?<span className="lb-circle-num">{goalsBet}</span>
-                    :<span className="lb-circle-icon">⚽</span>}
+                {/* LEFT: circles spread evenly + score */}
+                <div className="lb-fill">
+                  <div className="lb-circles">
+                    <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
+                      {globalLocked&&goalsBet!=null&&goalsBet!==""
+                        ?<span className="lb-circle-num">{goalsBet}</span>
+                        :<span className="lb-circle-icon">⚽</span>}
+                    </div>
+                    <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
+                      {globalLocked&&bootFlag
+                        ?<span className="lb-circle-flag">{bootFlag}</span>
+                        :<span className="lb-circle-icon">👟</span>}
+                    </div>
+                    <div className={`lb-circle ${!globalLocked||!champBet?"lb-circle-locked":""}`}>
+                      {globalLocked&&champFlag
+                        ?<span className="lb-circle-flag">{champFlag}</span>
+                        :<span className="lb-circle-icon">🏆</span>}
+                    </div>
+                  </div>
+                  <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
                 </div>
-                {/* Golden boot circle */}
-                <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
-                  {globalLocked&&bootFlag
-                    ?<span className="lb-circle-flag">{bootFlag}</span>
-                    :<span className="lb-circle-icon">👟</span>}
-                </div>
-                {/* Champion circle */}
-                <div className={`lb-circle ${!globalLocked||!champBet?"lb-circle-locked":""}`}>
-                  {globalLocked&&champFlag
-                    ?<span className="lb-circle-flag">{champFlag}</span>
-                    :<span className="lb-circle-icon">🏆</span>}
-                </div>
-                {/* Score — leftmost */}
-                <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
               </div>
             );
           })}
@@ -2773,28 +2779,33 @@ const STYLES=`
   .stepper button:disabled{opacity:.35;cursor:default}
   .stepper span{width:24px;text-align:center;font-weight:700;font-size:.9rem}
   .pts-hint{font-size:.7rem;color:var(--muted);font-weight:400}
-  .lb-header{display:flex;align-items:center;padding:.1rem .55rem .45rem;gap:.4rem}
-  .lb-h-rank{width:22px;flex-shrink:0}
-  .lb-h-pts{font-size:.68rem;color:var(--muted);font-weight:600;width:46px;flex-shrink:0;text-align:center}
-  .lb-h-col{font-size:.68rem;color:var(--muted);font-weight:600;width:46px;flex-shrink:0;text-align:center}
-  .lb-h-name{flex:1;font-size:.68rem;color:var(--muted);font-weight:600;text-align:right}
+  /* leaderboard header */
+  .lb-header{display:flex;align-items:center;padding:.1rem .55rem .4rem}
+  .lb-h-identity{flex-shrink:0;width:120px} /* matches rank+avatar+name min-width */
+  .lb-h-fill{flex:1;display:flex;align-items:center;gap:.4rem}
+  .lb-h-circles{flex:1;display:flex;justify-content:space-evenly;align-items:center}
+  .lb-h-circles span{font-size:.63rem;color:var(--muted);font-weight:600;text-align:center;width:46px}
+  .lb-h-pts{font-size:.63rem;color:var(--muted);font-weight:600;width:50px;flex-shrink:0;text-align:center}
+  /* leaderboard rows */
   .lb-list{display:flex;flex-direction:column;gap:.4rem}
-  .lb-row{display:flex;align-items:center;gap:.4rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:.5rem .55rem;cursor:pointer;transition:border-color .15s}
+  .lb-row{display:flex;align-items:center;gap:.35rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:.5rem .6rem;cursor:pointer;transition:border-color .15s}
   .lb-row:hover{border-color:var(--green)}
   .lb-row.rank-1{border-color:rgba(255,206,0,.5);background:rgba(255,206,0,.05)}
   .lb-row.rank-2{border-color:rgba(200,200,220,.25)}
   .lb-row.rank-3{border-color:rgba(180,110,50,.3)}
-  .lb-score{width:46px;flex-shrink:0;font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
+  .lb-rank{flex-shrink:0;font-size:.95rem;font-weight:700;text-align:center;color:var(--muted);width:22px}
+  .lb-name-col{flex-shrink:0;display:flex;align-items:center;gap:.4rem}
+  .lb-name{font-weight:700;font-size:.88rem;white-space:nowrap}
+  .lb-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15)}
+  .lb-avatar-ph{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;background:var(--green)}
+  .lb-fill{flex:1;display:flex;align-items:center;gap:.4rem}
+  .lb-circles{flex:1;display:flex;justify-content:space-evenly;align-items:center}
   .lb-circle{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12)}
   .lb-circle-locked{opacity:.25;filter:grayscale(1)}
   .lb-circle-flag{font-size:1.75rem;line-height:1}
   .lb-circle-icon{font-size:1.25rem;line-height:1}
   .lb-circle-num{font-size:.95rem;font-weight:900;color:var(--green)}
-  .lb-name-col{flex:1;display:flex;align-items:center;gap:.45rem;overflow:hidden;justify-content:flex-end}
-  .lb-name{font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .lb-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15)}
-  .lb-avatar-ph{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;background:var(--green)}
-  .lb-rank{width:22px;flex-shrink:0;font-size:.9rem;font-weight:700;text-align:center;color:var(--muted)}
+  .lb-score{flex-shrink:0;width:50px;font-size:.8rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .player-header{display:flex;align-items:center;gap:.8rem;background:var(--card2);border-radius:14px;padding:.8rem 1rem}
