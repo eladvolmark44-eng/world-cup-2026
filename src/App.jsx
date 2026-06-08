@@ -985,7 +985,7 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
 
   if(activePlayer) return(
     <div className="section">
-      <button className="btn-back-sm" onClick={()=>setActivePlayer(null)}>← חזרה לרשימה</button>
+      <button className="btn-back-sm" onClick={()=>setActivePlayer(null)}>→ חזרה לרשימה</button>
       <PlayerBetsView player={activePlayer} viewerUid={viewerUid} results={results} teamNames={teamNames}/>
     </div>
   );
@@ -2644,7 +2644,7 @@ export default function App(){
       <Toast msg={toast}/>
       <div className="main-screen">
         <div className="main-header">
-          <button className="back-btn" onClick={()=>setSelectedPlayer(null)}>←</button>
+          <button className="back-btn" onClick={()=>setSelectedPlayer(null)}>→</button>
           <span className="header-title">הימורים של {selectedPlayer.name}</span>
         </div>
         <div className="main-body">
