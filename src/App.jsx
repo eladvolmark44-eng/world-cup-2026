@@ -1414,13 +1414,14 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
           <span>🥇 {participants.length*50} ₪ ראשון</span>
           <span>🥈 מקום אחרון משלם 50₪</span>
         </div>
-        {/* Column headers */}
+        {/* Column headers — RTL: first in DOM = rightmost */}
         <div className="lb-header">
-          <span className="lb-h-pts">נקודות</span>
-          <span className="lb-h-col">הזוכה</span>
-          <span className="lb-h-col">מלך השערים</span>
-          <span className="lb-h-col">שערים</span>
+          <span className="lb-h-rank"/>
           <span className="lb-h-name">שחקן</span>
+          <span className="lb-h-col">שערים</span>
+          <span className="lb-h-col">מלך השערים</span>
+          <span className="lb-h-col">הזוכה</span>
+          <span className="lb-h-pts">נקודות</span>
         </div>
         <div className="lb-list">
           {ranked.map((p,i)=>{
@@ -1431,33 +1432,34 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
             const bootFlag=bootBet?(STRIKER_FLAGS[bootBet]||"👟"):null;
             return(
               <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
-                <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
-                {/* Champion circle */}
-                <div className={`lb-circle ${!globalLocked||!champBet?"lb-circle-locked":""}`}>
-                  {globalLocked&&champFlag
-                    ? <span className="lb-circle-flag">{champFlag}</span>
-                    : <span className="lb-circle-icon">🏆</span>}
-                </div>
-                {/* Golden boot circle */}
-                <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
-                  {globalLocked&&bootFlag
-                    ? <span className="lb-circle-flag">{bootFlag}</span>
-                    : <span className="lb-circle-icon">👟</span>}
-                </div>
-                {/* Goals circle */}
-                <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
-                  {globalLocked&&goalsBet!=null&&goalsBet!==""
-                    ? <span className="lb-circle-num">{goalsBet}</span>
-                    : <span className="lb-circle-icon">⚽</span>}
-                </div>
-                {/* Name + avatar */}
+                {/* RTL: first in DOM = rightmost visually */}
+                <span className="lb-rank">{medals[i]||i+1}</span>
                 <div className="lb-name-col">
                   {p.photoURL
                     ?<img src={p.photoURL} className="lb-avatar" alt=""/>
                     :<div className="lb-avatar-ph">{p.name[0]}</div>}
                   <span className="lb-name">{p.name}</span>
                 </div>
-                <span className="lb-rank">{medals[i]||i+1}</span>
+                {/* Goals circle */}
+                <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
+                  {globalLocked&&goalsBet!=null&&goalsBet!==""
+                    ?<span className="lb-circle-num">{goalsBet}</span>
+                    :<span className="lb-circle-icon">⚽</span>}
+                </div>
+                {/* Golden boot circle */}
+                <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
+                  {globalLocked&&bootFlag
+                    ?<span className="lb-circle-flag">{bootFlag}</span>
+                    :<span className="lb-circle-icon">👟</span>}
+                </div>
+                {/* Champion circle */}
+                <div className={`lb-circle ${!globalLocked||!champBet?"lb-circle-locked":""}`}>
+                  {globalLocked&&champFlag
+                    ?<span className="lb-circle-flag">{champFlag}</span>
+                    :<span className="lb-circle-icon">🏆</span>}
+                </div>
+                {/* Score — leftmost */}
+                <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
               </div>
             );
           })}
@@ -2771,7 +2773,8 @@ const STYLES=`
   .stepper button:disabled{opacity:.35;cursor:default}
   .stepper span{width:24px;text-align:center;font-weight:700;font-size:.9rem}
   .pts-hint{font-size:.7rem;color:var(--muted);font-weight:400}
-  .lb-header{display:flex;align-items:center;padding:.1rem .5rem .45rem;gap:.4rem}
+  .lb-header{display:flex;align-items:center;padding:.1rem .55rem .45rem;gap:.4rem}
+  .lb-h-rank{width:22px;flex-shrink:0}
   .lb-h-pts{font-size:.68rem;color:var(--muted);font-weight:600;width:46px;flex-shrink:0;text-align:center}
   .lb-h-col{font-size:.68rem;color:var(--muted);font-weight:600;width:46px;flex-shrink:0;text-align:center}
   .lb-h-name{flex:1;font-size:.68rem;color:var(--muted);font-weight:600;text-align:right}
