@@ -1247,7 +1247,7 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
     <div className="section">
       <LiveBar results={results} teamNames={teamNames}/>
       <div className="sub-tabs">
-        {[["matches","⚽ משחקים"],["groups","🏠 בתים"]].map(([k,l])=>(
+        {[["matches","⚽ משחקים"],["groups","🏠 בתים"],["standings","📈 טבלאות"],["knockout","🏆 נוקאאוט"]].map(([k,l])=>(
           <button key={k} className={`sub-tab ${subTab===k?"active":""}`} onClick={()=>setSubTab(k)}>{l}</button>
         ))}
       </div>
@@ -1341,6 +1341,149 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
           )}
         </div>
       )}
+      {subTab==="standings"&&(
+        <GroupStandingsView results={results} teamNames={teamNames}/>
+      )}
+      {subTab==="knockout"&&(
+        <KnockoutBracketView results={results} teamNames={teamNames}/>
+      )}
+    </div>
+  );
+}
+
+// ─── LIVE STANDINGS + KNOCKOUT BRACKET ───────────────────────────────────────
+
+function computeGroupStandings(letter, matches) {
+  const teams = GROUPS_2026[letter];
+  const st = {};
+  for (const t of teams) st[t] = {pts:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,played:0};
+  for (const m of GROUP_MATCHES.filter(gm=>gm.group===letter)) {
+    const res = matches?.[m.id];
+    if (res?.home==null) continue;
+    const [h,a] = [res.home, res.away];
+    st[m.home].played++; st[m.away].played++;
+    st[m.home].gf+=h; st[m.home].ga+=a; st[m.home].gd+=h-a;
+    st[m.away].gf+=a; st[m.away].ga+=h; st[m.away].gd+=a-h;
+    if(h>a){st[m.home].pts+=3;st[m.home].w++;st[m.away].l++;}
+    else if(h<a){st[m.away].pts+=3;st[m.away].w++;st[m.home].l++;}
+    else{st[m.home].pts++;st[m.away].pts++;st[m.home].d++;st[m.away].d++;}
+  }
+  return st;
+}
+
+function GroupStandingsView({results, teamNames}){
+  return(
+    <div className="st-grid">
+      {Object.entries(GROUPS_2026).map(([g, teams])=>{
+        const st = computeGroupStandings(g, results.matches);
+        const sorted = teams.slice().sort((a,b)=>{
+          const [sa,sb]=[st[a],st[b]];
+          return sb.pts!==sa.pts?sb.pts-sa.pts:sb.gd!==sa.gd?sb.gd-sa.gd:sb.gf-sa.gf;
+        });
+        const qualified = results.groups?.[g]||(sorted.every(t=>st[t].played===3)?sorted.slice(0,2):[]);
+        return(
+          <div key={g} className="st-group">
+            <div className="st-group-hdr">בית {g}</div>
+            <table className="st-table">
+              <thead><tr>
+                <th></th><th className="st-tc">קבוצה</th>
+                <th>מ׳</th><th>נ׳</th><th>ת׳</th><th>ה׳</th><th>±</th><th className="st-ptc">נק׳</th>
+              </tr></thead>
+              <tbody>
+                {sorted.map((t,i)=>{
+                  const s=st[t], q=qualified.includes(t);
+                  return(
+                    <tr key={t} className={q?'st-q':''}>
+                      <td className="st-num">{i+1}</td>
+                      <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
+                      <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
+                      <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
+                      <td className="st-ptv">{s.pts}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BkTeam({name, score, won, teamNames}){
+  const cls=`bk-tm${won?' bk-won':score!=null&&!won?' bk-lost':''}`;
+  return(
+    <div className={cls}>
+      <span className="bk-tn">{name?withFlag(teamNames?.[name]||name):'?'}</span>
+      {score!=null&&<span className="bk-sc">{score}</span>}
+    </div>
+  );
+}
+
+function BkMatch({m, result, teamNames}){
+  const hW=result&&result.home>result.away, aW=result&&result.away>result.home;
+  return(
+    <div className={`bk-match${result?.live?' bk-live':''}`}>
+      <BkTeam name={m?.home} score={result?.home} won={hW} teamNames={teamNames}/>
+      <div className="bk-div"/>
+      <BkTeam name={m?.away} score={result?.away} won={aW} teamNames={teamNames}/>
+    </div>
+  );
+}
+
+function BkCol({matches, koResults, teamNames, label}){
+  return(
+    <div className="bk-col">
+      <div className="bk-col-lbl">{label}</div>
+      <div className="bk-col-body">
+        {Array.from({length:Math.max(matches.length,1)}).map((_,i)=>(
+          <div key={i} className="bk-slot">
+            {matches[i]
+              ?<BkMatch m={matches[i]} result={koResults[matches[i].apiId]} teamNames={teamNames}/>
+              :<div className="bk-ph">⏳</div>
+            }
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KnockoutBracketView({results, teamNames}){
+  const kms=results.knockoutMatches||[], kr=results.koResults||{};
+  if(!kms.length) return <div className="empty-msg">🏆 שלב הנוקאאוט יתחיל לאחר סיום שלב הבתים</div>;
+  const by={};
+  for(const m of kms)(by[m.stage]||(by[m.stage]=[])).push(m);
+  const r32=by["32 האחרונות"]||[], r16=by["שמינית גמר"]||[];
+  const qf=by["רבע גמר"]||[], sf=by["חצי גמר"]||[];
+  const fin=by["גמר"]||[], trd=by["מקום שלישי"]||[];
+  const L=a=>a.slice(0,Math.ceil(a.length/2));
+  const R=a=>a.slice(Math.ceil(a.length/2));
+  return(
+    <div className="bk-outer">
+      <div className="bk-scroll">
+        {r32.length>0&&<BkCol matches={L(r32)} koResults={kr} teamNames={teamNames} label="32 אחרונות"/>}
+        {r16.length>0&&<BkCol matches={L(r16)} koResults={kr} teamNames={teamNames} label="שמינית"/>}
+        {qf.length>0&&<BkCol matches={L(qf)} koResults={kr} teamNames={teamNames} label="רבע גמר"/>}
+        {sf.length>0&&<BkCol matches={L(sf)} koResults={kr} teamNames={teamNames} label="חצי גמר"/>}
+        <div className="bk-final-col">
+          <div className="bk-trophy">🏆</div>
+          <div className="bk-col-lbl">גמר</div>
+          {fin[0]
+            ?<BkMatch m={fin[0]} result={kr[fin[0].apiId]} teamNames={teamNames}/>
+            :<div className="bk-ph bk-ph-final">⏳</div>
+          }
+          {trd[0]&&<>
+            <div className="bk-col-lbl" style={{marginTop:'.8rem'}}>מקום 3</div>
+            <BkMatch m={trd[0]} result={kr[trd[0].apiId]} teamNames={teamNames}/>
+          </>}
+        </div>
+        {sf.length>0&&<BkCol matches={R(sf)} koResults={kr} teamNames={teamNames} label="חצי גמר"/>}
+        {qf.length>0&&<BkCol matches={R(qf)} koResults={kr} teamNames={teamNames} label="רבע גמר"/>}
+        {r16.length>0&&<BkCol matches={R(r16)} koResults={kr} teamNames={teamNames} label="שמינית"/>}
+        {r32.length>0&&<BkCol matches={R(r32)} koResults={kr} teamNames={teamNames} label="32 אחרונות"/>}
+      </div>
     </div>
   );
 }
@@ -2453,4 +2596,39 @@ const STYLES=`
   .profile-label{font-size:.85rem;color:var(--muted);align-self:flex-start;width:100%}
   .profile-input{width:100%;padding:.5rem .7rem;border-radius:.4rem;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:1rem;box-sizing:border-box;text-align:right;font-family:'Heebo',sans-serif}
   .header-user:hover .header-name{color:var(--text)}
+  /* ── Group Standings ── */
+  .st-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;padding:.3rem 0}
+  @media(max-width:480px){.st-grid{grid-template-columns:1fr}}
+  .st-group{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .st-group-hdr{background:rgba(0,216,127,.1);color:var(--green);font-weight:800;font-size:.82rem;padding:.35rem .6rem;text-align:center;border-bottom:1px solid var(--border)}
+  .st-table{width:100%;border-collapse:collapse;font-size:.73rem}
+  .st-table th{color:var(--muted);font-weight:600;padding:.2rem .22rem;text-align:center;border-bottom:1px solid var(--border)}
+  .st-table td{padding:.2rem .22rem;text-align:center;border-bottom:1px solid rgba(255,255,255,.03)}
+  .st-tc{text-align:right!important;min-width:68px;padding-right:.35rem!important}
+  .st-num{color:var(--muted);font-size:.66rem;width:12px}
+  .st-ptc{font-weight:700}
+  .st-ptv{font-weight:800;color:var(--green)}
+  .st-gd-pos{color:var(--green)}
+  .st-gd-neg{color:var(--red)}
+  .st-q{background:rgba(0,216,127,.06)}
+  .st-q .st-num::after{content:"↑";font-size:.58rem;color:var(--green)}
+  /* ── Knockout Bracket ── */
+  .bk-outer{overflow:hidden;margin:0 -.5rem}
+  .bk-scroll{display:flex;align-items:stretch;overflow-x:auto;gap:3px;padding:.6rem .5rem;min-height:300px}
+  .bk-col{display:flex;flex-direction:column;flex-shrink:0;width:112px}
+  .bk-col-lbl{font-size:.62rem;color:var(--muted);font-weight:600;text-align:center;margin-bottom:.2rem;height:15px;white-space:nowrap}
+  .bk-col-body{display:flex;flex-direction:column;flex:1}
+  .bk-slot{display:flex;align-items:center;flex:1;padding:.1rem 0}
+  .bk-final-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;width:125px;padding:.2rem .25rem}
+  .bk-trophy{font-size:2.4rem;margin-bottom:.2rem;line-height:1}
+  .bk-match{background:var(--card);border:1px solid var(--border);border-radius:7px;overflow:hidden;width:100%}
+  .bk-match.bk-live{border-color:var(--red)}
+  .bk-tm{display:flex;align-items:center;justify-content:space-between;padding:.17rem .32rem;gap:.2rem;font-size:.71rem}
+  .bk-tm.bk-won{background:rgba(0,216,127,.12);font-weight:700}
+  .bk-tm.bk-lost{opacity:.42}
+  .bk-tn{flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl}
+  .bk-sc{font-weight:800;color:var(--green);flex-shrink:0;min-width:11px;text-align:center;font-size:.75rem}
+  .bk-div{height:1px;background:var(--border)}
+  .bk-ph{border:1px dashed var(--border);border-radius:7px;text-align:center;padding:.28rem;font-size:.72rem;width:100%;box-sizing:border-box;color:var(--muted);background:rgba(255,255,255,.02)}
+  .bk-ph-final{width:120px}
 `;
