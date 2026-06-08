@@ -1414,21 +1414,53 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
           <span>🥇 {participants.length*50} ₪ ראשון</span>
           <span>🥈 מקום אחרון משלם 50₪</span>
         </div>
+        {/* Column headers */}
+        <div className="lb-header">
+          <span className="lb-h-pts">נקודות</span>
+          <span className="lb-h-col">הזוכה</span>
+          <span className="lb-h-col">מלך השערים</span>
+          <span className="lb-h-col">שערים</span>
+          <span className="lb-h-name">שחקן</span>
+        </div>
         <div className="lb-list">
-          {ranked.map((p,i)=>(
-            <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
-              <span className="lb-rank">{medals[i]||i+1}</span>
-              {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
-              <span className="lb-name">{p.name}</span>
-              <div className="lb-specials">
-                <span className="lb-sp-item">🏆 {globalLocked?(p.bets?.champion?withFlag(teamNames?.[p.bets.champion]||p.bets.champion):"—"):"🔒"}</span>
-                <span className="lb-sp-item">👟 {globalLocked?(p.bets?.goldenBoot?withStrikerFlag(p.bets.goldenBoot):"—"):"🔒"}</span>
-                <span className="lb-sp-item">⚽ {globalLocked?(p.bets?.totalGoals!=null&&p.bets.totalGoals!==""?p.bets.totalGoals:"—"):"🔒"}</span>
+          {ranked.map((p,i)=>{
+            const champBet=p.bets?.champion;
+            const bootBet=p.bets?.goldenBoot;
+            const goalsBet=p.bets?.totalGoals;
+            const champFlag=champBet?(FLAG_MAP[teamNames?.[champBet]||champBet]||"🏆"):null;
+            const bootFlag=bootBet?(STRIKER_FLAGS[bootBet]||"👟"):null;
+            return(
+              <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
+                <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
+                {/* Champion circle */}
+                <div className={`lb-circle ${!globalLocked||!champBet?"lb-circle-locked":""}`}>
+                  {globalLocked&&champFlag
+                    ? <span className="lb-circle-flag">{champFlag}</span>
+                    : <span className="lb-circle-icon">🏆</span>}
+                </div>
+                {/* Golden boot circle */}
+                <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
+                  {globalLocked&&bootFlag
+                    ? <span className="lb-circle-flag">{bootFlag}</span>
+                    : <span className="lb-circle-icon">👟</span>}
+                </div>
+                {/* Goals circle */}
+                <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
+                  {globalLocked&&goalsBet!=null&&goalsBet!==""
+                    ? <span className="lb-circle-num">{goalsBet}</span>
+                    : <span className="lb-circle-icon">⚽</span>}
+                </div>
+                {/* Name + avatar */}
+                <div className="lb-name-col">
+                  {p.photoURL
+                    ?<img src={p.photoURL} className="lb-avatar" alt=""/>
+                    :<div className="lb-avatar-ph">{p.name[0]}</div>}
+                  <span className="lb-name">{p.name}</span>
+                </div>
+                <span className="lb-rank">{medals[i]||i+1}</span>
               </div>
-              <span className="lb-score">{p.score} נק׳</span>
-              <span className="lb-arrow">›</span>
-            </div>
-          ))}
+            );
+          })}
           {ranked.length===0&&<div className="empty-msg">עדיין אין משתתפים</div>}
         </div>
       </div>
@@ -2739,19 +2771,27 @@ const STYLES=`
   .stepper button:disabled{opacity:.35;cursor:default}
   .stepper span{width:24px;text-align:center;font-weight:700;font-size:.9rem}
   .pts-hint{font-size:.7rem;color:var(--muted);font-weight:400}
-  .lb-list{display:flex;flex-direction:column;gap:.45rem}
-  .lb-row{display:flex;align-items:center;gap:.55rem;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.65rem .8rem;cursor:pointer;transition:border-color .15s}
+  .lb-header{display:flex;align-items:center;padding:.1rem .5rem .45rem;gap:.4rem}
+  .lb-h-pts{font-size:.68rem;color:var(--muted);font-weight:600;width:46px;flex-shrink:0;text-align:center}
+  .lb-h-col{font-size:.68rem;color:var(--muted);font-weight:600;width:46px;flex-shrink:0;text-align:center}
+  .lb-h-name{flex:1;font-size:.68rem;color:var(--muted);font-weight:600;text-align:right}
+  .lb-list{display:flex;flex-direction:column;gap:.4rem}
+  .lb-row{display:flex;align-items:center;gap:.4rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:.5rem .55rem;cursor:pointer;transition:border-color .15s}
   .lb-row:hover{border-color:var(--green)}
-  .lb-row.rank-1{border-color:rgba(255,206,0,.5);background:rgba(255,206,0,.06)}
-  .lb-row.rank-2{border-color:rgba(200,200,220,.3)}
+  .lb-row.rank-1{border-color:rgba(255,206,0,.5);background:rgba(255,206,0,.05)}
+  .lb-row.rank-2{border-color:rgba(200,200,220,.25)}
   .lb-row.rank-3{border-color:rgba(180,110,50,.3)}
-  .lb-rank{font-size:1.2rem;width:1.8rem;text-align:center;flex-shrink:0}
-  .lb-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
-  .lb-name{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px;flex-shrink:0}
-  .lb-specials{display:flex;gap:.3rem;flex:1;flex-wrap:nowrap;overflow:hidden}
-  .lb-sp-item{font-size:.8rem;font-weight:600;color:var(--text);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.22rem .5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center}
-  .lb-score{color:var(--green);font-weight:800;font-size:1rem;flex-shrink:0;white-space:nowrap}
-  .lb-arrow{color:var(--muted);font-size:1.2rem;flex-shrink:0}
+  .lb-score{width:46px;flex-shrink:0;font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
+  .lb-circle{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12)}
+  .lb-circle-locked{opacity:.25;filter:grayscale(1)}
+  .lb-circle-flag{font-size:1.75rem;line-height:1}
+  .lb-circle-icon{font-size:1.25rem;line-height:1}
+  .lb-circle-num{font-size:.95rem;font-weight:900;color:var(--green)}
+  .lb-name-col{flex:1;display:flex;align-items:center;gap:.45rem;overflow:hidden;justify-content:flex-end}
+  .lb-name{font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lb-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15)}
+  .lb-avatar-ph{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;background:var(--green)}
+  .lb-rank{width:22px;flex-shrink:0;font-size:.9rem;font-weight:700;text-align:center;color:var(--muted)}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .player-header{display:flex;align-items:center;gap:.8rem;background:var(--card2);border-radius:14px;padding:.8rem 1rem}
