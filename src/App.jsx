@@ -292,12 +292,15 @@ function formatKickoffTime(kickoff) {
 // ── Betting Odds (The Odds API) ─────────────────────────────────────────────
 const ODDS_API_KEY    = "91d6f91ae83212b240af46baba466379";
 const ODDS_SPORT      = "soccer_fifa_world_cup";
-const ODDS_TTL_NORMAL = 2 * 60 * 60 * 1000;  // 2h when no match soon
-const ODDS_TTL_SOON   = 5 * 60 * 1000;        // 5min when match within 1h
+const ODDS_TTL_NORMAL = 60 * 60 * 1000;   // 1h when no match soon
+const ODDS_TTL_SOON   = 5 * 60 * 1000;    // 5min when match within 1h
 function hasMatchWithinHour(){
   const n=Date.now();
-  return GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;const t=new Date(m.kickoff).getTime();return t>n&&t-n<=60*60*1000;});
+  const withinHour=t=>t>n&&t-n<=60*60*1000;
+  if(GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;return withinHour(new Date(m.kickoff).getTime());}))return true;
+  return _koKickoffs.some(t=>withinHour(t));
 }
+let _koKickoffs=[];
 const ODDS_TEAM_MAP = {
   "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה",
   "Czech Republic":"צ'כיה","Czechia":"צ'כיה",
@@ -1911,7 +1914,13 @@ export default function App(){
 
   useEffect(()=>{
     loadGame().then(g=>{setGame(g);setGameLoading(false);});
-    const u1=onSnapshot(doc(db,"mundial2026","game"),snap=>{if(snap.exists())setGame(snap.data());});
+    const u1=onSnapshot(doc(db,"mundial2026","game"),snap=>{
+      if(snap.exists()){
+        const d=snap.data();
+        setGame(d);
+        _koKickoffs=(d.results?.knockoutMatches||[]).filter(m=>m.kickoff).map(m=>new Date(m.kickoff).getTime());
+      }
+    });
     const u2=onSnapshot(collection(db,"mundial2026","game","participants"),snap=>{
       setParticipants(snap.docs.map(d=>({...d.data(),uid:d.id})));
     });
@@ -2211,6 +2220,7 @@ export default function App(){
             const koMatch = {
               id: `ko_${ev.id}`, apiId: ev.id, stage, date: dateStr,
               home: heb(hC.team?.displayName||""), away: heb(aC.team?.displayName||""),
+              kickoff: ev.date||null,
             };
             if ((isFinished||isLive) && hC.score != null) {
               koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive};
