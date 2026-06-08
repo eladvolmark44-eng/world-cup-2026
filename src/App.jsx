@@ -1247,7 +1247,7 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
     <div className="section">
       <LiveBar results={results} teamNames={teamNames}/>
       <div className="sub-tabs">
-        {[["matches","⚽ משחקים"],["groups","🏠 בתים"],["standings","📈 טבלאות"],["knockout","🏆 נוקאאוט"]].map(([k,l])=>(
+        {[["matches","⚽ משחקים"],["groups","🏠 בתים"],["knockout","🏆 נוקאאוט"]].map(([k,l])=>(
           <button key={k} className={`sub-tab ${subTab===k?"active":""}`} onClick={()=>setSubTab(k)}>{l}</button>
         ))}
       </div>
@@ -1301,43 +1301,90 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
         </>
       )}
       {subTab==="groups"&&(
-        <div className="scroll-area">
-          {globalLocked?(
-            Object.entries(GROUPS_2026).map(([g,teams])=>{
-              const correct=results.groups?.[g]||[];
-              return(
-                <div key={g} className="group-box">
-                  <div className="group-label">
-                    בית {g}
-                    {correct.length>0&&<span style={{color:"var(--green)",marginRight:".5rem"}}>עלו: {correct.map(t=>withFlag(teamNames?.[t]||t)).join(", ")}</span>}
-                  </div>
-                  <div className="rev-bets-row wrap" style={{marginTop:".4rem"}}>
-                    {participants.map(p=>{
-                      const picks=p.bets?.groups?.[g]||[];
-                      if(!picks.length)return null;
-                      const hits=picks.filter(t=>correct.includes(t)).length;
-                      const pts=hits===2?5:hits===1?2:0;
+        <div className="cg-grid">
+          {!globalLocked&&<p className="section-note" style={{gridColumn:'1/-1'}}>בחר 2 קבוצות לכל בית · 2נק׳ לאחת | 5נק׳ לשתיים</p>}
+          {Object.entries(GROUPS_2026).map(([g, teams])=>{
+            const st = computeGroupStandings(g, results.matches);
+            const sorted = teams.slice().sort((a,b)=>{
+              const [sa,sb]=[st[a],st[b]];
+              return sb.pts!==sa.pts?sb.pts-sa.pts:sb.gd!==sa.gd?sb.gd-sa.gd:sb.gf-sa.gf;
+            });
+            const qualified = results.groups?.[g]||(sorted.every(t=>st[t].played===3)?sorted.slice(0,2):[]);
+            const myPicks = groupBets[g]||[];
+            return(
+              <div key={g} className="cg-card">
+                <div className="cg-card-hdr">בית {g}</div>
+                <table className="st-table">
+                  <thead><tr>
+                    <th></th><th className="st-tc">קבוצה</th>
+                    <th>מ׳</th><th>נ׳</th><th>ת׳</th><th>ה׳</th><th>±</th><th className="st-ptc">נק׳</th>
+                  </tr></thead>
+                  <tbody>
+                    {sorted.map((t,i)=>{
+                      const s=st[t], q=qualified.includes(t);
                       return(
-                        <div key={p.uid} className={`rev-bet-chip ${hits===2?"exact":hits===1?"correct":correct.length?"wrong":""}`}>
-                          <span className="chip-name">{p.name.split(" ")[0]}</span>
-                          <span className="chip-score">{picks.map(t=>withFlag(teamNames?.[t]||t)).join(", ")}</span>
-                          {correct.length>0&&<span>{pts>0?`+${pts}נק׳`:"✗"}</span>}
-                        </div>
+                        <tr key={t} className={q?'st-q':''}>
+                          <td className="st-num">{i+1}</td>
+                          <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
+                          <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
+                          <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
+                          <td className="st-ptv">{s.pts}</td>
+                        </tr>
                       );
                     })}
-                  </div>
+                  </tbody>
+                </table>
+                <div className="cg-bet-section">
+                  {globalLocked ? (
+                    <>
+                      {qualified.length>0&&(
+                        <div className="cg-qualifiers">עלו: {qualified.map(t=>withFlag(teamNames?.[t]||t)).join("  ")}</div>
+                      )}
+                      <div className="rev-bets-row wrap">
+                        {participants.map(p=>{
+                          const picks=p.bets?.groups?.[g]||[];
+                          if(!picks.length)return null;
+                          const hits=picks.filter(t=>qualified.includes(t)).length;
+                          const pts=hits===2?5:hits===1?2:0;
+                          return(
+                            <div key={p.uid} className={`rev-bet-chip ${hits===2?"exact":hits===1?"correct":qualified.length?"wrong":""}`}>
+                              <span className="chip-name">{p.name.split(" ")[0]}</span>
+                              <span className="chip-score">{picks.map(t=>withFlag(teamNames?.[t]||t)).join(", ")}</span>
+                              {qualified.length>0&&<span>{pts>0?`+${pts}נק׳`:"✗"}</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="cg-picker">
+                      {teams.map(t=>{
+                        const idx=myPicks.indexOf(t);
+                        const maxReached=myPicks.length>=2&&idx<0;
+                        const toggle=()=>{
+                          if(idx>=0) setGroupBets(prev=>({...prev,[g]:myPicks.filter(x=>x!==t)}));
+                          else if(!maxReached) setGroupBets(prev=>({...prev,[g]:[...myPicks,t]}));
+                        };
+                        return(
+                          <button key={t}
+                            className={`cg-team-btn${idx>=0?' cg-sel':''}${maxReached?' cg-dim':''}`}
+                            onClick={toggle} disabled={maxReached}>
+                            {idx===0&&<span className="cg-badge">1</span>}
+                            {idx===1&&<span className="cg-badge">2</span>}
+                            {withFlag(teamNames?.[t]||t)}
+                          </button>
+                        );
+                      })}
+                      {myPicks.length<2&&<div className="cg-hint">בחר {2-myPicks.length} עוד</div>}
+                    </div>
+                  )}
                 </div>
-              );
-            })
-          ):(
-            <>
-              <p className="section-note">בחר 2 קבוצות לכל בית · 2נק׳ לאחת | 5נק׳ לשתיים</p>
-              {Object.entries(GROUPS_2026).map(([g,teams])=>(
-                <GroupPicker key={g} groupId={g} teams={teams} picks={groupBets[g]}
-                  onChange={p=>setGroupBets(prev=>({...prev,[g]:p}))} locked={false} teamNames={teamNames}/>
-              ))}
-              <button className="btn-green" onClick={()=>onSaveBets({...me?.bets,groups:groupBets})}>💾 שמור הימורי בתים</button>
-            </>
+              </div>
+            );
+          })}
+          {!globalLocked&&(
+            <button className="btn-green" style={{gridColumn:'1/-1'}}
+              onClick={()=>onSaveBets({...me?.bets,groups:groupBets})}>💾 שמור הימורי בתים</button>
           )}
         </div>
       )}
@@ -2596,7 +2643,20 @@ const STYLES=`
   .profile-label{font-size:.85rem;color:var(--muted);align-self:flex-start;width:100%}
   .profile-input{width:100%;padding:.5rem .7rem;border-radius:.4rem;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:1rem;box-sizing:border-box;text-align:right;font-family:'Heebo',sans-serif}
   .header-user:hover .header-name{color:var(--text)}
-  /* ── Group Standings ── */
+  /* ── Combined Group Cards ── */
+  .cg-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;padding:.3rem 0}
+  @media(max-width:500px){.cg-grid{grid-template-columns:1fr}}
+  .cg-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  .cg-card-hdr{background:rgba(0,216,127,.1);color:var(--green);font-weight:800;font-size:.82rem;padding:.35rem .6rem;text-align:center;border-bottom:1px solid var(--border)}
+  .cg-bet-section{border-top:1px solid var(--border);padding:.45rem .5rem}
+  .cg-picker{display:grid;grid-template-columns:1fr 1fr;gap:.3rem}
+  .cg-team-btn{background:var(--card2);border:1.5px solid var(--border);color:var(--text);border-radius:8px;padding:.28rem .35rem;font-size:.72rem;cursor:pointer;font-family:'Heebo',sans-serif;text-align:center;display:flex;align-items:center;justify-content:center;gap:.2rem;transition:all .18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cg-team-btn.cg-sel{border-color:var(--green);background:rgba(0,216,127,.12);font-weight:700}
+  .cg-team-btn.cg-dim{opacity:.35;cursor:default}
+  .cg-badge{background:var(--green);color:#060e1a;font-size:.6rem;font-weight:800;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .cg-hint{grid-column:1/-1;font-size:.68rem;color:var(--muted);text-align:center;padding:.15rem 0}
+  .cg-qualifiers{font-size:.73rem;color:var(--green);font-weight:700;margin-bottom:.35rem}
+  /* ── Group Standings (standalone, kept for reference) ── */
   .st-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;padding:.3rem 0}
   @media(max-width:480px){.st-grid{grid-template-columns:1fr}}
   .st-group{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
