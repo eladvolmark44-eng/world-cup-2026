@@ -649,14 +649,27 @@ function MatchBetRow({match, savedBet, onSave, teamNames, odds}){
 function PlayerBetsView({player,viewerUid,results,teamNames}){
   const [tab,setTab]=useState("groups");
   const bets=player.bets||{};
+  const globalLocked=isGlobalLocked();
+  const medals=["🥇","🥈","🥉"];
+  const hasSpecial=globalLocked&&(bets.champion||bets.goldenBoot||(bets.totalGoals!=null&&bets.totalGoals!==""));
   return(
     <div className="player-bets-view">
-      <div className="player-header">
+      <div className="pbv-profile-card">
         {player.photoURL
-          ?<img src={player.photoURL} className="player-avatar" alt=""/>
-          :<div className="player-avatar-ph">{(player.name||"?")[0]}</div>}
-        <span className="player-hname">{player.name}</span>
-        <span className="player-score-badge">{calcScore(bets,results,[])} נק׳</span>
+          ?<img src={player.photoURL} className="pbv-avatar" alt=""/>
+          :<div className="pbv-avatar-ph">{(player.name||"?")[0]}</div>}
+        <div className="pbv-name">{player.name}</div>
+        <div className="pbv-meta">
+          {player.rank&&<span className="pbv-rank-badge">{medals[player.rank-1]||`#${player.rank}`}</span>}
+          <span className="pbv-score-badge">{calcScore(bets,results,[])} נק׳</span>
+        </div>
+        {hasSpecial&&(
+          <div className="pbv-special-row">
+            {bets.champion&&<span className="pbv-special-chip">🏆 {withFlag(teamNames?.[bets.champion]||bets.champion)}</span>}
+            {bets.goldenBoot&&<span className="pbv-special-chip">👟 {withStrikerFlag(bets.goldenBoot)}</span>}
+            {bets.totalGoals!=null&&bets.totalGoals!==""&&<span className="pbv-special-chip">⚽ {bets.totalGoals} שערים</span>}
+          </div>
+        )}
       </div>
       <div className="sub-tabs">
         {[["groups","🏠 בתים"],["matches","⚽ משחקים"],["knockout","🏆 נוקאאוט"],["special","⭐ מיוחד"]].map(([k,l])=>(
@@ -1433,7 +1446,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
             const champFlag=champBet?(FLAG_MAP[teamNames?.[champBet]||champBet]||"🏆"):null;
             const bootFlag=bootBet?(STRIKER_FLAGS[bootBet]||"👟"):null;
             return(
-              <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
+              <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer({...p,rank:i+1})}>
                 <span className="lb-rank">{medals[i]||i+1}</span>
                 <div className="lb-name-col">
                   {p.photoURL
@@ -2896,11 +2909,15 @@ const STYLES=`
   .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
-  .player-header{display:flex;align-items:center;gap:1rem;background:var(--card2);border-radius:14px;padding:.9rem 1.1rem}
-  .player-avatar{width:58px;height:58px;border-radius:50%;object-fit:cover;flex-shrink:0}
-  .player-avatar-ph{width:58px;height:58px;border-radius:50%;background:var(--green);color:#060e1a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.5rem;flex-shrink:0}
-  .player-hname{flex:1;font-weight:800;font-size:1.05rem}
-  .player-score-badge{background:rgba(0,216,127,.15);color:var(--green);border-radius:20px;padding:.3rem .9rem;font-weight:800}
+  .pbv-profile-card{display:flex;flex-direction:column;align-items:center;gap:.55rem;background:var(--card2);border-radius:16px;padding:1.4rem 1rem 1.1rem;margin-bottom:.8rem}
+  .pbv-avatar{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--green)}
+  .pbv-avatar-ph{width:90px;height:90px;border-radius:50%;background:var(--green);color:#060e1a;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:2.3rem;flex-shrink:0}
+  .pbv-name{font-size:1.2rem;font-weight:800;text-align:center}
+  .pbv-meta{display:flex;align-items:center;gap:.5rem}
+  .pbv-rank-badge{font-size:1.3rem}
+  .pbv-score-badge{background:rgba(0,216,127,.15);color:var(--green);border-radius:20px;padding:.28rem .85rem;font-weight:800;font-size:.85rem}
+  .pbv-special-row{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center}
+  .pbv-special-chip{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:.22rem .7rem;font-size:.78rem;color:var(--muted)}
   .filter-row{display:flex;overflow-x:auto;gap:.4rem;padding:.3rem 0;margin-bottom:.5rem;scrollbar-width:none}
   .filter-row::-webkit-scrollbar{display:none}
   .filter-btn{background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:.28rem .65rem;font-family:'Heebo',sans-serif;font-size:.75rem;cursor:pointer;white-space:nowrap;transition:all .15s}
