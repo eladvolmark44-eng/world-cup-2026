@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, updateDoc } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -793,9 +793,9 @@ function MatchRow({m, res, teamNames, odds}){
         {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
       </div>
       <div className="sched-teams">
-        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}</span>
+        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}{res?.reds?.home>0&&<span className="rc-badge">{"🟥".repeat(Math.min(res.reds.home,3))}</span>}</span>
         {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
-        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}</span>
+        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}{res?.reds?.away>0&&<span className="rc-badge">{"🟥".repeat(Math.min(res.reds.away,3))}</span>}</span>
       </div>
       {matchOdds&&(
         <div className="match-odds" style={{marginTop:".3rem",marginBottom:0}}>
@@ -1531,6 +1531,35 @@ function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
   );
 }
 
+async function syncRedCards(){
+  try{
+    const gameSnap=await getDoc(doc(db,"mundial2026","game"));
+    const cur=gameSnap.exists()?gameSnap.data():{};
+    const matches=cur.results?.matches||{};
+    const liveMatches=Object.entries(matches).filter(([,m])=>m.live&&m.sofaId);
+    if(!liveMatches.length)return;
+    const updates={};
+    for(const [matchId,matchData] of liveMatches){
+      try{
+        const r=await fetch(`https://api.sofascore.com/api/v1/event/${matchData.sofaId}/incidents`,
+          {headers:{"User-Agent":"Mozilla/5.0"}});
+        const j=await r.json();
+        const reds={home:0,away:0};
+        for(const inc of(j.incidents||[])){
+          if(inc.incidentType==="card"&&inc.incidentClass==="red"){
+            if(inc.isHome)reds.home++;else reds.away++;
+          }
+        }
+        const prev=matchData.reds||{home:0,away:0};
+        if(reds.home!==prev.home||reds.away!==prev.away)
+          updates[`results.matches.${matchId}.reds`]=reds;
+      }catch{}
+    }
+    if(Object.keys(updates).length)
+      await updateDoc(doc(db,"mundial2026","game"),updates);
+  }catch(e){console.warn("Red card sync failed:",e.message);}
+}
+
 export default function App(){
   const [authUser,setAuthUser]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
@@ -1688,7 +1717,9 @@ export default function App(){
             const hg=ev.homeScore?.current, ag=ev.awayScore?.current;
             if(hg==null||ag==null)continue;
             const minute=live ? (ev.time?.played??null) : null;
-            addBothKeys(res,heb(ev.homeTeam?.name),heb(ev.awayTeam?.name),hg,ag,fin?"FT":"LIVE",live,minute);
+            const hn=heb(ev.homeTeam?.name), an=heb(ev.awayTeam?.name);
+            addBothKeys(res,hn,an,hg,ag,fin?"FT":"LIVE",live,minute);
+            if(ev.id){res[`${hn}_${an}`].sofaId=ev.id;res[`${an}_${hn}`].sofaId=ev.id;}
           }
           return res;
         };
@@ -1827,7 +1858,7 @@ export default function App(){
           if (byKey[key]) {
             const prev = curMatches[m.id], next = byKey[key];
             if (!prev || prev.home!==next.home || prev.away!==next.away || prev.live!==next.live || prev.minute!==next.minute) {
-              updatedMatches[m.id] = next; matchChanged = true;
+              updatedMatches[m.id] = {...(curMatches[m.id]||{}), ...next}; matchChanged = true;
             }
           }
         }
@@ -1915,7 +1946,8 @@ export default function App(){
 
     syncScores(auth.currentUser?.uid||"anon");
     const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 15 * 1000);
-    return()=>{u1();u2();clearInterval(poll);};
+    const redPoll = setInterval(()=>syncRedCards(), 60 * 1000);
+    return()=>{u1();u2();clearInterval(poll);clearInterval(redPoll);};
   },[]);
 
   const handleSignIn=async()=>{
@@ -2191,6 +2223,7 @@ const STYLES=`
   .sched-open{border-color:rgba(0,216,127,.2)}
   .live-badge{font-size:.65rem;color:var(--red);font-weight:800;animation:pulse 1s ease-in-out infinite}
   .done-badge{font-size:.65rem;color:var(--green)}
+  .rc-badge{font-size:.65rem;margin-right:.2rem;vertical-align:middle}
 
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .sched-score-live{background:rgba(255,77,109,.15);color:var(--red) !important}
