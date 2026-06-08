@@ -339,6 +339,46 @@ const ODDS_TEAM_MAP = {
   "Iceland":"איסלנד","Nigeria":"ניגריה","Costa Rica":"קוסטה ריקה",
 };
 function oddsHeb(n){ return ODDS_TEAM_MAP[n]||n; }
+const SOFA_TEAM_MAP = {
+  "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה","Czech Republic":"צ'כיה","Czechia":"צ'כיה",
+  "Canada":"קנדה","Switzerland":"שוויץ","Qatar":"קטאר","Bosnia and Herzegovina":"בוסניה והרצגובינה","Bosnia-Herzegovina":"בוסניה והרצגובינה","Bosnia":"בוסניה והרצגובינה",
+  "Brazil":"ברזיל","Morocco":"מרוקו","Scotland":"סקוטלנד","Haiti":"האיטי",
+  "USA":"ארה\"ב","United States":"ארה\"ב","Australia":"אוסטרליה","Paraguay":"פרגוואי","Turkey":"טורקיה","Türkiye":"טורקיה",
+  "Germany":"גרמניה","Ecuador":"אקוודור","Ivory Coast":"חוף השנהב","Cote d'Ivoire":"חוף השנהב","Curacao":"קוראסאו","Curaçao":"קוראסאו",
+  "Netherlands":"הולנד","Japan":"יפן","Tunisia":"תוניסיה","Sweden":"שוודיה","Iraq":"עיראק","DR Congo":"קונגו דמוקרטית","Congo DR":"קונגו דמוקרטית","Democratic Republic of the Congo":"קונגו דמוקרטית",
+  "Spain":"ספרד","Saudi Arabia":"ערב הסעודית","Uruguay":"אורוגוואי","Cape Verde":"כף ורדה",
+  "Belgium":"בלגיה","Iran":"איראן","Egypt":"מצרים","New Zealand":"ניו זילנד",
+  "France":"צרפת","Senegal":"סנגל","Norway":"נורווגיה",
+  "Argentina":"ארגנטינה","Algeria":"אלג'יריה","Austria":"אוסטריה","Jordan":"ירדן",
+  "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
+  "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
+  "Chile":"צ'ילה",
+  "Armenia":"ארמניה","Kazakhstan":"קזחסטן","Wales":"וויילס","Romania":"רומניה",
+  "Bolivia":"בוליביה","Gibraltar":"גיברלטר","Cayman Islands":"קיימן","Cayman":"קיימן",
+  "Albania":"אלבניה","Luxembourg":"לוקסמבורג",
+  "Central Español":"סנטרל אספניול","Racing Montevideo":"ראסינג מונטבידאו","Racing Club de Montevideo":"ראסינג מונטבידאו",
+  "Comoros":"קומורו","Comores":"קומורו",
+  "Rwanda":"רואנדה","El Salvador":"אל סלבדור","Jamaica":"ג'מייקה","Venezuela":"ונצואלה","Honduras":"הונדורס","Aruba":"ארובה",
+  "Kenya":"קניה","Lesotho":"לסוטו","Denmark":"דנמרק","Ukraine":"אוקראינה",
+  "Slovenia":"סלובניה","Greece":"יוון","Italy":"איטליה","Guatemala":"גואטמלה",
+  "Liechtenstein":"ליכטנשטיין","Cyprus":"קפריסין","Kosovo":"קוסובו","Andorra":"אנדורה",
+  "Afghanistan":"אפגניסטן","Pakistan":"פקיסטן","Oman":"עומאן","Mozambique":"מוזמביק",
+  "Maldives":"מלדיביים","Bangladesh":"בנגלדש","Mauritania":"מאוריטניה","Niger":"ניז'ר",
+  "Northern Ireland":"צפון אירלנד","N. Ireland":"צפון אירלנד",
+  "Peru":"פרו","Botswana":"בוצוואנה","Angola":"אנגולה",
+  "Central African Republic":"רפובליקה מרכז-אפריקאית","Central African Rep.":"רפובליקה מרכז-אפריקאית",
+  "Ethiopia":"אתיופיה","Malawi":"מלאווי","Tanzania":"טנזניה",
+  "Vanuatu":"ונואטו","Fiji":"פיג'י","Philippines":"הפיליפינים","Myanmar":"מיאנמר","Burma":"מיאנמר",
+  "China":"סין","China PR":"סין","China Republic":"סין","Thailand":"תאילנד","Cambodia":"קמבודיה","Hong Kong":"הונג קונג",
+  "Indonesia":"אינדונזיה","Bahrain":"בחריין","Syria":"סוריה",
+  "Kyrgyzstan":"קירגיזסטן","Palestine":"פלסטין","Palestinian Territory":"פלסטין",
+  "Moldova":"מולדובה","Tajikistan":"טג'יקיסטן","India":"הודו",
+  "Equatorial Guinea":"גינאה המשוונית","Liberia":"ליבריה","Sierra Leone":"סיירה לאונה","Russia":"רוסיה",
+  "Trinidad and Tobago":"טרינידד וטובגו","Trinidad & Tobago":"טרינידד וטובגו",
+  "Belarus":"בלארוס","Burkina Faso":"בורקינה פאסו",
+  "Hungary":"הונגריה","Azerbaijan":"אזרבייג'ן","San Marino":"סן מרינו",
+  "Iceland":"איסלנד","Nigeria":"ניגריה","Costa Rica":"קוסטה ריקה",
+};
 function parseOddsData(fixtures){
   const map={};
   for(const f of fixtures){
@@ -1411,6 +1451,14 @@ function AdminPanel({ participants, game, showToast }) {
       }
     },
     {
+      id: "backfillReds",
+      label: "תיקון אדומים היסטורי",
+      desc: "שולף כרטיסים אדומים ממשחקים שכבר שוחקו (חד-פעמי)",
+      icon: "🟥",
+      danger: false,
+      run: async () => { await backfillRedCards(); }
+    },
+    {
       id: "allBets",
       label: "אפס הכל לחלוטין",
       desc: "מוחק כל ההימורים של כולם (משחקים + כלליים) + כל התוצאות",
@@ -1529,6 +1577,69 @@ function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
   );
 }
 
+async function backfillRedCards(){
+  const gameSnap=await getDoc(doc(db,"mundial2026","game"));
+  const cur=gameSnap.exists()?gameSnap.data():{};
+  const curMatches=cur.results?.matches||{};
+  const heb=n=>SOFA_TEAM_MAP[n]||n;
+  const isoDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+  // All past matches that have a stored result
+  const pastMatches=GROUP_MATCHES.filter(m=>{
+    const md=curMatches[m.id];
+    return md&&md.home!=null&&!md.live;
+  });
+  if(!pastMatches.length) return 0;
+
+  // Group by kickoff date
+  const byDate={};
+  for(const m of pastMatches){
+    const iso=isoDate(new Date(m.kickoff));
+    (byDate[iso]||(byDate[iso]=[])).push(m);
+  }
+
+  const updates={};
+  for(const [iso,matches] of Object.entries(byDate)){
+    let sofaEvents=[];
+    try{
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,
+        {headers:{"User-Agent":"Mozilla/5.0"}});
+      const j=await r.json();
+      sofaEvents=j.events||[];
+    }catch{continue;}
+
+    for(const m of matches){
+      const ev=sofaEvents.find(e=>{
+        const ht=heb(e.homeTeam?.name||""), at=heb(e.awayTeam?.name||"");
+        return ht===m.home&&at===m.away;
+      });
+      if(!ev?.id) continue;
+
+      try{
+        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`,
+          {headers:{"User-Agent":"Mozilla/5.0"}});
+        const j=await r.json();
+        const reds={home:0,away:0};
+        for(const inc of(j.incidents||[])){
+          if(inc.incidentType==="card"&&inc.incidentClass==="red"){
+            if(inc.isHome)reds.home++;else reds.away++;
+          }
+        }
+        updates[`results.matches.${m.id}.sofaId`]=ev.id;
+        if(reds.home>0||reds.away>0)
+          updates[`results.matches.${m.id}.reds`]=reds;
+      }catch{}
+    }
+    // Small delay between dates to be polite to SofaScore
+    await new Promise(r=>setTimeout(r,800));
+  }
+
+  if(Object.keys(updates).length)
+    await updateDoc(doc(db,"mundial2026","game"),updates);
+
+  return Object.keys(updates).filter(k=>k.includes(".reds")).length;
+}
+
 async function syncRedCards(){
   try{
     const gameSnap=await getDoc(doc(db,"mundial2026","game"));
@@ -1600,56 +1711,7 @@ export default function App(){
       setParticipants(snap.docs.map(d=>({...d.data(),uid:d.id})));
     });
 
-    const TEAM_MAP = {
-      "Mexico":"מקסיקו","South Korea":"קוריאה","South Africa":"דרום אפריקה","Czech Republic":"צ'כיה","Czechia":"צ'כיה",
-      "Canada":"קנדה","Switzerland":"שוויץ","Qatar":"קטאר","Bosnia and Herzegovina":"בוסניה והרצגובינה","Bosnia-Herzegovina":"בוסניה והרצגובינה","Bosnia":"בוסניה והרצגובינה",
-      "Brazil":"ברזיל","Morocco":"מרוקו","Scotland":"סקוטלנד","Haiti":"האיטי",
-      "USA":"ארה\"ב","United States":"ארה\"ב","Australia":"אוסטרליה","Paraguay":"פרגוואי","Turkey":"טורקיה","Türkiye":"טורקיה",
-      "Germany":"גרמניה","Ecuador":"אקוודור","Ivory Coast":"חוף השנהב","Cote d'Ivoire":"חוף השנהב","Curacao":"קוראסאו","Curaçao":"קוראסאו",
-      "Netherlands":"הולנד","Japan":"יפן","Tunisia":"תוניסיה","Sweden":"שוודיה","Iraq":"עיראק","DR Congo":"קונגו דמוקרטית","Congo DR":"קונגו דמוקרטית","Democratic Republic of the Congo":"קונגו דמוקרטית",
-      "Spain":"ספרד","Saudi Arabia":"ערב הסעודית","Uruguay":"אורוגוואי","Cape Verde":"כף ורדה",
-      "Belgium":"בלגיה","Iran":"איראן","Egypt":"מצרים","New Zealand":"ניו זילנד",
-      "France":"צרפת","Senegal":"סנגל","Norway":"נורווגיה",
-      "Argentina":"ארגנטינה","Algeria":"אלג'יריה","Austria":"אוסטריה","Jordan":"ירדן",
-      "Portugal":"פורטוגל","Uzbekistan":"אוזבקיסטן","Colombia":"קולומביה",
-      "England":"אנגליה","Croatia":"קרואטיה","Ghana":"גאנה","Panama":"פנמה",
-      "Chile":"צ'ילה",
-      "Armenia":"ארמניה","Kazakhstan":"קזחסטן","Wales":"וויילס","Romania":"רומניה",
-      "Bolivia":"בוליביה","Gibraltar":"גיברלטר","Cayman Islands":"קיימן","Cayman":"קיימן",
-      "Albania":"אלבניה","Luxembourg":"לוקסמבורג",
-      "Central Español":"סנטרל אספניול","Racing Montevideo":"ראסינג מונטבידאו","Racing Club de Montevideo":"ראסינג מונטבידאו",
-      "Comoros":"קומורו","Comores":"קומורו",
-      "Rwanda":"רואנדה",
-      "El Salvador":"אל סלבדור",
-      "Jamaica":"ג'מייקה",
-      "Venezuela":"ונצואלה",
-      "Honduras":"הונדורס",
-      "Aruba":"ארובה",
-      "Kenya":"קניה","Lesotho":"לסוטו","Denmark":"דנמרק","Ukraine":"אוקראינה",
-      "Slovenia":"סלובניה","Greece":"יוון","Italy":"איטליה","Guatemala":"גואטמלה",
-      "Liechtenstein":"ליכטנשטיין","Cyprus":"קפריסין","Kosovo":"קוסובו","Andorra":"אנדורה",
-      "Afghanistan":"אפגניסטן","Pakistan":"פקיסטן","Oman":"עומאן","Mozambique":"מוזמביק",
-      "Maldives":"מלדיביים","Bangladesh":"בנגלדש",
-      "Mauritania":"מאוריטניה","Niger":"ניז'ר",
-      "Northern Ireland":"צפון אירלנד","N. Ireland":"צפון אירלנד",
-      "Peru":"פרו","Botswana":"בוצוואנה","Angola":"אנגולה",
-      "Central African Republic":"רפובליקה מרכז-אפריקאית","Central African Rep.":"רפובליקה מרכז-אפריקאית",
-      "Ethiopia":"אתיופיה","Malawi":"מלאווי","Tanzania":"טנזניה",
-      "Vanuatu":"ונואטו","Fiji":"פיג'י",
-      "Philippines":"הפיליפינים","Myanmar":"מיאנמר","Burma":"מיאנמר",
-      "China":"סין","China PR":"סין","China Republic":"סין",
-      "Thailand":"תאילנד","Cambodia":"קמבודיה","Hong Kong":"הונג קונג",
-      "Indonesia":"אינדונזיה","Bahrain":"בחריין","Syria":"סוריה",
-      "Kyrgyzstan":"קירגיזסטן","Palestine":"פלסטין","Palestinian Territory":"פלסטין",
-      "Moldova":"מולדובה","Tajikistan":"טג'יקיסטן","India":"הודו",
-      "Equatorial Guinea":"גינאה המשוונית","Liberia":"ליבריה",
-      "Sierra Leone":"סיירה לאונה","Russia":"רוסיה",
-      "Trinidad and Tobago":"טרינידד וטובגו","Trinidad & Tobago":"טרינידד וטובגו",
-      "Belarus":"בלארוס","Burkina Faso":"בורקינה פאסו",
-      "Hungary":"הונגריה","Azerbaijan":"אזרבייג'ן","San Marino":"סן מרינו",
-      "Iceland":"איסלנד","Nigeria":"ניגריה","Costa Rica":"קוסטה ריקה",
-    };
-    const heb = n => TEAM_MAP[n]||n;
+    const heb = n => SOFA_TEAM_MAP[n]||n;
 
     const syncScores = async (uid) => {
       try {
