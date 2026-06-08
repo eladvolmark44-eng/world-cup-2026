@@ -1594,47 +1594,89 @@ async function backfillRedCards(){
   if(!pastMatches.length){console.log("[backfill] no past matches");return 0;}
   console.log("[backfill] need reds for:",pastMatches.map(m=>`${m.home}-${m.away}`));
 
-  // Group matches by ISO date so we make one scheduled-events call per day.
-  // scheduled-events/{date} works from the browser; events/last is blocked.
-  const byDate={};
+  // Build a map keyed by "homeHeb_awayHeb" → match record
+  const needByKey={};
+  for(const m of pastMatches) needByKey[`${m.home}_${m.away}`]=m;
+
+  // Group matches by YYYYMMDD for scoreboard lookup
+  const byYmd={};
   for(const m of pastMatches){
-    const iso=m.kickoff.slice(0,10); // "2026-06-06"
-    (byDate[iso]||(byDate[iso]=[])).push(m);
+    const ymd=m.kickoff.slice(0,10).replace(/-/g,"");
+    (byYmd[ymd]||(byYmd[ymd]=[])).push(m);
   }
 
   const updates={};
-  for(const [iso,matches] of Object.entries(byDate)){
-    let events=[];
-    try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
-      const j=await r.json();
-      events=j.events||[];
-      console.log(`[backfill] sofa ${iso}: ${events.length} events`);
-    }catch(e){console.warn(`[backfill] sofa ${iso} failed:`,e.message);continue;}
+  const SLUGS=["fifa.friendly","intl.friendlies","fifa.world"];
 
-    for(const m of matches){
-      const ev=events.find(e=>{
-        const hn=heb(e.homeTeam?.name||""),an=heb(e.awayTeam?.name||"");
-        return hn===m.home&&an===m.away;
-      });
-      if(!ev){console.log(`[backfill] no sofa event for ${m.home}-${m.away}`);continue;}
+  for(const ymd of Object.keys(byYmd)){
+    // Collect ESPN event IDs + competitor info for this date across all slugs
+    const espnEvents=[];
+    for(const slug of SLUGS){
       try{
-        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
-        const j=await r.json();
+        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
+        const d=await r.json();
+        for(const ev of(d.events||[])){
+          const comp=ev.competitions?.[0];
+          if(!comp)continue;
+          const state=comp.status?.type?.state;
+          if(state!=="post"&&state!=="in")continue;
+          const hC=comp.competitors?.find(c=>c.homeAway==="home");
+          const aC=comp.competitors?.find(c=>c.homeAway==="away");
+          if(!hC||!aC)continue;
+          espnEvents.push({slug,eventId:ev.id,hId:hC.team?.id,aId:aC.team?.id,hn:heb(hC.team?.displayName||""),an:heb(aC.team?.displayName||"")});
+        }
+      }catch(e){}
+    }
+
+    for(const ev of espnEvents){
+      const m=needByKey[`${ev.hn}_${ev.an}`];
+      if(!m)continue;
+
+      try{
+        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ev.slug}/summary?event=${ev.eventId}`);
+        const d=await r.json();
+
         const reds={home:0,away:0};
-        for(const inc of(j.incidents||[])){
-          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
-            if(inc.isHome)reds.home++;else reds.away++;
+
+        // Strategy 1: team-level statistics in boxscore
+        for(const t of(d.boxscore?.teams||[])){
+          const rc=parseInt((t.statistics||[]).find(s=>s.name==="redCards")?.value??0,10);
+          if(!rc)continue;
+          if(t.team?.id===ev.hId)reds.home=rc;
+          else if(t.team?.id===ev.aId)reds.away=rc;
+        }
+
+        // Strategy 2: sum individual player redCards stats if team stats missing
+        if(!reds.home&&!reds.away){
+          for(const pg of(d.boxscore?.players||[])){
+            const isHome=pg.team?.id===ev.hId;
+            for(const player of(pg.statistics?.[0]?.athletes||[])){
+              const rc=parseInt((player.stats||[]).find((_,i)=>(pg.statistics?.[0]?.labels||[])[i]==="RC")?.value??0,10);
+              if(rc>0) isHome ? reds.home+=rc : reds.away+=rc;
+            }
           }
         }
-        console.log(`[backfill] ${m.home}-${m.away} reds:`,reds);
+
+        // Strategy 3: play-by-play event types
+        if(!reds.home&&!reds.away){
+          for(const play of(d.plays||[])){
+            const txt=(play.type?.text||"").toLowerCase();
+            if(!txt.includes("red card")&&!txt.includes("second yellow")&&!txt.includes("double yellow"))continue;
+            if(play.team?.id===ev.hId)reds.home++;
+            else if(play.team?.id===ev.aId)reds.away++;
+          }
+        }
+
+        console.log(`[backfill] ${ev.hn}-${ev.an} reds:`,reds);
         if(reds.home>0||reds.away>0)
           updates[`results.matches.${m.id}.reds`]=reds;
-      }catch(e){console.warn(`[backfill] incidents failed for ${m.id}`,e.message);}
+      }catch(e){console.warn(`[backfill] summary failed for ${m.id}`,e.message);}
+      delete needByKey[`${ev.hn}_${ev.an}`];
     }
-    await new Promise(r=>setTimeout(r,300));
+    await new Promise(r=>setTimeout(r,200));
   }
 
+  console.log("[backfill] unmatched:",Object.keys(needByKey));
   console.log("[backfill] updates:",Object.keys(updates));
   if(Object.keys(updates).length)
     await updateDoc(doc(db,"mundial2026","game"),updates);
@@ -1650,30 +1692,49 @@ async function syncRedCards(){
     if(!liveMatchIds.length)return;
 
     const heb=n=>SOFA_TEAM_MAP[n]||n;
-    // Fetch live events from SofaScore via server-side proxy (bypasses CORS)
-    let sofaLive=[];
-    try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/live`);
-      const j=await r.json();
-      sofaLive=j.events||[];
-    }catch{return;}
+    const SLUGS=["fifa.friendly","intl.friendlies","fifa.world"];
+
+    // Collect ESPN live events for today across all slugs
+    const now=new Date();
+    const ymd=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
+    const espnEvents=[];
+    for(const slug of SLUGS){
+      try{
+        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
+        const d=await r.json();
+        for(const ev of(d.events||[])){
+          const comp=ev.competitions?.[0];
+          if(comp?.status?.type?.state!=="in")continue;
+          const hC=comp.competitors?.find(c=>c.homeAway==="home");
+          const aC=comp.competitors?.find(c=>c.homeAway==="away");
+          if(!hC||!aC)continue;
+          espnEvents.push({slug,eventId:ev.id,hId:hC.team?.id,aId:aC.team?.id,hn:heb(hC.team?.displayName||""),an:heb(aC.team?.displayName||"")});
+        }
+      }catch(e){}
+    }
 
     const updates={};
     for(const matchId of liveMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
-      const ev=sofaLive.find(e=>{
-        const ht=heb(e.homeTeam?.name||""),at=heb(e.awayTeam?.name||"");
-        return ht===gm.home&&at===gm.away;
-      });
-      if(!ev?.id)continue;
+      const ev=espnEvents.find(e=>e.hn===gm.home&&e.an===gm.away);
+      if(!ev)continue;
       try{
-        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
-        const j=await r.json();
+        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ev.slug}/summary?event=${ev.eventId}`);
+        const d=await r.json();
         const reds={home:0,away:0};
-        for(const inc of(j.incidents||[])){
-          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
-            if(inc.isHome)reds.home++;else reds.away++;
+        for(const t of(d.boxscore?.teams||[])){
+          const rc=parseInt((t.statistics||[]).find(s=>s.name==="redCards")?.value??0,10);
+          if(!rc)continue;
+          if(t.team?.id===ev.hId)reds.home=rc;
+          else if(t.team?.id===ev.aId)reds.away=rc;
+        }
+        if(!reds.home&&!reds.away){
+          for(const play of(d.plays||[])){
+            const txt=(play.type?.text||"").toLowerCase();
+            if(!txt.includes("red card")&&!txt.includes("second yellow"))continue;
+            if(play.team?.id===ev.hId)reds.home++;
+            else if(play.team?.id===ev.aId)reds.away++;
           }
         }
         const prev=matches[matchId]?.reds||{home:0,away:0};
