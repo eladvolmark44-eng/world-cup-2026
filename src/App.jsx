@@ -1598,47 +1598,49 @@ async function backfillRedCards(){
     (byDate[iso]||(byDate[iso]=[])).push(m);
   }
 
-  console.log("[backfill] dates:", Object.keys(byDate));
+  // Build lookup of all past matches we need: key → {matchId, home, away}
+  const needByKey={};
+  for(const m of pastMatches) needByKey[`${m.home}_${m.away}`]=m;
+
+  console.log("[backfill] need reds for:", Object.keys(needByKey));
   const updates={};
-  for(const [iso,matches] of Object.entries(byDate)){
-    const ymd=iso.replace(/-/g,"");
-    // Determine ESPN slugs for this date's matches
-    const slugSet=new Set(matches.map(m=>m.group==="יזיזות"?"fifa.friendly":"fifa.world"));
-    slugSet.add("intl.friendlies"); // always try friendly slug too
 
-    const redsByKey={};
-    for(const slug of slugSet){
+  // Page through SofaScore recent results until we find all matches or run out
+  for(let page=0; page<30 && Object.keys(needByKey).length>0; page++){
+    let events=[];
+    try{
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/last/${page}`);
+      const j=await r.json();
+      events=j.events||[];
+      console.log(`[backfill] sofa last/${page}: ${events.length} events`);
+      if(!events.length) break;
+    }catch(e){console.warn(`[backfill] sofa last/${page} failed:`,e.message);break;}
+
+    for(const ev of events){
+      const hn=heb(ev.homeTeam?.name||""), an=heb(ev.awayTeam?.name||"");
+      const m=needByKey[`${hn}_${an}`];
+      if(!m) continue;
+
       try{
-        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
-        const d=await r.json();
-        console.log(`[backfill] ESPN ${slug} ${iso}: ${d.events?.length||0} events`);
-        for(const ev of(d.events||[])){
-          const comp=ev.competitions?.[0]; if(!comp) continue;
-          if(comp.status?.type?.state!=="post") continue;
-          const home=comp.competitors?.find(c=>c.homeAway==="home");
-          const away=comp.competitors?.find(c=>c.homeAway==="away");
-          if(!home||!away) continue;
-          const homeReds=home.statistics?.find(s=>s.name==="redCards")?.value??0;
-          const awayReds=away.statistics?.find(s=>s.name==="redCards")?.value??0;
-          const hn=heb(home.team?.displayName||home.team?.name||"");
-          const an=heb(away.team?.displayName||away.team?.name||"");
-          console.log(`[backfill] ESPN event: ${hn}-${an} reds home=${homeReds} away=${awayReds}`, home.statistics?.map(s=>s.name+":"+s.value));
-          if(homeReds>0||awayReds>0) redsByKey[`${hn}_${an}`]={home:homeReds,away:awayReds};
+        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
+        const j=await r.json();
+        const reds={home:0,away:0};
+        for(const inc of(j.incidents||[])){
+          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
+            if(inc.isHome)reds.home++;else reds.away++;
+          }
         }
-      }catch(e){console.warn(`[backfill] ESPN ${slug} ${iso} failed:`,e.message);}
-    }
+        console.log(`[backfill] ${hn}-${an} reds:`,reds);
+        if(reds.home>0||reds.away>0)
+          updates[`results.matches.${m.id}.reds`]=reds;
+      }catch(e){console.warn(`[backfill] incidents failed for ${m.id}`,e.message);}
 
-    for(const m of matches){
-      const reds=redsByKey[`${m.home}_${m.away}`];
-      if(reds){
-        updates[`results.matches.${m.id}.reds`]=reds;
-        console.log(`[backfill] ✅ ${m.home}-${m.away}:`,reds);
-      } else {
-        console.log(`[backfill] no reds: ${m.home}-${m.away} (${iso})`);
-      }
+      delete needByKey[`${hn}_${an}`]; // found, remove from todo
     }
-    await new Promise(r=>setTimeout(r,300));
+    await new Promise(r=>setTimeout(r,400));
   }
+  console.log("[backfill] unmatched:", Object.keys(needByKey));
+  console.log("[backfill] updates:", Object.keys(updates));
 
   if(Object.keys(updates).length)
     await updateDoc(doc(db,"mundial2026","game"),updates);
@@ -1651,12 +1653,29 @@ async function syncRedCards(){
     const gameSnap=await getDoc(doc(db,"mundial2026","game"));
     const cur=gameSnap.exists()?gameSnap.data():{};
     const matches=cur.results?.matches||{};
-    const liveMatches=Object.entries(matches).filter(([,m])=>m.live&&m.sofaId);
-    if(!liveMatches.length)return;
+    const liveMatchIds=Object.entries(matches).filter(([,m])=>m.live).map(([id])=>id);
+    if(!liveMatchIds.length)return;
+
+    const heb=n=>SOFA_TEAM_MAP[n]||n;
+    // Use the live-events endpoint — confirmed working, no sofaId dependency
+    let sofaLive=[];
+    try{
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/live`);
+      const j=await r.json();
+      sofaLive=j.events||[];
+    }catch{return;}
+
     const updates={};
-    for(const [matchId,matchData] of liveMatches){
+    for(const matchId of liveMatchIds){
+      const gm=GROUP_MATCHES.find(m=>m.id===matchId);
+      if(!gm)continue;
+      const ev=sofaLive.find(e=>{
+        const ht=heb(e.homeTeam?.name||""),at=heb(e.awayTeam?.name||"");
+        return ht===gm.home&&at===gm.away;
+      });
+      if(!ev?.id)continue;
       try{
-        const r=await fetch(`https://api.sofascore.com/api/v1/event/${matchData.sofaId}/incidents`);
+        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
         const j=await r.json();
         const reds={home:0,away:0};
         for(const inc of(j.incidents||[])){
@@ -1664,7 +1683,7 @@ async function syncRedCards(){
             if(inc.isHome)reds.home++;else reds.away++;
           }
         }
-        const prev=matchData.reds||{home:0,away:0};
+        const prev=matches[matchId]?.reds||{home:0,away:0};
         if(reds.home!==prev.home||reds.away!==prev.away)
           updates[`results.matches.${matchId}.reds`]=reds;
       }catch{}
