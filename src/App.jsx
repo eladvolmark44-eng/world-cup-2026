@@ -1598,6 +1598,8 @@ async function backfillRedCards(){
     (byDate[iso]||(byDate[iso]=[])).push(m);
   }
 
+  console.log("[backfill] dates to process:", Object.keys(byDate));
+  console.log("[backfill] past matches:", pastMatches.map(m=>`${m.id} ${m.home}-${m.away}`));
   const updates={};
   for(const [iso,matches] of Object.entries(byDate)){
     let sofaEvents=[];
@@ -1606,19 +1608,32 @@ async function backfillRedCards(){
         {headers:{"User-Agent":"Mozilla/5.0"}});
       const j=await r.json();
       sofaEvents=j.events||[];
-    }catch{continue;}
+      console.log(`[backfill] ${iso}: got ${sofaEvents.length} sofa events`);
+    }catch(e){console.warn(`[backfill] ${iso}: fetch failed`,e);continue;}
 
     for(const m of matches){
       const ev=sofaEvents.find(e=>{
         const ht=heb(e.homeTeam?.name||""), at=heb(e.awayTeam?.name||"");
         return ht===m.home&&at===m.away;
       });
-      if(!ev?.id) continue;
+      if(!ev?.id){
+        // log near-misses to help debug name mismatches
+        const near=sofaEvents.filter(e=>{
+          const hn=e.homeTeam?.name||"", an=e.awayTeam?.name||"";
+          return hn.toLowerCase().includes((SOFA_TEAM_MAP[m.home]||m.home).slice(0,3).toLowerCase())||
+                 an.toLowerCase().includes((SOFA_TEAM_MAP[m.away]||m.away).slice(0,3).toLowerCase());
+        }).map(e=>`${e.homeTeam?.name} vs ${e.awayTeam?.name}`);
+        console.log(`[backfill] NO MATCH for ${m.home}-${m.away} (${iso}), near:`,near);
+        continue;
+      }
+      console.log(`[backfill] found ${m.home}-${m.away} → sofaId=${ev.id}`);
 
       try{
         const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`,
           {headers:{"User-Agent":"Mozilla/5.0"}});
         const j=await r.json();
+        const allCards=j.incidents?.filter(i=>i.incidentType==="card")||[];
+        console.log(`[backfill] ${m.home}-${m.away} cards:`,allCards.map(i=>`${i.incidentClass} isHome=${i.isHome} min=${i.minute}`));
         const reds={home:0,away:0};
         for(const inc of(j.incidents||[])){
           if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
@@ -1626,11 +1641,12 @@ async function backfillRedCards(){
           }
         }
         updates[`results.matches.${m.id}.sofaId`]=ev.id;
-        if(reds.home>0||reds.away>0)
+        if(reds.home>0||reds.away>0){
           updates[`results.matches.${m.id}.reds`]=reds;
-      }catch{}
+          console.log(`[backfill] reds for ${m.home}-${m.away}:`,reds);
+        }
+      }catch(e){console.warn(`[backfill] incidents failed for ${m.id}`,e);}
     }
-    // Small delay between dates to be polite to SofaScore
     await new Promise(r=>setTimeout(r,800));
   }
 
