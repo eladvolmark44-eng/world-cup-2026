@@ -1115,6 +1115,62 @@ function LiveBar({results, teamNames}){
   );
 }
 
+// ─── WINNER ANNOUNCEMENT ──────────────────────────────────────────────────────
+// Deterministic confetti layout — golden-ratio spacing so pieces spread evenly
+const CONFETTI_COLORS = ["#FFD700","#FF6B6B","#4ECDC4","#00D87F","#FF8E53","#C084FC","#60A5FA","#F472B6"];
+const CONFETTI_PIECES = Array.from({length: 48}, (_, i) => ({
+  left:     (((i * 137.508) % 100)).toFixed(2) + "%",
+  delay:    ((i * 0.19) % 3.5).toFixed(2) + "s",
+  duration: (2.2 + (i * 0.13) % 1.8).toFixed(2) + "s",
+  color:    CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  width:    6 + (i % 4) * 2,
+  height:   8 + (i % 3) * 3,
+  skew:     ((i * 31) % 40) - 20,
+}));
+
+function WinnerAnnouncement({ winner, isFinal, onClose }) {
+  useEffect(() => {
+    const handler = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div className="wa-overlay" onClick={onClose}>
+      {/* Confetti */}
+      <div className="wa-confetti" aria-hidden="true">
+        {CONFETTI_PIECES.map((p, i) => (
+          <span key={i} className="wa-piece" style={{
+            left: p.left,
+            animationDelay: p.delay,
+            animationDuration: p.duration,
+            background: p.color,
+            width: p.width,
+            height: p.height,
+            transform: `skewX(${p.skew}deg)`,
+          }}/>
+        ))}
+      </div>
+
+      {/* Card */}
+      <div className="wa-card" onClick={e => e.stopPropagation()}>
+        <div className="wa-trophy">🏆</div>
+        <div className="wa-title">{isFinal ? "🎉 המנצח!" : "🥇 מוביל כרגע"}</div>
+        {winner.photoURL
+          ? <img src={winner.photoURL} className="wa-avatar" alt={winner.name}/>
+          : <div className="wa-avatar-placeholder">{winner.name[0]}</div>
+        }
+        <div className="wa-name">{winner.name}</div>
+        <div className="wa-score">{winner.score} <span className="wa-pts-label">נק׳</span></div>
+        {!isFinal && (
+          <div className="wa-subtitle">הטורניר עדיין לא הסתיים</div>
+        )}
+        <button className="wa-close" onClick={onClose}>סגור</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── SPECIAL BETS CARD ────────────────────────────────────────────────────────
 function SpecialBetsCard({participants, results, teamNames}){
   if(!isGlobalLocked())return null;
@@ -1226,6 +1282,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
     setSaving(false);setSaved(true);
     setTimeout(()=>setSaved(false),2000);
   };
+  const [showWinner, setShowWinner] = useState(false);
   const nowTs=Date.now();
   const liveMatches=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
   const nextMatch=liveMatches.length===0&&GROUP_MATCHES
@@ -1234,6 +1291,18 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
   const groupsPickedCount=Object.keys(GROUPS_2026).filter(g=>(myBets.groups?.[g]||[]).length===2).length;
   const ranked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},results,participants)})).sort((a,b)=>b.score-a.score);
   const medals=["🥇","🥈","🥉"];
+  const tournamentOver=isTournamentOver();
+  const leader=ranked[0]||null;
+
+  // Auto-show once when tournament ends
+  useEffect(()=>{
+    if(!tournamentOver||!leader)return;
+    const key=`winner_shown_${leader.uid}`;
+    if(!localStorage.getItem(key)){
+      setShowWinner(true);
+      localStorage.setItem(key,"1");
+    }
+  },[tournamentOver, leader?.uid]);
   return(
     <div className="section">
       {me&&(
@@ -1330,8 +1399,22 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
         </div>
       )}
       <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}/>
+      {showWinner&&leader&&(
+        <WinnerAnnouncement
+          winner={leader}
+          isFinal={tournamentOver}
+          onClose={()=>setShowWinner(false)}
+        />
+      )}
       <div className="home-card">
-        <div className="home-card-title">🏆 טבלת דירוג</div>
+        <div className="home-card-title" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span>🏆 טבלת דירוג</span>
+          {leader&&(
+            <button className={`wa-trigger-btn ${tournamentOver?"wa-trigger-final":""}`} onClick={()=>setShowWinner(true)}>
+              {tournamentOver?"🎉 הכרז מנצח":"🥇 מוביל"}
+            </button>
+          )}
+        </div>
         <div className="prizes-row" style={{marginBottom:".6rem"}}>
           <span>👥 {participants.length} שחקנים</span>
           <span>💰 {participants.length*50} ₪ בקופה</span>
@@ -2879,4 +2962,28 @@ const STYLES=`
   .sp-pts{color:var(--green);font-weight:800;font-size:.68rem}
   .sp-diff{color:var(--muted);font-size:.68rem}
   .sp-diff.sp-exact{color:var(--green)}
+  /* ── Winner Announcement ── */
+  @keyframes wa-fall{0%{transform:translateY(-120px) rotate(0deg);opacity:1}80%{opacity:.9}100%{transform:translateY(105vh) rotate(600deg);opacity:0}}
+  @keyframes wa-card-in{0%{transform:scale(0.2) translateY(60px);opacity:0}65%{transform:scale(1.06) translateY(-6px);opacity:1}85%{transform:scale(.97) translateY(2px)}100%{transform:scale(1) translateY(0);opacity:1}}
+  @keyframes wa-trophy{0%,100%{transform:scale(1) rotate(-8deg)}50%{transform:scale(1.2) rotate(8deg)}}
+  @keyframes wa-name-glow{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 18px rgba(255,215,0,.7)}}
+  @keyframes wa-score-pop{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+  @keyframes wa-overlay-in{from{opacity:0}to{opacity:1}}
+  .wa-overlay{position:fixed;inset:0;background:rgba(6,14,26,.88);z-index:1000;display:flex;align-items:center;justify-content:center;animation:wa-overlay-in .35s ease;backdrop-filter:blur(4px);padding:1rem}
+  .wa-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+  .wa-piece{position:absolute;top:-20px;border-radius:2px;animation:wa-fall linear infinite}
+  .wa-card{background:linear-gradient(145deg,#0d1e35,#132540);border:2px solid #FFD700;border-radius:20px;padding:2rem 2.2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.7rem;max-width:320px;width:100%;animation:wa-card-in .7s cubic-bezier(.34,1.56,.64,1) forwards;box-shadow:0 0 60px rgba(255,215,0,.25),0 20px 60px rgba(0,0,0,.6);position:relative;z-index:1}
+  .wa-trophy{font-size:4rem;line-height:1;animation:wa-trophy 1.8s ease-in-out infinite}
+  .wa-title{font-size:1.1rem;font-weight:800;color:#FFD700;letter-spacing:.03em}
+  .wa-avatar{width:80px;height:80px;border-radius:50%;border:3px solid #FFD700;object-fit:cover;box-shadow:0 0 20px rgba(255,215,0,.4)}
+  .wa-avatar-placeholder{width:80px;height:80px;border-radius:50%;border:3px solid #FFD700;background:rgba(255,215,0,.15);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#FFD700}
+  .wa-name{font-size:1.6rem;font-weight:900;color:#fff;animation:wa-name-glow 2s ease-in-out infinite}
+  .wa-score{font-size:2.2rem;font-weight:900;color:#FFD700;animation:wa-score-pop 1.5s ease-in-out infinite}
+  .wa-pts-label{font-size:1rem;font-weight:600;opacity:.8}
+  .wa-subtitle{font-size:.78rem;color:var(--muted);margin-top:-.3rem}
+  .wa-close{margin-top:.4rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;padding:.5rem 1.6rem;font-family:'Heebo',sans-serif;font-size:.9rem;cursor:pointer;transition:background .2s}
+  .wa-close:hover{background:rgba(255,255,255,.2)}
+  .wa-trigger-btn{background:rgba(255,215,0,.12);border:1.5px solid rgba(255,215,0,.4);color:#FFD700;border-radius:8px;padding:.25rem .7rem;font-family:'Heebo',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .wa-trigger-btn:hover{background:rgba(255,215,0,.22)}
+  .wa-trigger-btn.wa-trigger-final{background:rgba(255,215,0,.2);border-color:#FFD700;animation:wa-score-pop 1.5s ease-in-out infinite}
 `;
