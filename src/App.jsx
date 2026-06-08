@@ -381,7 +381,7 @@ const SOFA_TEAM_MAP = {
   "Korea Republic":"קוריאה","IR Iran":"איראן","Côte d'Ivoire":"חוף השנהב",
   "North Macedonia":"מקדוניה הצפונית","Republic of Ireland":"אירלנד",
 };
-const FD_TOKEN="f00beef6d831482d97c454c546aacbab";
+const fdProxy=path=>`/api/fd-proxy?path=${encodeURIComponent(path)}`;
 function parseOddsData(fixtures){
   const map={};
   for(const f of fixtures){
@@ -1595,9 +1595,7 @@ async function backfillRedCards(){
 
   let fdMatches=[];
   try{
-    const r=await fetch("https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED",{
-      headers:{"X-Auth-Token":FD_TOKEN}
-    });
+    const r=await fetch(fdProxy("/v4/competitions/WC/matches?status=FINISHED"));
     const j=await r.json();
     fdMatches=j.matches||[];
     console.log(`[backfill] FD finished matches: ${fdMatches.length}`);
@@ -1640,9 +1638,7 @@ async function syncRedCards(){
     const heb=n=>SOFA_TEAM_MAP[n]||n;
     let fdMatches=[];
     try{
-      const r=await fetch("https://api.football-data.org/v4/competitions/WC/matches?status=IN_PLAY,PAUSED",{
-        headers:{"X-Auth-Token":FD_TOKEN}
-      });
+      const r=await fetch(fdProxy("/v4/competitions/WC/matches?status=IN_PLAY,PAUSED"));
       const j=await r.json();
       fdMatches=j.matches||[];
     }catch{return;}
@@ -1903,9 +1899,9 @@ export default function App(){
           for (const iso of wcDates) {
             const ymd = iso.replace(/-/g, '');
             Object.assign(byKey, await fetchWithFallback(["fifa.world"], iso, ymd));
-            // football-data.org supplement — CORS-friendly, reliable WC source
+            // football-data.org supplement — via server-side proxy (no CORS)
             try{
-              const r=await fetch(`https://api.football-data.org/v4/competitions/WC/matches?dateFrom=${iso}&dateTo=${iso}`,{headers:{"X-Auth-Token":FD_TOKEN}});
+              const r=await fetch(fdProxy(`/v4/competitions/WC/matches?dateFrom=${iso}&dateTo=${iso}`));
               const d=await r.json();
               if(d.matches?.length){const p=parseFDScore(d.matches);for(const [k,v] of Object.entries(p)) if(!byKey[k]) byKey[k]=v;}
             }catch(e){}
