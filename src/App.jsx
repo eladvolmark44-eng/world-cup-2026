@@ -1996,29 +1996,48 @@ function AdminPanel({ participants, game, showToast }) {
   );
 }
 
+function resizeImageToDataURL(file,size=120){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const s=Math.min(img.width,img.height);
+      const sx=(img.width-s)/2,sy=(img.height-s)/2;
+      const canvas=document.createElement("canvas");
+      canvas.width=size;canvas.height=size;
+      canvas.getContext("2d").drawImage(img,sx,sy,s,s,0,0,size,size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg",0.75));
+    };
+    img.onerror=reject;
+    img.src=url;
+  });
+}
+
 function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
   const [name,setName]=useState(currentParticipant?.name||authUser.displayName||"");
-  const [photoFile,setPhotoFile]=useState(null);
+  const [photoData,setPhotoData]=useState(null);
   const [preview,setPreview]=useState(currentParticipant?.photoURL||authUser.photoURL||null);
   const [saving,setSaving]=useState(false);
 
-  function handleFileChange(e){
+  async function handleFileChange(e){
     const f=e.target.files[0];
     if(!f)return;
-    setPhotoFile(f);
-    setPreview(URL.createObjectURL(f));
+    try{
+      const data=await resizeImageToDataURL(f);
+      setPhotoData(data);
+      setPreview(data);
+    }catch{ /* ignore */ }
   }
 
   async function handleSave(){
     setSaving(true);
     try{
-      let photoURL=currentParticipant?.photoURL||authUser.photoURL||null;
-      if(photoFile){
-        const ref=storageRef(storage,`avatars/${authUser.uid}`);
-        await uploadBytes(ref,photoFile);
-        photoURL=await getDownloadURL(ref);
-      }
-      await saveParticipant({...(currentParticipant||{}),uid:authUser.uid,name:name.trim()||authUser.displayName,photoURL});
+      const photoURL=photoData||(currentParticipant?.photoURL||authUser.photoURL||null);
+      await updateDoc(doc(db,"mundial2026","game","participants",authUser.uid),{
+        name:name.trim()||authUser.displayName,
+        photoURL
+      });
       showToast("הפרופיל עודכן ✓");
       onClose();
     }catch(e){
