@@ -70,6 +70,30 @@ const STRIKER_FLAGS = {
 };
 function withStrikerFlag(name){ return name ? `${STRIKER_FLAGS[name]||""} ${name}`.trim() : "—"; }
 
+// Maps STRIKERS Hebrew names → possible English API name variants (football-data.org / API-Football)
+const STRIKER_API_NAMES = {
+  "קיליאן אמבפה":      ["Kylian Mbappé","Kylian Mbappe","K. Mbappé","K. Mbappe"],
+  "הארי קיין":         ["Harry Kane","H. Kane"],
+  "ליונל מסי":         ["Lionel Messi","L. Messi"],
+  "ארלינג האלנד":      ["Erling Haaland","E. Haaland"],
+  "למין יאמאל":        ["Lamine Yamal","L. Yamal"],
+  "כריסטיאנו רונאלדו": ["Cristiano Ronaldo","C. Ronaldo"],
+  "ניק וולטמאדה":      ["Nick Woltemade","N. Woltemade","Niclas Woltemade"],
+  "עוסמאן דמבלה":      ["Ousmane Dembélé","Ousmane Dembele","O. Dembélé","O. Dembele"],
+  "לאוטרו מרטינז":     ["Lautaro Martínez","Lautaro Martinez","L. Martínez","L. Martinez"],
+  "ויניסיוס ג'וניור":  ["Vinícius Júnior","Vinicius Junior","V. Júnior","V. Junior","Vinícius Jr."],
+  "בוקאיו סאקה":       ["Bukayo Saka","B. Saka"],
+  "ראפיניה":           ["Raphinha","R. Raphinha"],
+  "מיקל אויארסבאל":    ["Mikel Oyarzabal","M. Oyarzabal"],
+};
+function apiNameToHeb(apiName){
+  const norm=n=>n.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  const na=norm(apiName);
+  for(const [heb,vs] of Object.entries(STRIKER_API_NAMES))
+    if(vs.some(v=>norm(v)===na))return heb;
+  return null;
+}
+
 const ADMIN_UID = "8tDgIRJQDFZyiTvaR0pP8nXShgH2";
 
 const GROUP_MATCHES = [
@@ -1091,6 +1115,97 @@ function LiveBar({results, teamNames}){
   );
 }
 
+// ─── SPECIAL BETS CARD ────────────────────────────────────────────────────────
+function SpecialBetsCard({participants, results, teamNames}){
+  if(!isGlobalLocked())return null;
+  const over=isTournamentOver();
+  const topScorer=results.topScorer;       // {name, goals} — synced from football-data.org
+  const actualGoals=results.actualTotalGoals; // number — computed from match scores
+  const champion=results.champion;
+
+  // For total goals: find minimum diff (to highlight winner)
+  const diffs=participants
+    .filter(p=>p.bets?.totalGoals!=null&&p.bets.totalGoals!=="")
+    .map(p=>Math.abs(+p.bets.totalGoals-(actualGoals??0)));
+  const minDiff=diffs.length?Math.min(...diffs):null;
+
+  return(
+    <div className="home-card">
+      <div className="home-card-title">⭐ הימורים מיוחדים</div>
+
+      {/* Champion */}
+      <div className="sp-section">
+        <div className="sp-label">
+          🏆 אלופה
+          {champion&&<span className="sp-live-val">{withFlag(teamNames?.[champion]||champion)}</span>}
+          {!champion&&<span className="sp-pending">ממתין לסיום</span>}
+        </div>
+        <div className="sp-chips">
+          {participants.map(p=>{
+            const bet=p.bets?.champion; if(!bet)return null;
+            const correct=over&&champion&&bet===champion;
+            const wrong=over&&champion&&!correct;
+            return(
+              <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
+                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
+                <span className="sp-chip-val">{withFlag(teamNames?.[bet]||bet)}</span>
+                {correct&&<span className="sp-pts">+12נק׳</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Golden Boot */}
+      <div className="sp-section">
+        <div className="sp-label">
+          👟 מלך שערים
+          {topScorer&&<span className="sp-live-val">{withStrikerFlag(topScorer.name)} ({topScorer.goals}⚽)</span>}
+          {!topScorer&&<span className="sp-pending">ממתין לנתונים</span>}
+        </div>
+        <div className="sp-chips">
+          {participants.map(p=>{
+            const bet=p.bets?.goldenBoot; if(!bet)return null;
+            const correct=over&&topScorer?.name&&bet.trim().toLowerCase()===topScorer.name.trim().toLowerCase();
+            const wrong=over&&topScorer?.name&&!correct;
+            return(
+              <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
+                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
+                <span className="sp-chip-val">{withStrikerFlag(bet)}</span>
+                {correct&&<span className="sp-pts">+12נק׳</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Total Goals */}
+      <div className="sp-section">
+        <div className="sp-label">
+          ⚽ סה״כ שערים בטורניר
+          {actualGoals!=null&&<span className="sp-live-val">{actualGoals} שערים</span>}
+          {actualGoals==null&&<span className="sp-pending">0 שערים עד כה</span>}
+        </div>
+        <div className="sp-chips">
+          {participants.map(p=>{
+            const bet=p.bets?.totalGoals; if(bet==null||bet==="")return null;
+            const diff=actualGoals!=null?Math.abs(+bet-actualGoals):null;
+            const isWinner=over&&diff!=null&&diff===minDiff;
+            const wrong=over&&!isWinner;
+            return(
+              <div key={p.uid} className={`sp-chip ${isWinner?"sp-correct":wrong?"sp-wrong":""}`}>
+                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
+                <span className="sp-chip-val">{bet}</span>
+                {diff!=null&&<span className={`sp-diff ${diff===0?"sp-exact":""}`}>{diff===0?"🎯":`±${diff}`}</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── HOME VIEW ────────────────────────────────────────────────────────────────
 function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, onSaveBets, onGoToGroups}){
   const myBets=me?.bets||{};
@@ -1214,6 +1329,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
           <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds}/>
         </div>
       )}
+      <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}/>
       <div className="home-card">
         <div className="home-card-title">🏆 טבלת דירוג</div>
         <div className="prizes-row" style={{marginBottom:".6rem"}}>
@@ -2238,14 +2354,51 @@ export default function App(){
           }
         } catch(e) {}
 
+        // ── TOP SCORER + TOTAL GOALS (WC only, not friendlies) ─────────────
+        let topScorerUpdate = null;
+        if (wcStarted) {
+          // Fetch top scorer from football-data.org, max once/hour
+          const lastTS = syncData.lastTopScorerSync ? new Date(syncData.lastTopScorerSync).getTime() : 0;
+          if (Date.now() - lastTS > 60 * 60 * 1000) {
+            try {
+              const r = await fetch(fdProxy('/v4/competitions/WC/scorers'));
+              const d = await r.json();
+              if (d.scorers?.length) {
+                const top = d.scorers[0];
+                const hebName = apiNameToHeb(top.player?.name||"") || top.player?.name || "";
+                topScorerUpdate = { name: hebName, goals: top.goals ?? 0 };
+                await setDoc(doc(db,"mundial2026","sync"),{lastTopScorerSync:new Date().toISOString()},{merge:true});
+              }
+            } catch(e) {}
+          }
+        }
+
+        // Compute total WC goals (group stage only until KO starts; excludes יזיזות friendlies)
+        let wcGoals = 0;
+        for (const [id, m] of Object.entries(updatedMatches)) {
+          const gm = GROUP_MATCHES.find(g => g.id === id);
+          if (!gm || gm.group === "יזיזות") continue;
+          if (m.home != null && m.away != null && !m.live) wcGoals += m.home + m.away;
+        }
+        for (const m of Object.values(koResults)) {
+          if (!m.live && m.home != null && m.away != null) wcGoals += m.home + m.away;
+        }
+        const goalsChanged = wcStarted && wcGoals !== (cur.results?.actualTotalGoals ?? -1);
+        const topScorerChanged = topScorerUpdate && (
+          topScorerUpdate.name !== cur.results?.topScorer?.name ||
+          topScorerUpdate.goals !== cur.results?.topScorer?.goals
+        );
+
         const updates = {};
-        if (matchChanged || groupsChanged || koMatchesArr.length > 0) {
+        if (matchChanged || groupsChanged || koMatchesArr.length > 0 || topScorerChanged || goalsChanged) {
           updates.results = {
             ...cur.results,
             matches: updatedMatches,
             koResults,
             knockoutMatches: koMatchesArr,
             ...(groupsChanged ? {groups: updatedGroups} : {}),
+            ...(topScorerChanged ? {topScorer: topScorerUpdate} : {}),
+            ...(goalsChanged ? {actualTotalGoals: wcGoals} : {}),
           };
         }
         if (Object.keys(updates).length) await saveGame(updates);
@@ -2710,4 +2863,20 @@ const STYLES=`
   .bk-div{height:1px;background:var(--border)}
   .bk-ph{border:1px dashed var(--border);border-radius:7px;text-align:center;padding:.28rem;font-size:.72rem;width:100%;box-sizing:border-box;color:var(--muted);background:rgba(255,255,255,.02)}
   .bk-ph-final{width:120px}
+  /* ── Special Bets Card ── */
+  .sp-section{display:flex;flex-direction:column;gap:.3rem;padding:.55rem 0;border-bottom:1px solid var(--border)}
+  .sp-section:last-child{border-bottom:none;padding-bottom:0}
+  .sp-section:first-child{padding-top:0}
+  .sp-label{font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+  .sp-live-val{background:rgba(0,216,127,.12);color:var(--green);font-size:.8rem;border-radius:6px;padding:.1rem .4rem;font-weight:800}
+  .sp-pending{color:var(--muted);font-size:.75rem;font-weight:400}
+  .sp-chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.2rem}
+  .sp-chip{display:flex;align-items:center;gap:.28rem;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.2rem .55rem;font-size:.74rem}
+  .sp-chip.sp-correct{border-color:var(--green);background:rgba(0,216,127,.12);font-weight:700}
+  .sp-chip.sp-wrong{opacity:.45}
+  .sp-chip-name{color:var(--muted);font-size:.68rem}
+  .sp-chip-val{font-weight:600}
+  .sp-pts{color:var(--green);font-weight:800;font-size:.68rem}
+  .sp-diff{color:var(--muted);font-size:.68rem}
+  .sp-diff.sp-exact{color:var(--green)}
 `;
