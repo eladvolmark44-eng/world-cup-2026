@@ -1604,8 +1604,7 @@ async function backfillRedCards(){
   for(const [iso,matches] of Object.entries(byDate)){
     let sofaEvents=[];
     try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,
-        {headers:{"User-Agent":"Mozilla/5.0"}});
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
       const j=await r.json();
       sofaEvents=j.events||[];
       console.log(`[backfill] ${iso}: got ${sofaEvents.length} sofa events`);
@@ -1629,8 +1628,7 @@ async function backfillRedCards(){
       console.log(`[backfill] found ${m.home}-${m.away} → sofaId=${ev.id}`);
 
       try{
-        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`,
-          {headers:{"User-Agent":"Mozilla/5.0"}});
+        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
         const j=await r.json();
         const allCards=j.incidents?.filter(i=>i.incidentType==="card")||[];
         console.log(`[backfill] ${m.home}-${m.away} cards:`,allCards.map(i=>`${i.incidentClass} isHome=${i.isHome} min=${i.minute}`));
@@ -1666,8 +1664,7 @@ async function syncRedCards(){
     const updates={};
     for(const [matchId,matchData] of liveMatches){
       try{
-        const r=await fetch(`https://api.sofascore.com/api/v1/event/${matchData.sofaId}/incidents`,
-          {headers:{"User-Agent":"Mozilla/5.0"}});
+        const r=await fetch(`https://api.sofascore.com/api/v1/event/${matchData.sofaId}/incidents`);
         const j=await r.json();
         const reds={home:0,away:0};
         for(const inc of(j.incidents||[])){
