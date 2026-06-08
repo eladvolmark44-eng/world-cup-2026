@@ -1621,7 +1621,7 @@ async function backfillRedCards(){
         const j=await r.json();
         const reds={home:0,away:0};
         for(const inc of(j.incidents||[])){
-          if(inc.incidentType==="card"&&inc.incidentClass==="red"){
+          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
             if(inc.isHome)reds.home++;else reds.away++;
           }
         }
@@ -1655,7 +1655,7 @@ async function syncRedCards(){
         const j=await r.json();
         const reds={home:0,away:0};
         for(const inc of(j.incidents||[])){
-          if(inc.incidentType==="card"&&inc.incidentClass==="red"){
+          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
             if(inc.isHome)reds.home++;else reds.away++;
           }
         }
