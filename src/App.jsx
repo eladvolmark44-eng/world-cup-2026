@@ -1842,9 +1842,18 @@ function timeAgo(ts){
   return`לפני ${days} ימים`;
 }
 
+function tsToLocal(ts){
+  if(!ts)return"";
+  const d=new Date(ts);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")
+    +"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+
 function AdminPanel({ participants, game, showToast }) {
   const [confirmAction, setConfirmAction] = useState(null);
   const [running, setRunning] = useState(false);
+  const [editUid, setEditUid] = useState(null);
+  const [editDate, setEditDate] = useState("");
 
   const friendlyIds = new Set(GROUP_MATCHES.filter(m => m.id.startsWith("T")).map(m => m.id));
 
@@ -1932,7 +1941,24 @@ function AdminPanel({ participants, game, showToast }) {
               ?<img src={p.photoURL} className="ap-avatar" alt=""/>
               :<div className="ap-avatar-ph">{(p.name||"?")[0]}</div>}
             <span className="ap-name">{p.name}</span>
-            <span className="ap-time">{timeAgo(p.lastSeen)}</span>
+            {editUid===p.uid?(
+              <>
+                <input type="datetime-local" className="ap-date-input" value={editDate}
+                  onChange={e=>setEditDate(e.target.value)}/>
+                <button className="ap-btn-save" onClick={async()=>{
+                  if(!editDate)return;
+                  await updateDoc(doc(db,"mundial2026","game","participants",p.uid),{lastSeen:new Date(editDate).getTime()});
+                  setEditUid(null);
+                  showToast("✅ עודכן");
+                }}>✓</button>
+                <button className="ap-btn-cancel" onClick={()=>setEditUid(null)}>✕</button>
+              </>
+            ):(
+              <>
+                <span className="ap-time">{timeAgo(p.lastSeen)}</span>
+                <button className="ap-btn-edit" onClick={()=>{setEditUid(p.uid);setEditDate(tsToLocal(p.lastSeen||Date.now()));}}>✏️</button>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -2969,6 +2995,11 @@ const STYLES=`
   .ap-avatar-ph{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem;color:#fff;background:var(--green)}
   .ap-name{flex:1;font-size:.85rem;font-weight:600}
   .ap-time{font-size:.75rem;color:var(--muted);flex-shrink:0}
+  .ap-btn-edit{background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.5;padding:0 .2rem;flex-shrink:0}
+  .ap-btn-edit:hover{opacity:1}
+  .ap-date-input{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:.25rem .4rem;font-size:.75rem;font-family:'Heebo',sans-serif;flex:1;min-width:0}
+  .ap-btn-save{background:var(--green);border:none;color:#060e1a;border-radius:6px;padding:.25rem .55rem;font-weight:800;cursor:pointer;font-size:.8rem;flex-shrink:0}
+  .ap-btn-cancel{background:var(--card2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:.25rem .5rem;font-weight:700;cursor:pointer;font-size:.8rem;flex-shrink:0}
   .admin-stat{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.6rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.1rem;min-width:80px}
   .admin-stat-val{font-size:1.4rem;font-weight:800;color:var(--green)}
   .admin-stat span:last-child{font-size:.72rem;color:var(--muted)}
