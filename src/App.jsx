@@ -1416,17 +1416,12 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
         </div>
         {/* Column headers */}
         <div className="lb-header">
-          {/* right side: spacer for rank + name */}
-          <div className="lb-h-identity"/>
-          {/* left side: circles labels + score label */}
-          <div className="lb-h-fill">
-            <div className="lb-h-circles">
-              <span>שערים</span>
-              <span>מלך השערים</span>
-              <span>הזוכה</span>
-            </div>
-            <span className="lb-h-pts">נקודות</span>
-          </div>
+          <span/>
+          <span/>
+          <span className="lb-h-label">שערים</span>
+          <span className="lb-h-label">מלך<br/>השערים</span>
+          <span className="lb-h-label">הזוכה</span>
+          <span className="lb-h-label">נקודות</span>
         </div>
         <div className="lb-list">
           {ranked.map((p,i)=>{
@@ -1437,7 +1432,6 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
             const bootFlag=bootBet?(STRIKER_FLAGS[bootBet]||"👟"):null;
             return(
               <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
-                {/* RIGHT: rank + name glued to right edge */}
                 <span className="lb-rank">{medals[i]||i+1}</span>
                 <div className="lb-name-col">
                   {p.photoURL
@@ -1445,27 +1439,22 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                     :<div className="lb-avatar-ph">{p.name[0]}</div>}
                   <span className="lb-name">{p.name}</span>
                 </div>
-                {/* LEFT: circles spread evenly + score */}
-                <div className="lb-fill">
-                  <div className="lb-circles">
-                    <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
-                      {globalLocked&&goalsBet!=null&&goalsBet!==""
-                        ?<span className="lb-circle-num">{goalsBet}</span>
-                        :<span className="lb-circle-icon">⚽</span>}
-                    </div>
-                    <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
-                      {globalLocked&&bootFlag
-                        ?<span className="lb-circle-flag">{bootFlag}</span>
-                        :<span className="lb-circle-icon">👟</span>}
-                    </div>
-                    <div className={`lb-circle ${!globalLocked||!champBet?"lb-circle-locked":""}`}>
-                      {globalLocked&&champFlag
-                        ?<span className="lb-circle-flag">{champFlag}</span>
-                        :<span className="lb-circle-icon">🏆</span>}
-                    </div>
-                  </div>
-                  <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
+                <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
+                  {globalLocked&&goalsBet!=null&&goalsBet!==""
+                    ?<span className="lb-circle-num">{goalsBet}</span>
+                    :<span className="lb-circle-icon">⚽</span>}
                 </div>
+                <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
+                  {globalLocked&&bootFlag
+                    ?<span className="lb-circle-flag">{bootFlag}</span>
+                    :<span className="lb-circle-icon">👟</span>}
+                </div>
+                <div className={`lb-circle ${!globalLocked||!champBet?"lb-circle-locked":""}`}>
+                  {globalLocked&&champFlag
+                    ?<span className="lb-circle-flag">{champFlag}</span>
+                    :<span className="lb-circle-icon">🏆</span>}
+                </div>
+                <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
               </div>
             );
           })}
@@ -2779,33 +2768,28 @@ const STYLES=`
   .stepper button:disabled{opacity:.35;cursor:default}
   .stepper span{width:24px;text-align:center;font-weight:700;font-size:.9rem}
   .pts-hint{font-size:.7rem;color:var(--muted);font-weight:400}
-  /* leaderboard header */
-  .lb-header{display:flex;align-items:center;padding:.1rem .55rem .4rem}
-  .lb-h-identity{flex-shrink:0;width:120px} /* matches rank+avatar+name min-width */
-  .lb-h-fill{flex:1;display:flex;align-items:center;gap:.4rem}
-  .lb-h-circles{flex:1;display:flex;justify-content:space-evenly;align-items:center}
-  .lb-h-circles span{font-size:.63rem;color:var(--muted);font-weight:600;text-align:center;width:46px}
-  .lb-h-pts{font-size:.63rem;color:var(--muted);font-weight:600;width:50px;flex-shrink:0;text-align:center}
+  /* leaderboard grid template: rank | name | goals | boot | champ | score */
+  .lb-header,.lb-row{display:grid;grid-template-columns:26px minmax(0,1fr) 52px 52px 52px 58px;align-items:center;column-gap:.4rem}
+  .lb-header{padding:.1rem .6rem .35rem}
+  .lb-h-label{font-size:.63rem;color:var(--muted);font-weight:600;text-align:center;line-height:1.2}
   /* leaderboard rows */
   .lb-list{display:flex;flex-direction:column;gap:.4rem}
-  .lb-row{display:flex;align-items:center;gap:.35rem;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:.5rem .6rem;cursor:pointer;transition:border-color .15s}
+  .lb-row{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:.5rem .6rem;cursor:pointer;transition:border-color .15s}
   .lb-row:hover{border-color:var(--green)}
   .lb-row.rank-1{border-color:rgba(255,206,0,.5);background:rgba(255,206,0,.05)}
   .lb-row.rank-2{border-color:rgba(200,200,220,.25)}
   .lb-row.rank-3{border-color:rgba(180,110,50,.3)}
-  .lb-rank{flex-shrink:0;font-size:.95rem;font-weight:700;text-align:center;color:var(--muted);width:22px}
-  .lb-name-col{flex-shrink:0;display:flex;align-items:center;gap:.4rem}
-  .lb-name{font-weight:700;font-size:.88rem;white-space:nowrap}
-  .lb-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15)}
-  .lb-avatar-ph{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;background:var(--green)}
-  .lb-fill{flex:1;display:flex;align-items:center;gap:.4rem}
-  .lb-circles{flex:1;display:flex;justify-content:space-evenly;align-items:center}
-  .lb-circle{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12)}
+  .lb-rank{font-size:.95rem;font-weight:700;text-align:center;color:var(--muted)}
+  .lb-name-col{display:flex;align-items:center;gap:.4rem;overflow:hidden;min-width:0}
+  .lb-name{font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lb-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15)}
+  .lb-avatar-ph{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;color:#fff;background:var(--green)}
+  .lb-circle{width:46px;height:46px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12)}
   .lb-circle-locked{opacity:.25;filter:grayscale(1)}
   .lb-circle-flag{font-size:1.75rem;line-height:1}
   .lb-circle-icon{font-size:1.25rem;line-height:1}
   .lb-circle-num{font-size:.95rem;font-weight:900;color:var(--green)}
-  .lb-score{flex-shrink:0;width:50px;font-size:.8rem;font-weight:800;color:var(--green);text-align:center}
+  .lb-score{font-size:.8rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .player-header{display:flex;align-items:center;gap:.8rem;background:var(--card2);border-radius:14px;padding:.8rem 1rem}
