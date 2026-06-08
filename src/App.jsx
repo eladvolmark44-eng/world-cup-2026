@@ -1417,24 +1417,16 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
         <div className="lb-list">
           {ranked.map((p,i)=>(
             <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
-              <div className="lb-row-top">
-                <span className="lb-rank">{medals[i]||i+1}</span>
-                {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
-                <span className="lb-name">{p.name}</span>
-                <span className="lb-score">{p.score} נק׳</span>
-                <span className="lb-arrow">›</span>
-              </div>
+              <span className="lb-rank">{medals[i]||i+1}</span>
+              {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
+              <span className="lb-name">{p.name}</span>
               <div className="lb-specials">
-                <span className="lb-sp-item">
-                  🏆 {globalLocked?(p.bets?.champion?withFlag(teamNames?.[p.bets.champion]||p.bets.champion):"—"):"🔒"}
-                </span>
-                <span className="lb-sp-item">
-                  👟 {globalLocked?(p.bets?.goldenBoot?withStrikerFlag(p.bets.goldenBoot):"—"):"🔒"}
-                </span>
-                <span className="lb-sp-item">
-                  ⚽ {globalLocked?(p.bets?.totalGoals!=null&&p.bets.totalGoals!==""?p.bets.totalGoals:"—"):"🔒"}
-                </span>
+                <span className="lb-sp-item">🏆 {globalLocked?(p.bets?.champion?withFlag(teamNames?.[p.bets.champion]||p.bets.champion):"—"):"🔒"}</span>
+                <span className="lb-sp-item">👟 {globalLocked?(p.bets?.goldenBoot?withStrikerFlag(p.bets.goldenBoot):"—"):"🔒"}</span>
+                <span className="lb-sp-item">⚽ {globalLocked?(p.bets?.totalGoals!=null&&p.bets.totalGoals!==""?p.bets.totalGoals:"—"):"🔒"}</span>
               </div>
+              <span className="lb-score">{p.score} נק׳</span>
+              <span className="lb-arrow">›</span>
             </div>
           ))}
           {ranked.length===0&&<div className="empty-msg">עדיין אין משתתפים</div>}
@@ -2748,19 +2740,18 @@ const STYLES=`
   .stepper span{width:24px;text-align:center;font-weight:700;font-size:.9rem}
   .pts-hint{font-size:.7rem;color:var(--muted);font-weight:400}
   .lb-list{display:flex;flex-direction:column;gap:.45rem}
-  .lb-row{display:flex;flex-direction:column;gap:.35rem;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.65rem 1rem;cursor:pointer;transition:border-color .15s}
+  .lb-row{display:flex;align-items:center;gap:.55rem;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.65rem .8rem;cursor:pointer;transition:border-color .15s}
   .lb-row:hover{border-color:var(--green)}
   .lb-row.rank-1{border-color:rgba(255,206,0,.5);background:rgba(255,206,0,.06)}
   .lb-row.rank-2{border-color:rgba(200,200,220,.3)}
   .lb-row.rank-3{border-color:rgba(180,110,50,.3)}
-  .lb-row-top{display:flex;align-items:center;gap:.7rem}
-  .lb-rank{font-size:1.2rem;width:1.8rem;text-align:center}
-  .lb-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover}
-  .lb-name{flex:1;font-weight:700}
-  .lb-score{color:var(--green);font-weight:800;font-size:1.05rem}
-  .lb-arrow{color:var(--muted);font-size:1.2rem}
-  .lb-specials{display:flex;gap:.35rem;flex-wrap:wrap;padding-right:.3rem}
-  .lb-sp-item{font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:.15rem .4rem;white-space:nowrap}
+  .lb-rank{font-size:1.2rem;width:1.8rem;text-align:center;flex-shrink:0}
+  .lb-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
+  .lb-name{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px;flex-shrink:0}
+  .lb-specials{display:flex;gap:.3rem;flex:1;flex-wrap:nowrap;overflow:hidden}
+  .lb-sp-item{font-size:.8rem;font-weight:600;color:var(--text);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.22rem .5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center}
+  .lb-score{color:var(--green);font-weight:800;font-size:1rem;flex-shrink:0;white-space:nowrap}
+  .lb-arrow{color:var(--muted);font-size:1.2rem;flex-shrink:0}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .player-header{display:flex;align-items:center;gap:.8rem;background:var(--card2);border-radius:14px;padding:.8rem 1rem}
