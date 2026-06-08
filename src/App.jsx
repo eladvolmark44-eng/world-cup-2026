@@ -378,7 +378,10 @@ const SOFA_TEAM_MAP = {
   "Belarus":"בלארוס","Burkina Faso":"בורקינה פאסו",
   "Hungary":"הונגריה","Azerbaijan":"אזרבייג'ן","San Marino":"סן מרינו",
   "Iceland":"איסלנד","Nigeria":"ניגריה","Costa Rica":"קוסטה ריקה",
+  "Korea Republic":"קוריאה","IR Iran":"איראן","Côte d'Ivoire":"חוף השנהב",
+  "North Macedonia":"מקדוניה הצפונית","Republic of Ireland":"אירלנד",
 };
+const FD_TOKEN="f00beef6d831482d97c454c546aacbab";
 function parseOddsData(fixtures){
   const map={};
   for(const f of fixtures){
@@ -1582,70 +1585,48 @@ async function backfillRedCards(){
   const cur=gameSnap.exists()?gameSnap.data():{};
   const curMatches=cur.results?.matches||{};
   const heb=n=>SOFA_TEAM_MAP[n]||n;
-  const isoDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-  // All past matches that have a stored result
   const pastMatches=GROUP_MATCHES.filter(m=>{
     const md=curMatches[m.id];
     return md&&md.home!=null&&!md.live;
   });
-  if(!pastMatches.length) return 0;
+  if(!pastMatches.length){console.log("[backfill] no past matches");return 0;}
+  console.log("[backfill] need reds for:",pastMatches.map(m=>`${m.home}-${m.away}`));
 
-  // Group by kickoff date
-  const byDate={};
-  for(const m of pastMatches){
-    const iso=isoDate(new Date(m.kickoff));
-    (byDate[iso]||(byDate[iso]=[])).push(m);
-  }
+  let fdMatches=[];
+  try{
+    const r=await fetch("https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED",{
+      headers:{"X-Auth-Token":FD_TOKEN}
+    });
+    const j=await r.json();
+    fdMatches=j.matches||[];
+    console.log(`[backfill] FD finished matches: ${fdMatches.length}`);
+    if(fdMatches.length===0) console.log("[backfill] FD response:",j);
+  }catch(e){console.warn("[backfill] FD failed:",e.message);return 0;}
 
-  // Build lookup of all past matches we need: key → {matchId, home, away}
-  const needByKey={};
-  for(const m of pastMatches) needByKey[`${m.home}_${m.away}`]=m;
-
-  console.log("[backfill] need reds for:", Object.keys(needByKey));
   const updates={};
-
-  // Page through SofaScore recent results until we find all matches or run out
-  for(let page=0; page<30 && Object.keys(needByKey).length>0; page++){
-    let events=[];
-    try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/last/${page}`);
-      const j=await r.json();
-      events=j.events||[];
-      console.log(`[backfill] sofa last/${page}: ${events.length} events`);
-      if(!events.length) break;
-    }catch(e){console.warn(`[backfill] sofa last/${page} failed:`,e.message);break;}
-
-    for(const ev of events){
-      const hn=heb(ev.homeTeam?.name||""), an=heb(ev.awayTeam?.name||"");
-      const m=needByKey[`${hn}_${an}`];
-      if(!m) continue;
-
-      try{
-        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
-        const j=await r.json();
-        const reds={home:0,away:0};
-        for(const inc of(j.incidents||[])){
-          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
-            if(inc.isHome)reds.home++;else reds.away++;
-          }
-        }
-        console.log(`[backfill] ${hn}-${an} reds:`,reds);
-        if(reds.home>0||reds.away>0)
-          updates[`results.matches.${m.id}.reds`]=reds;
-      }catch(e){console.warn(`[backfill] incidents failed for ${m.id}`,e.message);}
-
-      delete needByKey[`${hn}_${an}`]; // found, remove from todo
+  for(const m of pastMatches){
+    const fdm=fdMatches.find(fm=>{
+      const ht=heb(fm.homeTeam?.name||""),at=heb(fm.awayTeam?.name||"");
+      return ht===m.home&&at===m.away;
+    });
+    if(!fdm){console.log(`[backfill] no FD match: ${m.home}-${m.away}`);continue;}
+    const reds={home:0,away:0};
+    for(const b of(fdm.bookings||[])){
+      if(b.card==="RED_CARD"||b.card==="YELLOW_RED_CARD"){
+        const t=heb(b.team?.name||"");
+        if(t===m.home)reds.home++;else if(t===m.away)reds.away++;
+      }
     }
-    await new Promise(r=>setTimeout(r,400));
+    console.log(`[backfill] ${m.home}-${m.away} reds:`,reds);
+    if(reds.home>0||reds.away>0)
+      updates[`results.matches.${m.id}.reds`]=reds;
   }
-  console.log("[backfill] unmatched:", Object.keys(needByKey));
-  console.log("[backfill] updates:", Object.keys(updates));
 
+  console.log("[backfill] updates:",Object.keys(updates));
   if(Object.keys(updates).length)
     await updateDoc(doc(db,"mundial2026","game"),updates);
-
-  return Object.keys(updates).filter(k=>k.includes(".reds")).length;
+  return Object.keys(updates).length;
 }
 
 async function syncRedCards(){
@@ -1657,36 +1638,34 @@ async function syncRedCards(){
     if(!liveMatchIds.length)return;
 
     const heb=n=>SOFA_TEAM_MAP[n]||n;
-    // Use the live-events endpoint — confirmed working, no sofaId dependency
-    let sofaLive=[];
+    let fdMatches=[];
     try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/live`);
+      const r=await fetch("https://api.football-data.org/v4/competitions/WC/matches?status=IN_PLAY,PAUSED",{
+        headers:{"X-Auth-Token":FD_TOKEN}
+      });
       const j=await r.json();
-      sofaLive=j.events||[];
+      fdMatches=j.matches||[];
     }catch{return;}
 
     const updates={};
     for(const matchId of liveMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
-      const ev=sofaLive.find(e=>{
-        const ht=heb(e.homeTeam?.name||""),at=heb(e.awayTeam?.name||"");
+      const fdm=fdMatches.find(m=>{
+        const ht=heb(m.homeTeam?.name||""),at=heb(m.awayTeam?.name||"");
         return ht===gm.home&&at===gm.away;
       });
-      if(!ev?.id)continue;
-      try{
-        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
-        const j=await r.json();
-        const reds={home:0,away:0};
-        for(const inc of(j.incidents||[])){
-          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
-            if(inc.isHome)reds.home++;else reds.away++;
-          }
+      if(!fdm)continue;
+      const reds={home:0,away:0};
+      for(const b of(fdm.bookings||[])){
+        if(b.card==="RED_CARD"||b.card==="YELLOW_RED_CARD"){
+          const t=heb(b.team?.name||"");
+          if(t===gm.home)reds.home++;else if(t===gm.away)reds.away++;
         }
-        const prev=matches[matchId]?.reds||{home:0,away:0};
-        if(reds.home!==prev.home||reds.away!==prev.away)
-          updates[`results.matches.${matchId}.reds`]=reds;
-      }catch{}
+      }
+      const prev=matches[matchId]?.reds||{home:0,away:0};
+      if(reds.home!==prev.home||reds.away!==prev.away)
+        updates[`results.matches.${matchId}.reds`]=reds;
     }
     if(Object.keys(updates).length)
       await updateDoc(doc(db,"mundial2026","game"),updates);
@@ -1822,6 +1801,20 @@ export default function App(){
           return res;
         };
 
+        const parseFDScore = ms => {
+          const res={};
+          for(const m of(ms||[])){
+            const s=m.status;
+            const fin=["FINISHED","AWARDED"].includes(s),live=["IN_PLAY","PAUSED","HALFTIME"].includes(s);
+            if(!fin&&!live)continue;
+            const hg=m.score?.fullTime?.home,ag=m.score?.fullTime?.away;
+            if(hg==null||ag==null)continue;
+            const minute=live?(m.minute??null):null;
+            addBothKeys(res,heb(m.homeTeam?.name||""),heb(m.awayTeam?.name||""),hg,ag,fin?"FT":"LIVE",live,minute);
+          }
+          return res;
+        };
+
         // Fetch from multiple sources — merge all to avoid ESPN early-return missing small matches
         const fetchWithFallback = async (espnSlugs, iso, ymd) => {
           const merged = {};
@@ -1910,6 +1903,12 @@ export default function App(){
           for (const iso of wcDates) {
             const ymd = iso.replace(/-/g, '');
             Object.assign(byKey, await fetchWithFallback(["fifa.world"], iso, ymd));
+            // football-data.org supplement — CORS-friendly, reliable WC source
+            try{
+              const r=await fetch(`https://api.football-data.org/v4/competitions/WC/matches?dateFrom=${iso}&dateTo=${iso}`,{headers:{"X-Auth-Token":FD_TOKEN}});
+              const d=await r.json();
+              if(d.matches?.length){const p=parseFDScore(d.matches);for(const [k,v] of Object.entries(p)) if(!byKey[k]) byKey[k]=v;}
+            }catch(e){}
           }
 
           // Standings via API-Football, max once per hour
