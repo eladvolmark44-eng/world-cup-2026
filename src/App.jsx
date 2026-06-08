@@ -652,7 +652,9 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
   return(
     <div className="player-bets-view">
       <div className="player-header">
-        {player.photoURL&&<img src={player.photoURL} className="player-avatar" alt=""/>}
+        {player.photoURL
+          ?<img src={player.photoURL} className="player-avatar" alt=""/>
+          :<div className="player-avatar-ph">{(player.name||"?")[0]}</div>}
         <span className="player-hname">{player.name}</span>
         <span className="player-score-badge">{calcScore(bets,results,[])} נק׳</span>
       </div>
@@ -2894,9 +2896,10 @@ const STYLES=`
   .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
-  .player-header{display:flex;align-items:center;gap:.8rem;background:var(--card2);border-radius:14px;padding:.8rem 1rem}
-  .player-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover}
-  .player-hname{flex:1;font-weight:800;font-size:1rem}
+  .player-header{display:flex;align-items:center;gap:1rem;background:var(--card2);border-radius:14px;padding:.9rem 1.1rem}
+  .player-avatar{width:58px;height:58px;border-radius:50%;object-fit:cover;flex-shrink:0}
+  .player-avatar-ph{width:58px;height:58px;border-radius:50%;background:var(--green);color:#060e1a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.5rem;flex-shrink:0}
+  .player-hname{flex:1;font-weight:800;font-size:1.05rem}
   .player-score-badge{background:rgba(0,216,127,.15);color:var(--green);border-radius:20px;padding:.3rem .9rem;font-weight:800}
   .filter-row{display:flex;overflow-x:auto;gap:.4rem;padding:.3rem 0;margin-bottom:.5rem;scrollbar-width:none}
   .filter-row::-webkit-scrollbar{display:none}
