@@ -1602,7 +1602,7 @@ async function backfillRedCards(){
   for(let page=0; page<30 && Object.keys(needByKey).length>0; page++){
     let events=[];
     try{
-      const r=await fetch(sofaProxy(`/sport/football/events/last/${page}`));
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/last/${page}`);
       const j=await r.json();
       events=j.events||[];
       console.log(`[backfill] sofa last/${page}: ${events.length} events`);
@@ -1614,7 +1614,7 @@ async function backfillRedCards(){
       const m=needByKey[`${hn}_${an}`];
       if(!m) continue;
       try{
-        const r=await fetch(sofaProxy(`/event/${ev.id}/incidents`));
+        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
         const j=await r.json();
         const reds={home:0,away:0};
         for(const inc of(j.incidents||[])){
@@ -1650,7 +1650,7 @@ async function syncRedCards(){
     // Fetch live events from SofaScore via server-side proxy (bypasses CORS)
     let sofaLive=[];
     try{
-      const r=await fetch(sofaProxy("/sport/football/events/live"));
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/live`);
       const j=await r.json();
       sofaLive=j.events||[];
     }catch{return;}
@@ -1665,7 +1665,7 @@ async function syncRedCards(){
       });
       if(!ev?.id)continue;
       try{
-        const r=await fetch(sofaProxy(`/event/${ev.id}/incidents`));
+        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
         const j=await r.json();
         const reds={home:0,away:0};
         for(const inc of(j.incidents||[])){
