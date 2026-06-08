@@ -1581,6 +1581,8 @@ function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
   );
 }
 
+const AF_KEY="2150fd15cbccf603f549914910637735";
+
 async function backfillRedCards(){
   const gameSnap=await getDoc(doc(db,"mundial2026","game"));
   const cur=gameSnap.exists()?gameSnap.data():{};
@@ -1594,89 +1596,45 @@ async function backfillRedCards(){
   if(!pastMatches.length){console.log("[backfill] no past matches");return 0;}
   console.log("[backfill] need reds for:",pastMatches.map(m=>`${m.home}-${m.away}`));
 
-  // Build a map keyed by "homeHeb_awayHeb" → match record
-  const needByKey={};
-  for(const m of pastMatches) needByKey[`${m.home}_${m.away}`]=m;
-
-  // Group matches by YYYYMMDD for scoreboard lookup
-  const byYmd={};
+  // Group by ISO date — one API call per day
+  const byDate={};
   for(const m of pastMatches){
-    const ymd=m.kickoff.slice(0,10).replace(/-/g,"");
-    (byYmd[ymd]||(byYmd[ymd]=[])).push(m);
+    const iso=m.kickoff.slice(0,10);
+    (byDate[iso]||(byDate[iso]=[])).push(m);
   }
 
   const updates={};
-  const SLUGS=["fifa.friendly","intl.friendlies","fifa.world"];
+  for(const [iso,matches] of Object.entries(byDate)){
+    let fixtures=[];
+    try{
+      const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":AF_KEY}});
+      const d=await r.json();
+      fixtures=d.response||[];
+      console.log(`[backfill] api-football ${iso}: ${fixtures.length} fixtures`);
+    }catch(e){console.warn(`[backfill] api-football ${iso} failed:`,e.message);continue;}
 
-  for(const ymd of Object.keys(byYmd)){
-    // Collect ESPN event IDs + competitor info for this date across all slugs
-    const espnEvents=[];
-    for(const slug of SLUGS){
-      try{
-        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
-        const d=await r.json();
-        for(const ev of(d.events||[])){
-          const comp=ev.competitions?.[0];
-          if(!comp)continue;
-          const state=comp.status?.type?.state;
-          if(state!=="post"&&state!=="in")continue;
-          const hC=comp.competitors?.find(c=>c.homeAway==="home");
-          const aC=comp.competitors?.find(c=>c.homeAway==="away");
-          if(!hC||!aC)continue;
-          espnEvents.push({slug,eventId:ev.id,hId:hC.team?.id,aId:aC.team?.id,hn:heb(hC.team?.displayName||""),an:heb(aC.team?.displayName||"")});
-        }
-      }catch(e){}
-    }
+    for(const m of matches){
+      const fix=fixtures.find(f=>{
+        const hn=heb(f.teams?.home?.name||""),an=heb(f.teams?.away?.name||"");
+        return hn===m.home&&an===m.away;
+      });
+      if(!fix){console.log(`[backfill] no fixture for ${m.home}-${m.away}`);continue;}
 
-    for(const ev of espnEvents){
-      const m=needByKey[`${ev.hn}_${ev.an}`];
-      if(!m)continue;
-
-      try{
-        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ev.slug}/summary?event=${ev.eventId}`);
-        const d=await r.json();
-
-        const reds={home:0,away:0};
-
-        // Strategy 1: team-level statistics in boxscore
-        for(const t of(d.boxscore?.teams||[])){
-          const rc=parseInt((t.statistics||[]).find(s=>s.name==="redCards")?.value??0,10);
-          if(!rc)continue;
-          if(t.team?.id===ev.hId)reds.home=rc;
-          else if(t.team?.id===ev.aId)reds.away=rc;
-        }
-
-        // Strategy 2: sum individual player redCards stats if team stats missing
-        if(!reds.home&&!reds.away){
-          for(const pg of(d.boxscore?.players||[])){
-            const isHome=pg.team?.id===ev.hId;
-            for(const player of(pg.statistics?.[0]?.athletes||[])){
-              const rc=parseInt((player.stats||[]).find((_,i)=>(pg.statistics?.[0]?.labels||[])[i]==="RC")?.value??0,10);
-              if(rc>0) isHome ? reds.home+=rc : reds.away+=rc;
-            }
-          }
-        }
-
-        // Strategy 3: play-by-play event types
-        if(!reds.home&&!reds.away){
-          for(const play of(d.plays||[])){
-            const txt=(play.type?.text||"").toLowerCase();
-            if(!txt.includes("red card")&&!txt.includes("second yellow")&&!txt.includes("double yellow"))continue;
-            if(play.team?.id===ev.hId)reds.home++;
-            else if(play.team?.id===ev.aId)reds.away++;
-          }
-        }
-
-        console.log(`[backfill] ${ev.hn}-${ev.an} reds:`,reds);
-        if(reds.home>0||reds.away>0)
-          updates[`results.matches.${m.id}.reds`]=reds;
-      }catch(e){console.warn(`[backfill] summary failed for ${m.id}`,e.message);}
-      delete needByKey[`${ev.hn}_${ev.an}`];
+      const reds={home:0,away:0};
+      for(const ev of(fix.events||[])){
+        if(ev.type!=="Card")continue;
+        const d=(ev.detail||"").toLowerCase();
+        if(!d.includes("red")&&!d.includes("yellow red"))continue;
+        if(ev.team?.id===fix.teams?.home?.id)reds.home++;
+        else reds.away++;
+      }
+      console.log(`[backfill] ${m.home}-${m.away} reds:`,reds);
+      if(reds.home>0||reds.away>0)
+        updates[`results.matches.${m.id}.reds`]=reds;
     }
     await new Promise(r=>setTimeout(r,200));
   }
 
-  console.log("[backfill] unmatched:",Object.keys(needByKey));
   console.log("[backfill] updates:",Object.keys(updates));
   if(Object.keys(updates).length)
     await updateDoc(doc(db,"mundial2026","game"),updates);
@@ -1692,57 +1650,39 @@ async function syncRedCards(){
     if(!liveMatchIds.length)return;
 
     const heb=n=>SOFA_TEAM_MAP[n]||n;
-    const SLUGS=["fifa.friendly","intl.friendlies","fifa.world"];
 
-    // Collect ESPN live events for today across all slugs
-    const now=new Date();
-    const ymd=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
-    const espnEvents=[];
-    for(const slug of SLUGS){
-      try{
-        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
-        const d=await r.json();
-        for(const ev of(d.events||[])){
-          const comp=ev.competitions?.[0];
-          if(comp?.status?.type?.state!=="in")continue;
-          const hC=comp.competitors?.find(c=>c.homeAway==="home");
-          const aC=comp.competitors?.find(c=>c.homeAway==="away");
-          if(!hC||!aC)continue;
-          espnEvents.push({slug,eventId:ev.id,hId:hC.team?.id,aId:aC.team?.id,hn:heb(hC.team?.displayName||""),an:heb(aC.team?.displayName||"")});
-        }
-      }catch(e){}
-    }
+    // Single API-Football call returns all live fixtures with their events.
+    // One call covers every live match — no per-match calls needed.
+    let fixtures=[];
+    try{
+      const r=await fetch("https://v3.football.api-sports.io/fixtures?live=all",{headers:{"x-apisports-key":AF_KEY}});
+      const d=await r.json();
+      fixtures=d.response||[];
+    }catch{return;}
 
     const updates={};
     for(const matchId of liveMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
-      const ev=espnEvents.find(e=>e.hn===gm.home&&e.an===gm.away);
-      if(!ev)continue;
-      try{
-        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ev.slug}/summary?event=${ev.eventId}`);
-        const d=await r.json();
-        const reds={home:0,away:0};
-        for(const t of(d.boxscore?.teams||[])){
-          const rc=parseInt((t.statistics||[]).find(s=>s.name==="redCards")?.value??0,10);
-          if(!rc)continue;
-          if(t.team?.id===ev.hId)reds.home=rc;
-          else if(t.team?.id===ev.aId)reds.away=rc;
-        }
-        if(!reds.home&&!reds.away){
-          for(const play of(d.plays||[])){
-            const txt=(play.type?.text||"").toLowerCase();
-            if(!txt.includes("red card")&&!txt.includes("second yellow"))continue;
-            if(play.team?.id===ev.hId)reds.home++;
-            else if(play.team?.id===ev.aId)reds.away++;
-          }
-        }
-        const prev=matches[matchId]?.reds||{home:0,away:0};
-        if(reds.home!==prev.home||reds.away!==prev.away)
-          updates[`results.matches.${matchId}.reds`]=reds;
-      }catch{}
+      const fix=fixtures.find(f=>heb(f.teams?.home?.name||"")===gm.home&&heb(f.teams?.away?.name||"")===gm.away);
+      if(!fix)continue;
+
+      const reds={home:0,away:0};
+      for(const ev of(fix.events||[])){
+        if(ev.type!=="Card")continue;
+        const d=(ev.detail||"").toLowerCase();
+        if(!d.includes("red")&&!d.includes("yellow red"))continue;
+        if(ev.team?.id===fix.teams?.home?.id)reds.home++;
+        else reds.away++;
+      }
+      const prev=matches[matchId]?.reds||{home:0,away:0};
+      if(reds.home!==prev.home||reds.away!==prev.away)
+        updates[`results.matches.${matchId}.reds`]=reds;
     }
     if(Object.keys(updates).length)
+      await updateDoc(doc(db,"mundial2026","game"),updates);
+  }catch(e){console.warn("Red card sync failed:",e.message);}
+}
       await updateDoc(doc(db,"mundial2026","game"),updates);
   }catch(e){console.warn("Red card sync failed:",e.message);}
 }
@@ -2104,7 +2044,7 @@ export default function App(){
 
     syncScores(auth.currentUser?.uid||"anon");
     const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 15 * 1000);
-    const redPoll = setInterval(()=>syncRedCards(), 60 * 1000);
+    const redPoll = setInterval(()=>syncRedCards(), 3 * 60 * 1000);
     return()=>{u1();u2();clearInterval(poll);clearInterval(redPoll);};
   },[]);
 
