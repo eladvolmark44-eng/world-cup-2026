@@ -1860,7 +1860,7 @@ export default function App(){
           const lastAF = syncData.lastApiFootballSync ? new Date(syncData.lastApiFootballSync).getTime() : 0;
           if (Date.now() - lastAF > 60 * 60 * 1000) {
             try{
-              const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
+              const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":AF_KEY}});
               const d=await r.json();
               for(const f of(d.response||[])){
                 const{fixture:fi,teams,goals}=f;
@@ -1883,7 +1883,7 @@ export default function App(){
         const firstWCKickoff = Math.min(...GROUP_MATCHES.filter(m=>m.group!=="יזיזות").map(m=>new Date(m.kickoff).getTime()));
         const wcStarted = Date.now() >= firstWCKickoff - 2*60*60*1000;
 
-        let standingsData = { response: [] };
+        let standingsData = { response: [] }; // kept for compatibility, no longer used for standings
 
         const gameSnap = await getDoc(doc(db,"mundial2026","game"));
         const cur = gameSnap.exists() ? gameSnap.data() : {};
@@ -1922,16 +1922,6 @@ export default function App(){
               if(d.matches?.length){const p=parseFDScore(d.matches);for(const [k,v] of Object.entries(p)) if(!byKey[k]) byKey[k]=v;}
             }catch(e){}
           }
-
-          // Standings via API-Football, max once per hour
-          const lastSS = syncData.lastStandingsSync ? new Date(syncData.lastStandingsSync).getTime() : 0;
-          if (Date.now()-lastSS > 60*60*1000) {
-            try {
-              const rs=await fetch("https://v3.football.api-sports.io/standings?league=1&season=2026",{headers:{"x-apisports-key":"2150fd15cbccf603f549914910637735"}});
-              standingsData=await rs.json();
-              await setDoc(doc(db,"mundial2026","sync"),{lastStandingsSync:new Date().toISOString()},{merge:true});
-            } catch(e) {}
-          }
         }
 
         // Extra: SofaScore live events — catches obscure matches missed by ESPN date-based calls
@@ -1958,70 +1948,86 @@ export default function App(){
           }
         }
 
-        // ── STANDINGS → auto group qualifiers + playoff names ──────
-        let groupsChanged = false, playoffChanged = false;
+        // ── STANDINGS → derive from stored results, no API call needed ────
+        let groupsChanged = false;
         const updatedGroups = {...(cur.results?.groups||{})};
-        const updatedPlayoff = {...(cur.playoffNames||{})};
 
-        const standingsList = standingsData.response?.[0]?.league?.standings || [];
-        const GROUP_LETTER = {"Group A":"A","Group B":"B","Group C":"C","Group D":"D","Group E":"E","Group F":"F","Group G":"G","Group H":"H","Group I":"I","Group J":"J","Group K":"K","Group L":"L"};
-        for (const groupStandings of standingsList) {
-          if (!Array.isArray(groupStandings)||!groupStandings.length) continue;
-          const groupName = groupStandings[0]?.group;
-          const letter = GROUP_LETTER[groupName];
-          if (!letter) continue;
-          const allPlayed = groupStandings.every(t => t.all?.played >= 3);
-          if (allPlayed) {
-            const top2 = groupStandings.slice(0,2).map(t => heb(t.team.name));
-            const prev = updatedGroups[letter];
-            if (!prev || JSON.stringify(prev)!==JSON.stringify(top2)) {
-              updatedGroups[letter] = top2; groupsChanged = true;
-            }
+        for (const [letter, teams] of Object.entries(GROUPS_2026)) {
+          const groupMatches = GROUP_MATCHES.filter(m => m.group === letter);
+          const allComplete = groupMatches.every(m => {
+            const md = updatedMatches[m.id];
+            return md && md.home != null && md.away != null && !md.live;
+          });
+          if (!allComplete) continue;
+
+          const st = {};
+          for (const t of teams) st[t] = {pts:0, gd:0, gf:0};
+          for (const m of groupMatches) {
+            const md = updatedMatches[m.id];
+            const h = md.home, a = md.away;
+            st[m.home].gf += h; st[m.home].gd += h - a;
+            st[m.away].gf += a; st[m.away].gd += a - h;
+            if (h > a)      { st[m.home].pts += 3; }
+            else if (h < a) { st[m.away].pts += 3; }
+            else            { st[m.home].pts += 1; st[m.away].pts += 1; }
           }
-          for (const t of groupStandings) {
-            const apiName = t.team.name;
-            const hebName = heb(apiName);
-            if (t.all?.played > 0) {
-              if (GROUPS_2026[letter]?.includes("פלייאוף FIFA 1") && t.all.played > 0) {
-                if (!Object.values(TEAM_MAP).includes(hebName) && hebName !== apiName) {
-                  if (updatedPlayoff["פלייאוף FIFA 1"] !== hebName) {
-                    updatedPlayoff["פלייאוף FIFA 1"] = hebName; playoffChanged = true;
-                  }
-                }
-              }
-            }
+          const top2 = teams.slice().sort((a,b) => {
+            const sa=st[a], sb=st[b];
+            if (sb.pts !== sa.pts) return sb.pts - sa.pts;
+            if (sb.gd  !== sa.gd)  return sb.gd  - sa.gd;
+            return sb.gf - sa.gf;
+          }).slice(0, 2);
+
+          const prev = updatedGroups[letter];
+          if (!prev || JSON.stringify(prev) !== JSON.stringify(top2)) {
+            updatedGroups[letter] = top2; groupsChanged = true;
           }
         }
 
-        // ── KNOCKOUT MATCHES (schedule + results, no betting) ─────
+        // ── KNOCKOUT MATCHES — fetch from ESPN (free, unlimited) ──────────
         const STAGE_MAP = {
           "Round of 32":"32 האחרונות","Round of 16":"שמינית גמר",
           "Quarter-finals":"רבע גמר","Semi-finals":"חצי גמר",
           "3rd Place Final":"מקום שלישי","Final":"גמר"
         };
+        const ROUND_SLUG = {
+          "32 האחרונות":"round-of-32","שמינית גמר":"round-of-16",
+          "רבע גמר":"quarterfinals","חצי גמר":"semifinals",
+          "מקום שלישי":"third-place","גמר":"final"
+        };
         const koMatchesArr = [];
-        for (const f of fixtures) {
-          const round = f.league?.round || "";
-          const stage = STAGE_MAP[round];
-          if (!stage) continue; // skip group stage
-          const {fixture:fi, teams, goals} = f;
-          const status = fi.status.short;
-          const isFinished = ["FT","AET","PEN"].includes(status);
-          const isLive = ["1H","2H","HT","ET","BT","P"].includes(status);
-          const dateStr = fi.date ? new Date(fi.date).toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit"}) : "";
-          koMatchesArr.push({
-            id: `ko_${fi.id}`,
-            apiId: fi.id,
-            stage,
-            date: dateStr,
-            home: heb(teams.home.name),
-            away: heb(teams.away.name),
-            ...(((isFinished||isLive)&&goals.home!=null)?{result:{home:goals.home,away:goals.away,live:isLive,status}}:{}),
-          });
-        }
         const koResults = {};
-        koMatchesArr.forEach(m=>{ if(m.result) koResults[m.apiId]=m.result; });
-        const koMatchesCleaned = koMatchesArr.map(({result,...m})=>m);
+        try {
+          const koRes = await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard");
+          const koData = await koRes.json();
+          for (const ev of (koData.events || [])) {
+            const comp = ev.competitions?.[0];
+            if (!comp) continue;
+            const round = ev.season?.slug || ev.name || "";
+            let stage = null;
+            for (const [eng, heb2] of Object.entries(STAGE_MAP)) {
+              if (round.toLowerCase().includes(eng.toLowerCase()) || (ev.season?.type?.name||"").toLowerCase().includes(eng.toLowerCase())) {
+                stage = heb2; break;
+              }
+            }
+            if (!stage) continue;
+            const hC = comp.competitors?.find(c=>c.homeAway==="home");
+            const aC = comp.competitors?.find(c=>c.homeAway==="away");
+            if (!hC || !aC) continue;
+            const state = comp.status?.type?.state;
+            const isFinished = state === "post";
+            const isLive = state === "in";
+            const dateStr = ev.date ? new Date(ev.date).toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit"}) : "";
+            const koMatch = {
+              id: `ko_${ev.id}`, apiId: ev.id, stage, date: dateStr,
+              home: heb(hC.team?.displayName||""), away: heb(aC.team?.displayName||""),
+            };
+            if ((isFinished||isLive) && hC.score != null) {
+              koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive};
+            }
+            koMatchesArr.push(koMatch);
+          }
+        } catch(e) {}
 
         const updates = {};
         if (matchChanged || groupsChanged || koMatchesArr.length > 0) {
@@ -2029,11 +2035,10 @@ export default function App(){
             ...cur.results,
             matches: updatedMatches,
             koResults,
-            knockoutMatches: koMatchesCleaned,
+            knockoutMatches: koMatchesArr,
             ...(groupsChanged ? {groups: updatedGroups} : {}),
           };
         }
-        if (playoffChanged) updates.playoffNames = updatedPlayoff;
         if (Object.keys(updates).length) await saveGame(updates);
 
       } catch(e) { console.warn("Score sync failed:", e.message); }
