@@ -1594,33 +1594,43 @@ async function backfillRedCards(){
   if(!pastMatches.length){console.log("[backfill] no past matches");return 0;}
   console.log("[backfill] need reds for:",pastMatches.map(m=>`${m.home}-${m.away}`));
 
-  let fdMatches=[];
-  try{
-    const r=await fetch(fdProxy("/v4/competitions/WC/matches?status=FINISHED"));
-    const j=await r.json();
-    fdMatches=j.matches||[];
-    console.log(`[backfill] FD finished matches: ${fdMatches.length}`);
-    if(fdMatches.length===0) console.log("[backfill] FD response:",j);
-  }catch(e){console.warn("[backfill] FD failed:",e.message);return 0;}
+  // Page through SofaScore recent events via server-side proxy (no CORS)
+  const needByKey={};
+  for(const m of pastMatches) needByKey[`${m.home}_${m.away}`]=m;
 
   const updates={};
-  for(const m of pastMatches){
-    const fdm=fdMatches.find(fm=>{
-      const ht=heb(fm.homeTeam?.name||""),at=heb(fm.awayTeam?.name||"");
-      return ht===m.home&&at===m.away;
-    });
-    if(!fdm){console.log(`[backfill] no FD match: ${m.home}-${m.away}`);continue;}
-    const reds={home:0,away:0};
-    for(const b of(fdm.bookings||[])){
-      if(b.card==="RED_CARD"||b.card==="YELLOW_RED_CARD"){
-        const t=heb(b.team?.name||"");
-        if(t===m.home)reds.home++;else if(t===m.away)reds.away++;
-      }
+  for(let page=0; page<30 && Object.keys(needByKey).length>0; page++){
+    let events=[];
+    try{
+      const r=await fetch(sofaProxy(`/sport/football/events/last/${page}`));
+      const j=await r.json();
+      events=j.events||[];
+      console.log(`[backfill] sofa last/${page}: ${events.length} events`);
+      if(!events.length) break;
+    }catch(e){console.warn(`[backfill] sofa last/${page} failed:`,e.message);break;}
+
+    for(const ev of events){
+      const hn=heb(ev.homeTeam?.name||""),an=heb(ev.awayTeam?.name||"");
+      const m=needByKey[`${hn}_${an}`];
+      if(!m) continue;
+      try{
+        const r=await fetch(sofaProxy(`/event/${ev.id}/incidents`));
+        const j=await r.json();
+        const reds={home:0,away:0};
+        for(const inc of(j.incidents||[])){
+          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
+            if(inc.isHome)reds.home++;else reds.away++;
+          }
+        }
+        console.log(`[backfill] ${hn}-${an} reds:`,reds);
+        if(reds.home>0||reds.away>0)
+          updates[`results.matches.${m.id}.reds`]=reds;
+      }catch(e){console.warn(`[backfill] incidents failed for ${m.id}`,e.message);}
+      delete needByKey[`${hn}_${an}`];
     }
-    console.log(`[backfill] ${m.home}-${m.away} reds:`,reds);
-    if(reds.home>0||reds.away>0)
-      updates[`results.matches.${m.id}.reds`]=reds;
+    await new Promise(r=>setTimeout(r,300));
   }
+  console.log("[backfill] unmatched:",Object.keys(needByKey));
 
   console.log("[backfill] updates:",Object.keys(updates));
   if(Object.keys(updates).length)
