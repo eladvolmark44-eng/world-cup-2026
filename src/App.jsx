@@ -2735,11 +2735,16 @@ const STYLES=`
     .tab-label{font-size:.68rem}
     .main-body{padding:1.5rem 2rem}
     .section{max-width:900px}
-    .lb-header,.lb-row{grid-template-columns:32px minmax(0,1fr) 62px 62px 62px 72px}
+    .lb-header,.lb-row{grid-template-columns:32px minmax(0,1fr) 62px 62px 62px 72px;column-gap:.5rem}
+    .lb-h-label{font-size:.72rem}
     .lb-circle{width:54px;height:54px}
     .lb-circle-flag{font-size:2rem}
+    .lb-circle-icon{font-size:1.3rem}
+    .lb-circle-num{font-size:1rem}
     .lb-avatar,.lb-avatar-ph{width:42px;height:42px}
+    .lb-avatar-ph{font-size:1.1rem}
     .lb-name{font-size:.95rem}
+    .lb-rank{font-size:1rem}
     .lb-score{font-size:.88rem}
   }
   @media(min-width:1200px){
@@ -2797,9 +2802,9 @@ const STYLES=`
   .stepper span{width:24px;text-align:center;font-weight:700;font-size:.9rem}
   .pts-hint{font-size:.7rem;color:var(--muted);font-weight:400}
   /* leaderboard grid template: rank | name | goals | boot | champ | score */
-  .lb-header,.lb-row{display:grid;grid-template-columns:26px minmax(0,1fr) 52px 52px 52px 58px;align-items:center;column-gap:.4rem}
+  .lb-header,.lb-row{display:grid;grid-template-columns:20px minmax(0,1fr) 38px 38px 38px 46px;align-items:center;column-gap:.35rem}
   .lb-header{padding:.1rem .6rem .35rem}
-  .lb-h-label{font-size:.63rem;color:var(--muted);font-weight:600;text-align:center;line-height:1.2}
+  .lb-h-label{font-size:.6rem;color:var(--muted);font-weight:600;text-align:center;line-height:1.2}
   /* leaderboard rows */
   .lb-list{display:flex;flex-direction:column;gap:.4rem}
   .lb-row{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:.5rem .6rem;cursor:pointer;transition:border-color .15s}
@@ -2807,17 +2812,17 @@ const STYLES=`
   .lb-row.rank-1{border-color:rgba(255,206,0,.5);background:rgba(255,206,0,.05)}
   .lb-row.rank-2{border-color:rgba(200,200,220,.25)}
   .lb-row.rank-3{border-color:rgba(180,110,50,.3)}
-  .lb-rank{font-size:.95rem;font-weight:700;text-align:center;color:var(--muted)}
-  .lb-name-col{display:flex;align-items:center;gap:.4rem;overflow:hidden;min-width:0}
-  .lb-name{font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .lb-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15)}
-  .lb-avatar-ph{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;color:#fff;background:var(--green)}
-  .lb-circle{width:46px;height:46px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12)}
+  .lb-rank{font-size:.85rem;font-weight:700;text-align:center;color:var(--muted)}
+  .lb-name-col{display:flex;align-items:center;gap:.35rem;overflow:hidden;min-width:0}
+  .lb-name{font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lb-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15)}
+  .lb-avatar-ph{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem;color:#fff;background:var(--green)}
+  .lb-circle{width:32px;height:32px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12)}
   .lb-circle-locked{opacity:.25;filter:grayscale(1)}
-  .lb-circle-flag{font-size:1.75rem;line-height:1}
-  .lb-circle-icon{font-size:1.25rem;line-height:1}
-  .lb-circle-num{font-size:.95rem;font-weight:900;color:var(--green)}
-  .lb-score{font-size:.8rem;font-weight:800;color:var(--green);text-align:center}
+  .lb-circle-flag{font-size:1.1rem;line-height:1}
+  .lb-circle-icon{font-size:.9rem;line-height:1}
+  .lb-circle-num{font-size:.78rem;font-weight:900;color:var(--green)}
+  .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .player-header{display:flex;align-items:center;gap:.8rem;background:var(--card2);border-radius:14px;padding:.8rem 1rem}
