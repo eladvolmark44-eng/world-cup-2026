@@ -1598,54 +1598,46 @@ async function backfillRedCards(){
     (byDate[iso]||(byDate[iso]=[])).push(m);
   }
 
-  console.log("[backfill] dates to process:", Object.keys(byDate));
-  console.log("[backfill] past matches:", pastMatches.map(m=>`${m.id} ${m.home}-${m.away}`));
+  console.log("[backfill] dates:", Object.keys(byDate));
   const updates={};
   for(const [iso,matches] of Object.entries(byDate)){
-    let sofaEvents=[];
-    try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
-      const j=await r.json();
-      sofaEvents=j.events||[];
-      console.log(`[backfill] ${iso}: got ${sofaEvents.length} sofa events`);
-    }catch(e){console.warn(`[backfill] ${iso}: fetch failed`,e);continue;}
+    const ymd=iso.replace(/-/g,"");
+    // Determine ESPN slugs for this date's matches
+    const slugSet=new Set(matches.map(m=>m.group==="יזיזות"?"fifa.friendly":"fifa.world"));
+    slugSet.add("intl.friendlies"); // always try friendly slug too
+
+    const redsByKey={};
+    for(const slug of slugSet){
+      try{
+        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
+        const d=await r.json();
+        console.log(`[backfill] ESPN ${slug} ${iso}: ${d.events?.length||0} events`);
+        for(const ev of(d.events||[])){
+          const comp=ev.competitions?.[0]; if(!comp) continue;
+          if(comp.status?.type?.state!=="post") continue;
+          const home=comp.competitors?.find(c=>c.homeAway==="home");
+          const away=comp.competitors?.find(c=>c.homeAway==="away");
+          if(!home||!away) continue;
+          const homeReds=home.statistics?.find(s=>s.name==="redCards")?.value??0;
+          const awayReds=away.statistics?.find(s=>s.name==="redCards")?.value??0;
+          const hn=heb(home.team?.displayName||home.team?.name||"");
+          const an=heb(away.team?.displayName||away.team?.name||"");
+          console.log(`[backfill] ESPN event: ${hn}-${an} reds home=${homeReds} away=${awayReds}`, home.statistics?.map(s=>s.name+":"+s.value));
+          if(homeReds>0||awayReds>0) redsByKey[`${hn}_${an}`]={home:homeReds,away:awayReds};
+        }
+      }catch(e){console.warn(`[backfill] ESPN ${slug} ${iso} failed:`,e.message);}
+    }
 
     for(const m of matches){
-      const ev=sofaEvents.find(e=>{
-        const ht=heb(e.homeTeam?.name||""), at=heb(e.awayTeam?.name||"");
-        return ht===m.home&&at===m.away;
-      });
-      if(!ev?.id){
-        // log near-misses to help debug name mismatches
-        const near=sofaEvents.filter(e=>{
-          const hn=e.homeTeam?.name||"", an=e.awayTeam?.name||"";
-          return hn.toLowerCase().includes((SOFA_TEAM_MAP[m.home]||m.home).slice(0,3).toLowerCase())||
-                 an.toLowerCase().includes((SOFA_TEAM_MAP[m.away]||m.away).slice(0,3).toLowerCase());
-        }).map(e=>`${e.homeTeam?.name} vs ${e.awayTeam?.name}`);
-        console.log(`[backfill] NO MATCH for ${m.home}-${m.away} (${iso}), near:`,near);
-        continue;
+      const reds=redsByKey[`${m.home}_${m.away}`];
+      if(reds){
+        updates[`results.matches.${m.id}.reds`]=reds;
+        console.log(`[backfill] ✅ ${m.home}-${m.away}:`,reds);
+      } else {
+        console.log(`[backfill] no reds: ${m.home}-${m.away} (${iso})`);
       }
-      console.log(`[backfill] found ${m.home}-${m.away} → sofaId=${ev.id}`);
-
-      try{
-        const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
-        const j=await r.json();
-        const allCards=j.incidents?.filter(i=>i.incidentType==="card")||[];
-        console.log(`[backfill] ${m.home}-${m.away} cards:`,allCards.map(i=>`${i.incidentClass} isHome=${i.isHome} min=${i.minute}`));
-        const reds={home:0,away:0};
-        for(const inc of(j.incidents||[])){
-          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
-            if(inc.isHome)reds.home++;else reds.away++;
-          }
-        }
-        updates[`results.matches.${m.id}.sofaId`]=ev.id;
-        if(reds.home>0||reds.away>0){
-          updates[`results.matches.${m.id}.reds`]=reds;
-          console.log(`[backfill] reds for ${m.home}-${m.away}:`,reds);
-        }
-      }catch(e){console.warn(`[backfill] incidents failed for ${m.id}`,e);}
     }
-    await new Promise(r=>setTimeout(r,800));
+    await new Promise(r=>setTimeout(r,300));
   }
 
   if(Object.keys(updates).length)
