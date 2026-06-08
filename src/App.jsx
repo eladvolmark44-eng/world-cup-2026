@@ -1407,14 +1407,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
         />
       )}
       <div className="home-card">
-        <div className="home-card-title" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span>🏆 טבלת דירוג</span>
-          {leader&&(
-            <button className={`wa-trigger-btn ${tournamentOver?"wa-trigger-final":""}`} onClick={()=>setShowWinner(true)}>
-              {tournamentOver?"🎉 הכרז מנצח":"🥇 מוביל"}
-            </button>
-          )}
-        </div>
+        <div className="home-card-title">🏆 טבלת דירוג</div>
         <div className="prizes-row" style={{marginBottom:".6rem"}}>
           <span>👥 {participants.length} שחקנים</span>
           <span>💰 {participants.length*50} ₪ בקופה</span>
