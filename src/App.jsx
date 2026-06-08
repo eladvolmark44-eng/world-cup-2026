@@ -1683,9 +1683,6 @@ async function syncRedCards(){
       await updateDoc(doc(db,"mundial2026","game"),updates);
   }catch(e){console.warn("Red card sync failed:",e.message);}
 }
-      await updateDoc(doc(db,"mundial2026","game"),updates);
-  }catch(e){console.warn("Red card sync failed:",e.message);}
-}
 
 export default function App(){
   const [authUser,setAuthUser]=useState(null);
