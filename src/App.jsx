@@ -2587,6 +2587,7 @@ export default function App(){
           </div>
           <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
         </div>
+        <div className="main-content">
         <div className="main-tabs">
           {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"],...(isAdmin?[["admin","⚙️","מנהל"]]:[])].map(([k,icon,label])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>
@@ -2656,6 +2657,7 @@ export default function App(){
             <AdminPanel participants={participants} game={game} showToast={showToast}/>
           )}
         </div>
+        </div>{/* /main-content */}
       </div>
       <style>{STYLES}</style>
     </div>
@@ -2711,16 +2713,42 @@ const STYLES=`
   .back-btn{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:.2rem .5rem}
   .btn-signout{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.3rem .7rem;font-size:.75rem;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap}
   .btn-signout:hover{color:var(--red);border-color:var(--red)}
+  .main-content{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0}
   .main-tabs{display:flex;justify-content:center;background:var(--card);border-bottom:1px solid var(--border);padding:0 .5rem;flex-shrink:0;scrollbar-width:none}
   .main-tabs::-webkit-scrollbar{display:none}
   .main-tab{background:none;border:none;color:var(--muted);font-family:'Heebo',sans-serif;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.55rem 1.4rem}
   .tab-icon{font-size:1.6rem;line-height:1}
+  .tab-label{font-size:.72rem;font-weight:600}
   .tab-score{font-size:1.1rem;font-weight:900;font-family:'Heebo',sans-serif;color:inherit;background:var(--card2);border:1.5px solid var(--border);border-radius:7px;padding:.1rem .4rem;letter-spacing:-.5px}
   .main-tab.active .tab-score{border-color:var(--green);color:var(--green)}
   .tab-ref-img{width:1.8rem;height:1.8rem;object-fit:contain}
   .main-tab.active{color:var(--green);border-bottom-color:var(--green)}
   .main-body{flex:1;overflow-y:auto;padding:1rem}
   .section{display:flex;flex-direction:column;gap:1rem;max-width:680px;margin:0 auto}
+  /* ── Desktop responsive layout ── */
+  @media(min-width:800px){
+    .main-content{flex-direction:row} /* RTL: tabs first in DOM = rightmost (sidebar) */
+    .main-tabs{flex-direction:column;width:96px;border-bottom:none;border-left:1px solid var(--border);padding:.6rem 0;justify-content:flex-start;gap:.2rem;overflow-y:auto}
+    .main-tab{border-bottom:none;padding:.7rem .4rem;border-radius:10px;margin:0 .35rem;white-space:normal;text-align:center}
+    .main-tab.active{background:rgba(0,216,127,.1);color:var(--green)}
+    .tab-icon{font-size:1.5rem}
+    .tab-label{font-size:.68rem}
+    .main-body{padding:1.5rem 2rem}
+    .section{max-width:900px}
+    .lb-header,.lb-row{grid-template-columns:32px minmax(0,1fr) 62px 62px 62px 72px}
+    .lb-circle{width:54px;height:54px}
+    .lb-circle-flag{font-size:2rem}
+    .lb-avatar,.lb-avatar-ph{width:42px;height:42px}
+    .lb-name{font-size:.95rem}
+    .lb-score{font-size:.88rem}
+  }
+  @media(min-width:1200px){
+    .main-tabs{width:110px}
+    .main-tab{padding:.8rem .5rem}
+    .tab-icon{font-size:1.7rem}
+    .tab-label{font-size:.72rem}
+    .section{max-width:1060px}
+  }
   .section h2{font-size:1.2rem;font-weight:800}
   .section-header{display:flex;flex-direction:column;gap:.5rem}
   .prizes-row{display:flex;flex-wrap:wrap;gap:.5rem}
