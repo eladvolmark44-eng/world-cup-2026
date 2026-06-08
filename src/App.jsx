@@ -2981,6 +2981,7 @@ const STYLES=`
   /* ── Group Standings (standalone, kept for reference) ── */
   .st-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;padding:.3rem 0}
   @media(max-width:480px){.st-grid{grid-template-columns:1fr}}
+  @media(min-width:800px){.st-grid{grid-template-columns:1fr;gap:.8rem}}
   .st-group{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
   .st-group-hdr{background:rgba(0,216,127,.1);color:var(--green);font-weight:800;font-size:.82rem;padding:.35rem .6rem;text-align:center;border-bottom:1px solid var(--border)}
   .st-table{width:100%;border-collapse:collapse;font-size:.73rem}
@@ -2994,6 +2995,15 @@ const STYLES=`
   .st-gd-neg{color:var(--red)}
   .st-q{background:rgba(0,216,127,.06)}
   .st-q .st-num::after{content:"↑";font-size:.58rem;color:var(--green)}
+  @media(min-width:800px){
+    .cg-card-hdr,.st-group-hdr{font-size:1rem;padding:.5rem .9rem}
+    .st-table{font-size:.92rem}
+    .st-table th{padding:.3rem .4rem}
+    .st-table td{padding:.28rem .4rem}
+    .st-tc{min-width:120px}
+    .st-num{font-size:.8rem;width:18px}
+    .cg-team-btn{font-size:.88rem;padding:.38rem .55rem}
+  }
   /* ── Knockout Bracket ── */
   .bk-outer{overflow:hidden;margin:0 -.5rem}
   .bk-scroll{display:flex;align-items:stretch;overflow-x:auto;gap:3px;padding:.6rem .5rem;min-height:300px}
