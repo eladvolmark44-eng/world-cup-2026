@@ -1813,8 +1813,16 @@ async function backfillRedCards(){
       });
       if(!fix){console.log(`[backfill] no fixture for ${m.home}-${m.away}`);continue;}
 
+      // /fixtures?date= doesn't embed events — fetch them via the dedicated endpoint
+      let events=[];
+      try{
+        const er=await fetch(`https://v3.football.api-sports.io/fixtures/events?fixture=${fix.fixture.id}`,{headers:{"x-apisports-key":AF_KEY}});
+        const ed=await er.json();
+        events=ed.response||[];
+      }catch(e){console.warn(`[backfill] events fetch failed for ${m.home}-${m.away}:`,e.message);}
+
       const reds={home:0,away:0};
-      for(const ev of(fix.events||[])){
+      for(const ev of events){
         if(ev.type!=="Card")continue;
         const d=(ev.detail||"").toLowerCase();
         if(!d.includes("red")&&!d.includes("yellow red"))continue;
@@ -1824,6 +1832,7 @@ async function backfillRedCards(){
       console.log(`[backfill] ${m.home}-${m.away} reds:`,reds);
       if(reds.home>0||reds.away>0)
         updates[`results.matches.${m.id}.reds`]=reds;
+      await new Promise(r=>setTimeout(r,150));
     }
     await new Promise(r=>setTimeout(r,200));
   }
