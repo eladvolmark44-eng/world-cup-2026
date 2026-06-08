@@ -1594,25 +1594,30 @@ async function backfillRedCards(){
   if(!pastMatches.length){console.log("[backfill] no past matches");return 0;}
   console.log("[backfill] need reds for:",pastMatches.map(m=>`${m.home}-${m.away}`));
 
-  // Page through SofaScore recent events via server-side proxy (no CORS)
-  const needByKey={};
-  for(const m of pastMatches) needByKey[`${m.home}_${m.away}`]=m;
+  // Group matches by ISO date so we make one scheduled-events call per day.
+  // scheduled-events/{date} works from the browser; events/last is blocked.
+  const byDate={};
+  for(const m of pastMatches){
+    const iso=m.kickoff.slice(0,10); // "2026-06-06"
+    (byDate[iso]||(byDate[iso]=[])).push(m);
+  }
 
   const updates={};
-  for(let page=0; page<30 && Object.keys(needByKey).length>0; page++){
+  for(const [iso,matches] of Object.entries(byDate)){
     let events=[];
     try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/events/last/${page}`);
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
       const j=await r.json();
       events=j.events||[];
-      console.log(`[backfill] sofa last/${page}: ${events.length} events`);
-      if(!events.length) break;
-    }catch(e){console.warn(`[backfill] sofa last/${page} failed:`,e.message);break;}
+      console.log(`[backfill] sofa ${iso}: ${events.length} events`);
+    }catch(e){console.warn(`[backfill] sofa ${iso} failed:`,e.message);continue;}
 
-    for(const ev of events){
-      const hn=heb(ev.homeTeam?.name||""),an=heb(ev.awayTeam?.name||"");
-      const m=needByKey[`${hn}_${an}`];
-      if(!m) continue;
+    for(const m of matches){
+      const ev=events.find(e=>{
+        const hn=heb(e.homeTeam?.name||""),an=heb(e.awayTeam?.name||"");
+        return hn===m.home&&an===m.away;
+      });
+      if(!ev){console.log(`[backfill] no sofa event for ${m.home}-${m.away}`);continue;}
       try{
         const r=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
         const j=await r.json();
@@ -1622,15 +1627,13 @@ async function backfillRedCards(){
             if(inc.isHome)reds.home++;else reds.away++;
           }
         }
-        console.log(`[backfill] ${hn}-${an} reds:`,reds);
+        console.log(`[backfill] ${m.home}-${m.away} reds:`,reds);
         if(reds.home>0||reds.away>0)
           updates[`results.matches.${m.id}.reds`]=reds;
       }catch(e){console.warn(`[backfill] incidents failed for ${m.id}`,e.message);}
-      delete needByKey[`${hn}_${an}`];
     }
     await new Promise(r=>setTimeout(r,300));
   }
-  console.log("[backfill] unmatched:",Object.keys(needByKey));
 
   console.log("[backfill] updates:",Object.keys(updates));
   if(Object.keys(updates).length)
