@@ -2967,6 +2967,7 @@ const STYLES=`
   /* ── Combined Group Cards ── */
   .cg-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;padding:.3rem 0}
   @media(max-width:500px){.cg-grid{grid-template-columns:1fr}}
+  @media(min-width:800px){.cg-grid{grid-template-columns:1fr;gap:.8rem}}
   .cg-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
   .cg-card-hdr{background:rgba(0,216,127,.1);color:var(--green);font-weight:800;font-size:.82rem;padding:.35rem .6rem;text-align:center;border-bottom:1px solid var(--border)}
   .cg-bet-section{border-top:1px solid var(--border);padding:.45rem .5rem}
