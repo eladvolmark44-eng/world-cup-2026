@@ -1830,6 +1830,18 @@ function RankingView({participants, results, teamNames, onSelectPlayer}){
   );
 }
 
+function timeAgo(ts){
+  if(!ts)return"לא ידוע";
+  const d=Date.now()-ts,m=Math.floor(d/60000);
+  if(m<1)return"עכשיו";
+  if(m<60)return`לפני ${m} דק׳`;
+  const h=Math.floor(m/60);
+  if(h<24)return`לפני ${h} שע׳`;
+  const days=Math.floor(h/24);
+  if(days===1)return"אתמול";
+  return`לפני ${days} ימים`;
+}
+
 function AdminPanel({ participants, game, showToast }) {
   const [confirmAction, setConfirmAction] = useState(null);
   const [running, setRunning] = useState(false);
@@ -1912,6 +1924,18 @@ function AdminPanel({ participants, game, showToast }) {
   return (
     <div className="section admin-panel">
       <h2>⚙️ פאנל מנהל</h2>
+      <div className="admin-presence">
+        <div className="admin-presence-title">👥 כניסות אחרונות</div>
+        {[...participants].sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0)).map(p=>(
+          <div key={p.uid} className="admin-presence-row">
+            {p.photoURL
+              ?<img src={p.photoURL} className="ap-avatar" alt=""/>
+              :<div className="ap-avatar-ph">{(p.name||"?")[0]}</div>}
+            <span className="ap-name">{p.name}</span>
+            <span className="ap-time">{timeAgo(p.lastSeen)}</span>
+          </div>
+        ))}
+      </div>
       <div className="admin-stats">
         <div className="admin-stat"><span className="admin-stat-val">{participants.length}</span><span>משתתפים</span></div>
         <div className="admin-stat"><span className="admin-stat-val">{Object.keys(game.results?.matches||{}).length}</span><span>תוצאות שמורות</span></div>
@@ -2140,9 +2164,9 @@ export default function App(){
       setAuthUser(user);setAuthLoading(false);
       if(user){
         const snap=await getDoc(doc(db,"mundial2026","game","participants",user.uid));
-        const existing=snap.exists()?snap.data():{};
         if(!snap.exists())
           await saveParticipant({uid:user.uid,name:user.displayName,photoURL:user.photoURL||null,bets:{}});
+        await updateDoc(doc(db,"mundial2026","game","participants",user.uid),{lastSeen:Date.now()});
       }
     });
   },[]);
@@ -2938,6 +2962,13 @@ const STYLES=`
   .bd-all-link:hover{text-decoration:underline}
   .admin-panel{display:flex;flex-direction:column;gap:1.2rem}
   .admin-stats{display:flex;gap:.8rem;flex-wrap:wrap}
+  .admin-presence{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.7rem 1rem;display:flex;flex-direction:column;gap:.45rem}
+  .admin-presence-title{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:.1rem}
+  .admin-presence-row{display:flex;align-items:center;gap:.6rem}
+  .ap-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0}
+  .ap-avatar-ph{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem;color:#fff;background:var(--green)}
+  .ap-name{flex:1;font-size:.85rem;font-weight:600}
+  .ap-time{font-size:.75rem;color:var(--muted);flex-shrink:0}
   .admin-stat{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.6rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.1rem;min-width:80px}
   .admin-stat-val{font-size:1.4rem;font-weight:800;color:var(--green)}
   .admin-stat span:last-child{font-size:.72rem;color:var(--muted)}
