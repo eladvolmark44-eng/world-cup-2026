@@ -1856,7 +1856,7 @@ export default function App(){
           if (byKey[key]) {
             const prev = curMatches[m.id], next = byKey[key];
             if (!prev || prev.home!==next.home || prev.away!==next.away || prev.live!==next.live || prev.minute!==next.minute) {
-              updatedMatches[m.id] = {...(curMatches[m.id]||{}), ...next, ...(!next.live?{reds:{home:0,away:0}}:{})}; matchChanged = true;
+              updatedMatches[m.id] = {...(curMatches[m.id]||{}), ...next}; matchChanged = true;
             }
           }
         }
