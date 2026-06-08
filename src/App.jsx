@@ -382,6 +382,7 @@ const SOFA_TEAM_MAP = {
   "North Macedonia":"מקדוניה הצפונית","Republic of Ireland":"אירלנד",
 };
 const fdProxy=path=>`/api/fd-proxy?path=${encodeURIComponent(path)}`;
+const sofaProxy=path=>`/api/sofa-proxy?path=${encodeURIComponent(path)}`;
 function parseOddsData(fixtures){
   const map={};
   for(const f of fixtures){
@@ -1636,32 +1637,36 @@ async function syncRedCards(){
     if(!liveMatchIds.length)return;
 
     const heb=n=>SOFA_TEAM_MAP[n]||n;
-    let fdMatches=[];
+    // Fetch live events from SofaScore via server-side proxy (bypasses CORS)
+    let sofaLive=[];
     try{
-      const r=await fetch(fdProxy("/v4/competitions/WC/matches?status=IN_PLAY,PAUSED"));
+      const r=await fetch(sofaProxy("/sport/football/events/live"));
       const j=await r.json();
-      fdMatches=j.matches||[];
+      sofaLive=j.events||[];
     }catch{return;}
 
     const updates={};
     for(const matchId of liveMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
-      const fdm=fdMatches.find(m=>{
-        const ht=heb(m.homeTeam?.name||""),at=heb(m.awayTeam?.name||"");
+      const ev=sofaLive.find(e=>{
+        const ht=heb(e.homeTeam?.name||""),at=heb(e.awayTeam?.name||"");
         return ht===gm.home&&at===gm.away;
       });
-      if(!fdm)continue;
-      const reds={home:0,away:0};
-      for(const b of(fdm.bookings||[])){
-        if(b.card==="RED_CARD"||b.card==="YELLOW_RED_CARD"){
-          const t=heb(b.team?.name||"");
-          if(t===gm.home)reds.home++;else if(t===gm.away)reds.away++;
+      if(!ev?.id)continue;
+      try{
+        const r=await fetch(sofaProxy(`/event/${ev.id}/incidents`));
+        const j=await r.json();
+        const reds={home:0,away:0};
+        for(const inc of(j.incidents||[])){
+          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
+            if(inc.isHome)reds.home++;else reds.away++;
+          }
         }
-      }
-      const prev=matches[matchId]?.reds||{home:0,away:0};
-      if(reds.home!==prev.home||reds.away!==prev.away)
-        updates[`results.matches.${matchId}.reds`]=reds;
+        const prev=matches[matchId]?.reds||{home:0,away:0};
+        if(reds.home!==prev.home||reds.away!==prev.away)
+          updates[`results.matches.${matchId}.reds`]=reds;
+      }catch{}
     }
     if(Object.keys(updates).length)
       await updateDoc(doc(db,"mundial2026","game"),updates);
