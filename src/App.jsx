@@ -877,9 +877,9 @@ function MatchRow({m, res, teamNames, odds}){
         {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
       </div>
       <div className="sched-teams">
-        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}{res?.reds?.home>0&&<span className="rc-badge">{"🟥".repeat(Math.min(res.reds.home,3))}</span>}</span>
+        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}{res?.reds?.home>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.home,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
         {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
-        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}{res?.reds?.away>0&&<span className="rc-badge">{"🟥".repeat(Math.min(res.reds.away,3))}</span>}</span>
+        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}{res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
       </div>
       {matchOdds&&(
         <div className="match-odds" style={{marginTop:".3rem",marginBottom:0}}>
@@ -2806,7 +2806,8 @@ const STYLES=`
   .tab-score{font-size:1.1rem;font-weight:900;font-family:'Heebo',sans-serif;color:inherit;background:var(--card2);border:1.5px solid var(--border);border-radius:7px;padding:.1rem .4rem;letter-spacing:-.5px}
   .main-tab.active .tab-score{border-color:var(--green);color:var(--green)}
   .tab-ref-img{width:1.8rem;height:1.8rem;object-fit:contain}
-  .redcard{display:inline-block;width:.42rem;height:.58rem;background:#ff5555;border-radius:2px;box-shadow:0 1px 4px rgba(255,60,60,.5);flex-shrink:0}
+  .redcard{display:inline-block;width:9px;height:13px;background:#ff6060;border-radius:2px;flex-shrink:0;vertical-align:middle}
+  .rc-badge{display:inline-flex;align-items:center;gap:2px;margin-right:3px}
   .main-tab.active{color:var(--green);border-bottom-color:var(--green)}
   .main-body{flex:1;overflow-y:auto;padding:1rem}
   .section{display:flex;flex-direction:column;gap:1rem;max-width:680px;margin:0 auto}
