@@ -2805,7 +2805,7 @@ const STYLES=`
   .tab-label{font-size:.72rem;font-weight:600}
   .tab-score{font-size:1.1rem;font-weight:900;font-family:'Heebo',sans-serif;color:inherit;background:var(--card2);border:1.5px solid var(--border);border-radius:7px;padding:.1rem .4rem;letter-spacing:-.5px}
   .main-tab.active .tab-score{border-color:var(--green);color:var(--green)}
-  .tab-ref-img{width:1.8rem;height:1.8rem;object-fit:contain}
+  .tab-ref-img{width:.9rem;height:1.8rem;object-fit:contain}
   .main-tab.active{color:var(--green);border-bottom-color:var(--green)}
   .main-body{flex:1;overflow-y:auto;padding:1rem}
   .section{display:flex;flex-direction:column;gap:1rem;max-width:680px;margin:0 auto}
