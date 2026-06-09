@@ -1278,7 +1278,7 @@ function SpecialBetsCard({participants, results, teamNames}){
 }
 
 // ─── HOME VIEW ────────────────────────────────────────────────────────────────
-function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, onSaveBets, onGoToGroups}){
+function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, onSaveBets, onGoToGroups, showWinner, setShowWinner}){
   const myBets=me?.bets||{};
   const globalLocked=isGlobalLocked();
   const [champion,setChampion]=useState(myBets.champion||"");
@@ -1297,7 +1297,6 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
     setSaving(false);setSaved(true);
     setTimeout(()=>setSaved(false),2000);
   };
-  const [showWinner, setShowWinner] = useState(false);
   const nowTs=Date.now();
   const liveMatches=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
   const nextMatch=liveMatches.length===0&&GROUP_MATCHES
@@ -1414,13 +1413,6 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
         </div>
       )}
       <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}/>
-      {showWinner&&leader&&(
-        <WinnerAnnouncement
-          winner={leader}
-          isFinal={tournamentOver}
-          onClose={()=>setShowWinner(false)}
-        />
-      )}
       <div className="home-card">
         <div className="home-card-title">🏆 טבלת דירוג</div>
         <div className="prizes-row" style={{marginBottom:".6rem"}}>
@@ -1864,7 +1856,7 @@ function tsToLocal(ts){
     +"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
 }
 
-function AdminPanel({ participants, game, showToast }) {
+function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [confirmAction, setConfirmAction] = useState(null);
   const [running, setRunning] = useState(false);
   const [editUid, setEditUid] = useState(null);
@@ -1981,6 +1973,13 @@ function AdminPanel({ participants, game, showToast }) {
         <div className="admin-stat"><span className="admin-stat-val">{participants.length}</span><span>משתתפים</span></div>
         <div className="admin-stat"><span className="admin-stat-val">{Object.keys(game.results?.matches||{}).length}</span><span>תוצאות שמורות</span></div>
         <div className="admin-stat"><span className="admin-stat-val">{friendlyIds.size}</span><span>משחקי יזיזות</span></div>
+      </div>
+      <div className="admin-winner-section">
+        <div className="admin-action-info">
+          <span className="admin-action-label">🎉 אנימציית מנצח</span>
+          <span className="admin-action-desc">מציג את חלון הניצחון עם קונפטי למנצח הנוכחי</span>
+        </div>
+        <button className="btn-admin-winner" onClick={onTriggerWinner}>הפעל</button>
       </div>
       <div className="admin-actions">
         {actions.map(a=>(
@@ -2209,6 +2208,7 @@ export default function App(){
   const [toast,setToast]=useState(null);
   const [odds,setOdds]=useState({});
   const [showProfileEdit,setShowProfileEdit]=useState(false);
+  const [showWinner,setShowWinner]=useState(false);
   const toastRef=useRef(null);
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
@@ -2635,6 +2635,9 @@ export default function App(){
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
   const isAdmin=authUser?.uid===ADMIN_UID;
   const n=participants.length;
+  const tournamentOver=isTournamentOver();
+  const appRanked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},game.results||{},participants)})).sort((a,b)=>b.score-a.score);
+  const appLeader=appRanked[0]||null;
 
   if(authLoading||gameLoading)return(<div className="app loading-screen"><div className="loading-ball">⚽</div><p>טוען...</p></div>);
   if(!authUser)return(<div className="app"><SignInScreen onSignIn={handleSignIn} loading={signingIn}/><style>{STYLES}</style></div>);
@@ -2696,6 +2699,8 @@ export default function App(){
               onSelectPlayer={setSelectedPlayer}
               onSaveBets={handleSaveBets}
               onGoToGroups={()=>{setTab("results");setResultsSubTab("groups");}}
+              showWinner={showWinner}
+              setShowWinner={setShowWinner}
             />
           )}
           {tab==="results"&&(
@@ -2738,13 +2743,20 @@ export default function App(){
             </div>
           )}
           {tab==="admin"&&isAdmin&&(
-            <AdminPanel participants={participants} game={game} showToast={showToast}/>
+            <AdminPanel participants={participants} game={game} showToast={showToast} onTriggerWinner={()=>setShowWinner(true)}/>
           )}
         </div>
         </div>{/* /main-content */}
       </div>
       <style>{STYLES}</style>
     </div>
+    {showWinner&&appLeader&&(
+      <WinnerAnnouncement
+        winner={appLeader}
+        isFinal={tournamentOver}
+        onClose={()=>setShowWinner(false)}
+      />
+    )}
     {showProfileEdit&&authUser&&(
       <ProfileEditModal
         authUser={authUser}
@@ -3044,6 +3056,9 @@ const STYLES=`
   .admin-stat{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.6rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.1rem;min-width:80px}
   .admin-stat-val{font-size:1.4rem;font-weight:800;color:var(--green)}
   .admin-stat span:last-child{font-size:.72rem;color:var(--muted)}
+  .admin-winner-section{background:var(--card2);border:1px solid rgba(0,216,127,.3);border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  .btn-admin-winner{background:linear-gradient(135deg,#00d87f,#00b86a);color:#060e1a;border:none;border-radius:8px;padding:.4rem 1.1rem;font-size:.85rem;font-weight:800;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap;flex-shrink:0}
+  .btn-admin-winner:hover{opacity:.88}
   .admin-actions{display:flex;flex-direction:column;gap:.6rem}
   .admin-action-row{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
   .admin-action-danger{border-color:rgba(255,77,109,.3)}
