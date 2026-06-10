@@ -879,7 +879,7 @@ function MatchRow({m, res, teamNames, odds}){
       <div className="sched-teams">
         <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}{res?.reds?.home>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.home,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
         {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
-        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{withFlag(awayName)}{res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
+        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}{withFlag(awayName)}</span>
       </div>
       {matchOdds&&(
         <div className="match-odds" style={{marginTop:".3rem",marginBottom:0}}>
@@ -2942,15 +2942,16 @@ const STYLES=`
   .sched-open{border-color:rgba(0,216,127,.2)}
   .live-badge{font-size:.65rem;color:var(--red);font-weight:800;animation:pulse 1s ease-in-out infinite}
   .done-badge{font-size:.65rem;color:var(--green)}
-  .rc-badge{font-size:.65rem;margin-right:.2rem;vertical-align:middle}
+  .redcard{display:inline-block;width:9px;height:13px;background:#ff6060;border-radius:2px;flex-shrink:0;vertical-align:middle}
+  .rc-badge{display:inline-flex;align-items:center;gap:2px;margin:0 3px}
 
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .sched-score-live{background:rgba(255,77,109,.15);color:var(--red) !important}
   .sched-winning{color:var(--gold) !important}
   .sched-date{font-size:.82rem;color:var(--muted);margin-bottom:.28rem}
   .sched-teams{display:flex;align-items:center;gap:.5rem;font-size:1rem;font-weight:600}
-  .sched-teams>span:first-child{flex:1;text-align:right}
-  .sched-teams>span:last-child{flex:1;text-align:left}
+  .sched-teams>span:first-child{flex:1;text-align:right;padding-right:.6rem}
+  .sched-teams>span:last-child{flex:1;text-align:left;padding-left:.6rem}
   .sched-vs{background:var(--card);border-radius:6px;padding:.12rem .45rem;font-size:.7rem;color:var(--muted)}
   .sched-score{background:rgba(0,216,127,.15);color:var(--green);border-radius:7px;padding:.12rem .65rem;font-weight:800;font-size:.88rem}
   .sched-winner{color:var(--green)}
