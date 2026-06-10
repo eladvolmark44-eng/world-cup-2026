@@ -97,53 +97,6 @@ function apiNameToHeb(apiName){
 const ADMIN_UID = "8tDgIRJQDFZyiTvaR0pP8nXShgH2";
 
 const GROUP_MATCHES = [
-  // --- June 6 (יזיזות — dry run) ---
-  {id:"T0",group:"יזיזות",home:"בלגיה",away:"תוניסיה",date:"06/06",kickoff:"2026-06-06T16:00:00+03:00"},
-  {id:"T4",group:"יזיזות",home:"ארמניה",away:"קזחסטן",date:"06/06",kickoff:"2026-06-06T19:00:00+03:00"},
-  {id:"T12",group:"יזיזות",home:"קומורו",away:"רואנדה",date:"06/06",kickoff:"2026-06-06T19:00:00+03:00"},
-  {id:"T10",group:"יזיזות",home:"גיברלטר",away:"קיימן",date:"06/06",kickoff:"2026-06-06T20:00:00+03:00"},
-  {id:"T5",group:"יזיזות",home:"וויילס",away:"רומניה",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
-  {id:"T1",group:"יזיזות",home:"פורטוגל",away:"צ'ילה",date:"06/06",kickoff:"2026-06-06T20:45:00+03:00"},
-  {id:"T11",group:"יזיזות",home:"אלבניה",away:"לוקסמבורג",date:"06/06",kickoff:"2026-06-06T21:00:00+03:00"},
-  {id:"T2",group:"יזיזות",home:'ארה"ב',away:"גרמניה",date:"06/06",kickoff:"2026-06-06T21:30:00+03:00"},
-  {id:"T7",group:"יזיזות",home:"שוויץ",away:"אוסטרליה",date:"06/06",kickoff:"2026-06-06T22:00:00+03:00"},
-  {id:"T13",group:"יזיזות",home:"פנמה",away:"בוסניה והרצגובינה",date:"06/06",kickoff:"2026-06-06T22:00:00+03:00"},
-  {id:"T3",group:"יזיזות",home:"אנגליה",away:"ניו זילנד",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
-  {id:"T8",group:"יזיזות",home:"בוליביה",away:"סקוטלנד",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
-  {id:"T14",group:"יזיזות",home:"קטאר",away:"אל סלבדור",date:"06/06",kickoff:"2026-06-06T23:00:00+03:00"},
-  {id:"T15",group:"יזיזות",home:"ג'מייקה",away:"דרום אפריקה",date:"07/06",kickoff:"2026-06-07T00:00:00+03:00"},
-  {id:"T9",group:"יזיזות",home:"ברזיל",away:"מצרים",date:"07/06",kickoff:"2026-06-07T01:00:00+03:00"},
-  {id:"T16",group:"יזיזות",home:"ונצואלה",away:"טורקיה",date:"07/06",kickoff:"2026-06-07T01:00:00+03:00"},
-  {id:"T17",group:"יזיזות",home:"ארגנטינה",away:"הונדורס",date:"07/06",kickoff:"2026-06-07T03:00:00+03:00"},
-  {id:"T18",group:"יזיזות",home:"קוראסאו",away:"ארובה",date:"07/06",kickoff:"2026-06-07T03:00:00+03:00"},
-  {id:"T27",group:"יזיזות",home:"אפגניסטן",away:"פקיסטן",date:"07/06",kickoff:"2026-06-07T14:00:00+03:00"},
-  {id:"T19",group:"יזיזות",home:"קניה",away:"לסוטו",date:"07/06",kickoff:"2026-06-07T16:00:00+03:00"},
-  {id:"T25",group:"יזיזות",home:"ליכטנשטיין",away:"קפריסין",date:"07/06",kickoff:"2026-06-07T16:00:00+03:00"},
-  {id:"T28",group:"יזיזות",home:"עומאן",away:"מוזמביק",date:"07/06",kickoff:"2026-06-07T16:00:00+03:00"},
-  {id:"T20",group:"יזיזות",home:"דנמרק",away:"אוקראינה",date:"07/06",kickoff:"2026-06-07T19:30:00+03:00"},
-  {id:"T26",group:"יזיזות",home:"קוסובו",away:"אנדורה",date:"07/06",kickoff:"2026-06-07T21:00:00+03:00"},
-  {id:"T21",group:"יזיזות",home:"קרואטיה",away:"סלובניה",date:"07/06",kickoff:"2026-06-07T21:45:00+03:00"},
-  {id:"T22",group:"יזיזות",home:"מרוקו",away:"נורווגיה",date:"07/06",kickoff:"2026-06-07T22:00:00+03:00"},
-  {id:"T23",group:"יזיזות",home:"יוון",away:"איטליה",date:"07/06",kickoff:"2026-06-07T22:00:00+03:00"},
-  {id:"T24",group:"יזיזות",home:"אקוודור",away:"גואטמלה",date:"07/06",kickoff:"2026-06-07T23:00:00+03:00"},
-  // --- June 8 (יזיזות) ---
-  {id:"T29",group:"יזיזות",home:"הולנד",away:"אוזבקיסטן",date:"08/06",kickoff:"2026-06-08T21:45:00+03:00"},
-  {id:"T31",group:"יזיזות",home:"צרפת",away:"צפון אירלנד",date:"08/06",kickoff:"2026-06-08T22:10:00+03:00"},
-  // --- June 9 (יזיזות) ---
-  {id:"T32",group:"יזיזות",home:"פרו",away:"ספרד",date:"09/06",kickoff:"2026-06-09T05:00:00+03:00"},
-  {id:"T44",group:"יזיזות",home:"ארמניה",away:"מולדובה",date:"09/06",kickoff:"2026-06-09T18:00:00+03:00"},
-  {id:"T58",group:"יזיזות",home:"קונגו דמוקרטית",away:"צ'ילה",date:"09/06",kickoff:"2026-06-09T18:00:00+03:00"},
-  {id:"T49",group:"יזיזות",home:"בלארוס",away:"בורקינה פאסו",date:"09/06",kickoff:"2026-06-09T19:30:00+03:00"},
-  {id:"T50",group:"יזיזות",home:"הונגריה",away:"קזחסטן",date:"09/06",kickoff:"2026-06-09T20:00:00+03:00"},
-  {id:"T48",group:"יזיזות",home:"רוסיה",away:"טרינידד וטובגו",date:"09/06",kickoff:"2026-06-09T20:00:00+03:00"},
-  {id:"T51",group:"יזיזות",home:"אזרבייג'ן",away:"סן מרינו",date:"09/06",kickoff:"2026-06-09T21:00:00+03:00"},
-  // --- June 10 (יזיזות) ---
-  {id:"T52",group:"יזיזות",home:"ערב הסעודית",away:"סנגל",date:"10/06",kickoff:"2026-06-10T02:00:00+03:00"},
-  {id:"T53",group:"יזיזות",home:"ארגנטינה",away:"איסלנד",date:"10/06",kickoff:"2026-06-10T04:00:00+03:00"},
-  {id:"T54",group:"יזיזות",home:"עיראק",away:"ונצואלה",date:"10/06",kickoff:"2026-06-10T04:00:00+03:00"},
-  {id:"T56",group:"יזיזות",home:"בוליביה",away:"אלג'יריה",date:"10/06",kickoff:"2026-06-10T17:00:00+03:00"},
-  {id:"T55",group:"יזיזות",home:"פורטוגל",away:"ניגריה",date:"10/06",kickoff:"2026-06-10T22:45:00+03:00"},
-  {id:"T57",group:"יזיזות",home:"אנגליה",away:"קוסטה ריקה",date:"10/06",kickoff:"2026-06-10T23:00:00+03:00"},
   // --- June 11 ---
   {id:"A1",group:"A",home:"מקסיקו",away:"דרום אפריקה",date:"11/06",kickoff:"2026-06-11T22:00:00+03:00"},
   // --- June 12 ---
@@ -1862,33 +1815,7 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [editUid, setEditUid] = useState(null);
   const [editDate, setEditDate] = useState("");
 
-  const friendlyIds = new Set(GROUP_MATCHES.filter(m => m.id.startsWith("T")).map(m => m.id));
-
   const actions = [
-    {
-      id: "friendlyBets",
-      label: "אפס הימורי ידידות",
-      desc: `מוחק ניחושים על ${friendlyIds.size} משחקי יזיזות מכל המשתתפים`,
-      icon: "🗑️",
-      danger: false,
-      run: async () => {
-        for (const p of participants) {
-          const newMatches = Object.fromEntries(Object.entries(p.bets?.matches||{}).filter(([k])=>!friendlyIds.has(k)));
-          await saveParticipant({...p, bets: {...p.bets, matches: newMatches}});
-        }
-      }
-    },
-    {
-      id: "friendlyResults",
-      label: "אפס תוצאות יזיזות",
-      desc: `מוחק ${friendlyIds.size} תוצאות משחקי יזיזות מהמערכת`,
-      icon: "📊",
-      danger: false,
-      run: async () => {
-        const newMatches = Object.fromEntries(Object.entries(game.results?.matches||{}).filter(([k])=>!friendlyIds.has(k)));
-        await saveGame({results: {...game.results, matches: newMatches}});
-      }
-    },
     {
       id: "allMatchBets",
       label: "אפס כל הימורי המשחקים",
@@ -1900,14 +1827,6 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
           await saveParticipant({...p, bets: {...p.bets, matches: {}}});
         }
       }
-    },
-    {
-      id: "backfillReds",
-      label: "תיקון אדומים היסטורי",
-      desc: "שולף כרטיסים אדומים ממשחקים שכבר שוחקו (חד-פעמי)",
-      icon: "🟥",
-      danger: false,
-      run: async () => { await backfillRedCards(); }
     },
     {
       id: "allBets",
@@ -2083,74 +2002,6 @@ function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
   );
 }
 
-const AF_KEY="2150fd15cbccf603f549914910637735";
-
-async function backfillRedCards(){
-  const gameSnap=await getDoc(doc(db,"mundial2026","game"));
-  const cur=gameSnap.exists()?gameSnap.data():{};
-  const curMatches=cur.results?.matches||{};
-  const heb=n=>SOFA_TEAM_MAP[n]||n;
-
-  const pastMatches=GROUP_MATCHES.filter(m=>{
-    const md=curMatches[m.id];
-    return md&&md.home!=null&&!md.live;
-  });
-  if(!pastMatches.length){console.log("[backfill] no past matches");return 0;}
-  console.log("[backfill] need reds for:",pastMatches.map(m=>`${m.home}-${m.away}`));
-
-  // Group by ISO date — one API call per day
-  const byDate={};
-  for(const m of pastMatches){
-    const iso=m.kickoff.slice(0,10);
-    (byDate[iso]||(byDate[iso]=[])).push(m);
-  }
-
-  const updates={};
-  for(const [iso,matches] of Object.entries(byDate)){
-    let fixtures=[];
-    try{
-      const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":AF_KEY}});
-      const d=await r.json();
-      fixtures=d.response||[];
-      console.log(`[backfill] api-football ${iso}: ${fixtures.length} fixtures`);
-    }catch(e){console.warn(`[backfill] api-football ${iso} failed:`,e.message);continue;}
-
-    for(const m of matches){
-      const fix=fixtures.find(f=>{
-        const hn=heb(f.teams?.home?.name||""),an=heb(f.teams?.away?.name||"");
-        return hn===m.home&&an===m.away;
-      });
-      if(!fix){console.log(`[backfill] no fixture for ${m.home}-${m.away}`);continue;}
-
-      // /fixtures?date= doesn't embed events — fetch them via the dedicated endpoint
-      let events=[];
-      try{
-        const er=await fetch(`https://v3.football.api-sports.io/fixtures/events?fixture=${fix.fixture.id}`,{headers:{"x-apisports-key":AF_KEY}});
-        const ed=await er.json();
-        events=ed.response||[];
-      }catch(e){console.warn(`[backfill] events fetch failed for ${m.home}-${m.away}:`,e.message);}
-
-      const reds={home:0,away:0};
-      for(const ev of events){
-        if(ev.type!=="Card")continue;
-        const d=(ev.detail||"").toLowerCase();
-        if(!d.includes("red")&&!d.includes("yellow red"))continue;
-        if(ev.team?.id===fix.teams?.home?.id)reds.home++;
-        else reds.away++;
-      }
-      console.log(`[backfill] ${m.home}-${m.away} reds:`,reds);
-      if(reds.home>0||reds.away>0)
-        updates[`results.matches.${m.id}.reds`]=reds;
-      await new Promise(r=>setTimeout(r,150));
-    }
-    await new Promise(r=>setTimeout(r,200));
-  }
-
-  console.log("[backfill] updates:",Object.keys(updates));
-  if(Object.keys(updates).length)
-    await updateDoc(doc(db,"mundial2026","game"),updates);
-  return Object.keys(updates).length;
-}
 
 async function syncRedCards(){
   try{
