@@ -1891,7 +1891,7 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
       <div className="admin-stats">
         <div className="admin-stat"><span className="admin-stat-val">{participants.length}</span><span>משתתפים</span></div>
         <div className="admin-stat"><span className="admin-stat-val">{Object.keys(game.results?.matches||{}).length}</span><span>תוצאות שמורות</span></div>
-        <div className="admin-stat"><span className="admin-stat-val">{friendlyIds.size}</span><span>משחקי יזיזות</span></div>
+        <div className="admin-stat"><span className="admin-stat-val">{GROUP_MATCHES.length}</span><span>משחקי ליגה</span></div>
       </div>
       <div className="admin-winner-section">
         <div className="admin-action-info">
