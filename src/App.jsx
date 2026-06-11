@@ -1163,6 +1163,29 @@ function SpecialBetsCard({participants, results, teamNames}){
     <div className="home-card">
       <div className="home-card-title">⭐ הימורים מיוחדים</div>
 
+      {/* Golden Boot */}
+      <div className="sp-section">
+        <div className="sp-label">
+          👟 מלך שערים
+          {topScorer&&<span className="sp-live-val">{withStrikerFlag(topScorer.name)} ({topScorer.goals}⚽)</span>}
+          {!topScorer&&<span className="sp-pending">ממתין לנתונים</span>}
+        </div>
+        <div className="sp-chips">
+          {participants.map(p=>{
+            const bet=p.bets?.goldenBoot; if(!bet)return null;
+            const correct=over&&topScorer?.name&&bet.trim().toLowerCase()===topScorer.name.trim().toLowerCase();
+            const wrong=over&&topScorer?.name&&!correct;
+            return(
+              <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
+                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
+                <span className="sp-chip-val">{bet}</span>
+                {correct&&<span className="sp-pts">+12נק׳</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Champion */}
       <div className="sp-section">
         <div className="sp-label">
@@ -1179,29 +1202,6 @@ function SpecialBetsCard({participants, results, teamNames}){
               <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
                 <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
                 <span className="sp-chip-val">{withFlag(teamNames?.[bet]||bet)}</span>
-                {correct&&<span className="sp-pts">+12נק׳</span>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Golden Boot */}
-      <div className="sp-section">
-        <div className="sp-label">
-          👟 מלך שערים
-          {topScorer&&<span className="sp-live-val">{withStrikerFlag(topScorer.name)} ({topScorer.goals}⚽)</span>}
-          {!topScorer&&<span className="sp-pending">ממתין לנתונים</span>}
-        </div>
-        <div className="sp-chips">
-          {participants.map(p=>{
-            const bet=p.bets?.goldenBoot; if(!bet)return null;
-            const correct=over&&topScorer?.name&&bet.trim().toLowerCase()===topScorer.name.trim().toLowerCase();
-            const wrong=over&&topScorer?.name&&!correct;
-            return(
-              <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
-                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
-                <span className="sp-chip-val">{withStrikerFlag(bet)}</span>
                 {correct&&<span className="sp-pts">+12נק׳</span>}
               </div>
             );
