@@ -1402,7 +1402,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
             const bootFlag=bootBet?(STRIKER_FLAGS[bootBet]||"👟"):null;
             return(
               <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer({...p,rank:i+1})}>
-                <span className="lb-rank">{medals[i]||i+1}</span>
+                <span className="lb-rank">{medals[i]||(i===ranked.length-1&&ranked.length>3?"🗑️":i+1)}</span>
                 <div className="lb-name-col">
                   {p.photoURL
                     ?<img src={p.photoURL} className="lb-avatar" alt=""/>
@@ -1419,9 +1419,9 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                     ?<span className="lb-circle-flag">{champFlag}</span>
                     :<span className="lb-circle-icon">🏆</span>}
                 </div>
-                <div className={`lb-circle ${globalLocked&&bootBet?"lb-circle-pill":""} ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
+                <div className={`lb-boot-cell ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
                   {globalLocked&&bootBet
-                    ?<span className="lb-circle-text">{bootBet}</span>
+                    ?<span className="lb-boot-chip">{bootBet}</span>
                     :<span className="lb-circle-icon">👟</span>}
                 </div>
                 <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
@@ -2700,8 +2700,7 @@ const STYLES=`
     .lb-circle-flag{font-size:2rem}
     .lb-circle-icon{font-size:1.3rem}
     .lb-circle-num{font-size:1rem}
-    .lb-circle-text{font-size:.72rem}
-    .lb-circle-pill{height:34px;border-radius:10px}
+    .lb-boot-chip{font-size:.72rem;padding:.22rem .6rem}
     .lb-avatar,.lb-avatar-ph{width:42px;height:42px}
     .lb-avatar-ph{font-size:1.1rem}
     .lb-name{font-size:.95rem}
@@ -2783,8 +2782,8 @@ const STYLES=`
   .lb-circle-flag{font-size:1.1rem;line-height:1}
   .lb-circle-icon{font-size:.9rem;line-height:1}
   .lb-circle-num{font-size:.78rem;font-weight:900;color:var(--green)}
-  .lb-circle-text{font-size:.52rem;font-weight:700;color:var(--green);text-align:center;line-height:1.2;white-space:nowrap}
-  .lb-circle-pill{width:100%;height:26px;border-radius:8px;padding:0 4px}
+  .lb-boot-cell{display:flex;align-items:center;justify-content:center}
+  .lb-boot-chip{display:inline-flex;align-items:center;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.18rem .45rem;font-size:.62rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:var(--text)}
   .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
