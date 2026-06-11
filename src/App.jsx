@@ -1375,7 +1375,6 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
           <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds}/>
         </div>
       )}
-      <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}/>
       <div className="home-card">
         <div className="home-card-title">🏆 טבלת דירוג</div>
         <div className="prizes-row" style={{marginBottom:".6rem"}}>
@@ -1431,6 +1430,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
           {ranked.length===0&&<div className="empty-msg">עדיין אין משתתפים</div>}
         </div>
       </div>
+      <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}/>
     </div>
   );
 }
@@ -2022,34 +2022,41 @@ async function syncRedCards(){
     if(!liveMatchIds.length)return;
 
     const heb=n=>SOFA_TEAM_MAP[n]||n;
+    const iso=new Date().toISOString().slice(0,10);
 
-    // Single API-Football call returns all live fixtures with their events.
-    // One call covers every live match — no per-match calls needed.
-    let fixtures=[];
+    // Fetch today's SofaScore scheduled events to get sofaIds by team name
+    let sofaEvents=[];
     try{
-      const r=await fetch("https://v3.football.api-sports.io/fixtures?live=all",{headers:{"x-apisports-key":AF_KEY}});
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,
+        {headers:{"User-Agent":"Mozilla/5.0"}});
       const d=await r.json();
-      fixtures=d.response||[];
+      sofaEvents=d.events||[];
     }catch{return;}
 
     const updates={};
     for(const matchId of liveMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
-      const fix=fixtures.find(f=>heb(f.teams?.home?.name||"")===gm.home&&heb(f.teams?.away?.name||"")===gm.away);
-      if(!fix)continue;
-
-      const reds={home:0,away:0};
-      for(const ev of(fix.events||[])){
-        if(ev.type!=="Card")continue;
-        const d=(ev.detail||"").toLowerCase();
-        if(!d.includes("red")&&!d.includes("yellow red"))continue;
-        if(ev.team?.id===fix.teams?.home?.id)reds.home++;
-        else reds.away++;
-      }
-      const prev=matches[matchId]?.reds||{home:0,away:0};
-      if(reds.home!==prev.home||reds.away!==prev.away)
-        updates[`results.matches.${matchId}.reds`]=reds;
+      // Match by team name
+      const ev=sofaEvents.find(e=>{
+        const ht=heb(e.homeTeam?.name||""), at=heb(e.awayTeam?.name||"");
+        return ht===gm.home&&at===gm.away;
+      });
+      if(!ev?.id)continue;
+      try{
+        const ir=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`,
+          {headers:{"User-Agent":"Mozilla/5.0"}});
+        const ij=await ir.json();
+        const reds={home:0,away:0};
+        for(const inc of(ij.incidents||[])){
+          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
+            if(inc.isHome)reds.home++; else reds.away++;
+          }
+        }
+        const prev=matches[matchId]?.reds||{home:0,away:0};
+        if(reds.home!==prev.home||reds.away!==prev.away)
+          updates[`results.matches.${matchId}.reds`]=reds;
+      }catch{/* skip this match */}
     }
     if(Object.keys(updates).length)
       await updateDoc(doc(db,"mundial2026","game"),updates);
@@ -2462,8 +2469,9 @@ export default function App(){
     };
 
     syncScores(auth.currentUser?.uid||"anon");
+    syncRedCards();
     const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 15 * 1000);
-    const redPoll = setInterval(()=>syncRedCards(), 3 * 60 * 1000);
+    const redPoll = setInterval(()=>syncRedCards(), 60 * 1000);
     return()=>{u1();u2();clearInterval(poll);clearInterval(redPoll);};
   },[]);
 
@@ -2783,7 +2791,7 @@ const STYLES=`
   .lb-circle-icon{font-size:.9rem;line-height:1}
   .lb-circle-num{font-size:.78rem;font-weight:900;color:var(--green)}
   .lb-boot-cell{display:flex;align-items:center;justify-content:center}
-  .lb-boot-chip{display:inline-flex;align-items:center;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.18rem .45rem;font-size:.62rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:var(--text)}
+  .lb-boot-chip{display:inline-flex;align-items:center;justify-content:center;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.18rem .45rem;font-size:.60rem;font-weight:600;text-align:center;line-height:1.15;word-break:break-word;max-width:100%;color:var(--text)}
   .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
