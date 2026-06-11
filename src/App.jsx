@@ -1282,32 +1282,12 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
   },[tournamentOver, leader?.uid]);
   return(
     <div className="section">
-      {me&&(
+      {me&&!globalLocked&&(
         <div className="home-card">
           <div className="home-card-title">
             🎯 ההימורים הכלליים שלי
-            {globalLocked&&<span className="lock-badge-sm"> 🔒 נעול</span>}
           </div>
-          {globalLocked?(
-            <div className="home-bets-grid">
-              <div className="home-bet-item">
-                <span className="home-bet-label">🏆 אלופה</span>
-                <span className="home-bet-val">{myBets.champion?withFlag(teamNames?.[myBets.champion]||myBets.champion):"—"}</span>
-              </div>
-              <div className="home-bet-item">
-                <span className="home-bet-label">👟 מלך שערים</span>
-                <span className="home-bet-val">{withStrikerFlag(myBets.goldenBoot)||"—"}</span>
-              </div>
-              <div className="home-bet-item">
-                <span className="home-bet-label">⚽ ניחוש שערים</span>
-                <span className="home-bet-val">{myBets.totalGoals!=null?myBets.totalGoals:"—"}</span>
-              </div>
-              <div className="home-bet-item">
-                <span className="home-bet-label">🏠 בתים שנבחרו</span>
-                <span className="home-bet-val">{groupsPickedCount}/12</span>
-              </div>
-            </div>
-          ):(
+          {(
             <div className="home-special-form">
               <div className="special-row">
                 <label>🏆 אלופה <span className="pts-hint">(12נק׳)</span></label>
