@@ -2018,8 +2018,17 @@ async function syncRedCards(){
     const gameSnap=await getDoc(doc(db,"mundial2026","game"));
     const cur=gameSnap.exists()?gameSnap.data():{};
     const matches=cur.results?.matches||{};
-    const liveMatchIds=Object.entries(matches).filter(([,m])=>m.live).map(([id])=>id);
-    if(!liveMatchIds.length)return;
+    const nowMs=Date.now();
+    // Include live matches AND recently-played matches (kickoff within last 4h)
+    const activeMatchIds=Object.entries(matches).filter(([id,m])=>{
+      if(m.live)return true;
+      if(m.home!=null){
+        const gm=GROUP_MATCHES.find(g=>g.id===id);
+        if(gm?.kickoff&&nowMs-new Date(gm.kickoff).getTime()<4*60*60*1000)return true;
+      }
+      return false;
+    }).map(([id])=>id);
+    if(!activeMatchIds.length)return;
 
     const heb=n=>SOFA_TEAM_MAP[n]||n;
     const iso=new Date().toISOString().slice(0,10);
@@ -2027,39 +2036,41 @@ async function syncRedCards(){
     // Fetch today's SofaScore scheduled events to get sofaIds by team name
     let sofaEvents=[];
     try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`,
-        {headers:{"User-Agent":"Mozilla/5.0"}});
+      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
       const d=await r.json();
       sofaEvents=d.events||[];
-    }catch{return;}
+    }catch(e){console.warn("SofaScore events fetch failed:",e.message);return;}
 
     const updates={};
-    for(const matchId of liveMatchIds){
+    for(const matchId of activeMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
-      // Match by team name
       const ev=sofaEvents.find(e=>{
         const ht=heb(e.homeTeam?.name||""), at=heb(e.awayTeam?.name||"");
         return ht===gm.home&&at===gm.away;
       });
-      if(!ev?.id)continue;
+      if(!ev?.id){console.warn("No SofaScore event for",gm.home,"vs",gm.away);continue;}
       try{
-        const ir=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`,
-          {headers:{"User-Agent":"Mozilla/5.0"}});
+        const ir=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
         const ij=await ir.json();
         const reds={home:0,away:0};
         for(const inc of(ij.incidents||[])){
-          if(inc.incidentType==="card"&&(inc.incidentClass==="red"||inc.incidentClass==="yellowRed")){
-            if(inc.isHome)reds.home++; else reds.away++;
+          if(inc.incidentType==="card"){
+            const cls=(inc.incidentClass||"").toLowerCase();
+            if(cls==="red"||cls==="yellowred"||cls==="yellow-red"){
+              if(inc.isHome)reds.home++; else reds.away++;
+            }
           }
         }
         const prev=matches[matchId]?.reds||{home:0,away:0};
         if(reds.home!==prev.home||reds.away!==prev.away)
           updates[`results.matches.${matchId}.reds`]=reds;
-      }catch{/* skip this match */}
+      }catch(e){console.warn("Incidents fetch failed for",gm.home,"vs",gm.away,":",e.message);}
     }
-    if(Object.keys(updates).length)
+    if(Object.keys(updates).length){
+      console.log("Red card updates:",updates);
       await updateDoc(doc(db,"mundial2026","game"),updates);
+    }
   }catch(e){console.warn("Red card sync failed:",e.message);}
 }
 
