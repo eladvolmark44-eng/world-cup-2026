@@ -1282,42 +1282,6 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
   },[tournamentOver, leader?.uid]);
   return(
     <div className="section">
-      {me&&!globalLocked&&(
-        <div className="home-card">
-          <div className="home-card-title">
-            🎯 ההימורים הכלליים שלי
-          </div>
-          {(
-            <div className="home-special-form">
-              <div className="special-row">
-                <label>🏆 אלופה <span className="pts-hint">(12נק׳)</span></label>
-                <select value={champion} onChange={e=>setChampion(e.target.value)}>
-                  <option value="">— בחר קבוצה —</option>
-                  {REAL_TEAMS.map(t=><option key={t} value={t}>{withFlag(teamNames?.[t]||t)}</option>)}
-                </select>
-              </div>
-              <div className="special-row">
-                <label>👟 מלך שערים <span className="pts-hint">(12נק׳)</span></label>
-                <select value={goldenBoot} onChange={e=>setGoldenBoot(e.target.value)}>
-                  <option value="">— בחר שחקן —</option>
-                  {STRIKERS.map(s=><option key={s} value={s}>{STRIKER_FLAGS[s]||""} {s}</option>)}
-                </select>
-              </div>
-              <div className="special-row">
-                <label>⚽ ניחוש סה״כ שערים <span className="pts-hint">(קרוב ביותר מנצח)</span></label>
-                <input type="number" placeholder="כמה שערים?" value={totalGoals} onChange={e=>setTotalGoals(e.target.value)}/>
-              </div>
-              <div className="home-groups-indicator" onClick={onGoToGroups} style={{cursor:"pointer"}}>
-                <span>🏠 בתים שנבחרו</span>
-                <span className={groupsPickedCount===12?"val-green":"val-muted"}>{groupsPickedCount}/12 — לחץ לעריכה</span>
-              </div>
-              <button className="btn-green" onClick={handleSaveSpecial} disabled={saving}>
-                {saved?"✅ נשמר!":saving?"...":"💾 שמור הימורים"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
       {liveMatches.length>0?(
         <div className="home-card">
           <div className="home-card-title">🔴 משחקים חיים</div>
