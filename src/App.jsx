@@ -2428,15 +2428,15 @@ export default function App(){
           }
         }
 
-        // Compute total WC goals (group stage only until KO starts; excludes יזיזות friendlies)
+        // Compute total WC goals — includes live matches (count as-you-go), excludes orphan friendlies
         let wcGoals = 0;
         for (const [id, m] of Object.entries(updatedMatches)) {
           const gm = GROUP_MATCHES.find(g => g.id === id);
-          if (!gm || gm.group === "יזיזות") continue;
-          if (m.home != null && m.away != null && !m.live) wcGoals += m.home + m.away;
+          if (!gm) continue; // skip orphan friendly IDs (T53, T54 etc.) still in Firestore
+          if (m.home != null && m.away != null) wcGoals += m.home + m.away;
         }
         for (const m of Object.values(koResults)) {
-          if (!m.live && m.home != null && m.away != null) wcGoals += m.home + m.away;
+          if (m.home != null && m.away != null) wcGoals += m.home + m.away;
         }
         const goalsChanged = wcStarted && wcGoals !== (cur.results?.actualTotalGoals ?? -1);
         const topScorerChanged = topScorerUpdate && (
