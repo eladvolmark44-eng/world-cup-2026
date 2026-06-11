@@ -1226,7 +1226,7 @@ function SpecialBetsCard({participants, results, teamNames}){
               <div key={p.uid} className={`sp-chip ${isWinner?"sp-correct":wrong?"sp-wrong":""}`}>
                 <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
                 <span className="sp-chip-val">{bet}</span>
-                {diff!=null&&<span className={`sp-diff ${diff===0?"sp-exact":""}`}>{diff===0?"🎯":`±${diff}`}</span>}
+                {isWinner&&<span className="sp-diff sp-exact">🎯</span>}
               </div>
             );
           })}
