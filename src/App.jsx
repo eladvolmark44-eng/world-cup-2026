@@ -2031,41 +2031,41 @@ async function syncRedCards(){
     if(!activeMatchIds.length)return;
 
     const heb=n=>SOFA_TEAM_MAP[n]||n;
-    const iso=new Date().toISOString().slice(0,10);
 
-    // Fetch today's SofaScore scheduled events to get sofaIds by team name
-    let sofaEvents=[];
+    // One ESPN scoreboard call — gives event IDs for all current WC matches
+    let espnEvents=[];
     try{
-      const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
+      const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard");
       const d=await r.json();
-      sofaEvents=d.events||[];
-    }catch(e){console.warn("SofaScore events fetch failed:",e.message);return;}
+      espnEvents=d.events||[];
+    }catch(e){console.warn("ESPN scoreboard fetch failed:",e.message);return;}
 
     const updates={};
     for(const matchId of activeMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
-      const ev=sofaEvents.find(e=>{
-        const ht=heb(e.homeTeam?.name||""), at=heb(e.awayTeam?.name||"");
+      // Find ESPN event by matching home/away team names
+      const espnEv=espnEvents.find(e=>{
+        const comp=e.competitions?.[0];
+        const ht=heb(comp?.competitors?.find(c=>c.homeAway==="home")?.team?.displayName||"");
+        const at=heb(comp?.competitors?.find(c=>c.homeAway==="away")?.team?.displayName||"");
         return ht===gm.home&&at===gm.away;
       });
-      if(!ev?.id){console.warn("No SofaScore event for",gm.home,"vs",gm.away);continue;}
+      if(!espnEv?.id){console.warn("No ESPN event for",gm.home,"vs",gm.away);continue;}
       try{
-        const ir=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/incidents`);
-        const ij=await ir.json();
+        const sr=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${espnEv.id}`);
+        const sd=await sr.json();
+        const homeTeamId=espnEv.competitions[0].competitors.find(c=>c.homeAway==="home")?.team?.id;
         const reds={home:0,away:0};
-        for(const inc of(ij.incidents||[])){
-          if(inc.incidentType==="card"){
-            const cls=(inc.incidentClass||"").toLowerCase();
-            if(cls==="red"||cls==="yellowred"||cls==="yellow-red"){
-              if(inc.isHome)reds.home++; else reds.away++;
-            }
-          }
+        for(const ev of(sd.keyEvents||[])){
+          const txt=(ev.type?.text||ev.text||"").toLowerCase();
+          if(!txt.includes("red"))continue;
+          if(ev.team?.id===homeTeamId)reds.home++; else reds.away++;
         }
         const prev=matches[matchId]?.reds||{home:0,away:0};
         if(reds.home!==prev.home||reds.away!==prev.away)
           updates[`results.matches.${matchId}.reds`]=reds;
-      }catch(e){console.warn("Incidents fetch failed for",gm.home,"vs",gm.away,":",e.message);}
+      }catch(e){console.warn("ESPN summary failed for",gm.home,"vs",gm.away,":",e.message);}
     }
     if(Object.keys(updates).length){
       console.log("Red card updates:",updates);
