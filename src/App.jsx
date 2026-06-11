@@ -1419,7 +1419,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                     ?<span className="lb-circle-flag">{champFlag}</span>
                     :<span className="lb-circle-icon">🏆</span>}
                 </div>
-                <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
+                <div className={`lb-circle ${globalLocked&&bootBet?"lb-circle-pill":""} ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
                   {globalLocked&&bootBet
                     ?<span className="lb-circle-text">{bootBet}</span>
                     :<span className="lb-circle-icon">👟</span>}
@@ -2694,13 +2694,14 @@ const STYLES=`
     .tab-label{font-size:.68rem}
     .main-body{padding:1.5rem 2rem}
     .section{max-width:900px}
-    .lb-header,.lb-row{grid-template-columns:32px minmax(0,1fr) 62px 62px 62px 72px;column-gap:.5rem}
+    .lb-header,.lb-row{grid-template-columns:32px minmax(0,1fr) 62px 62px 100px 72px;column-gap:.5rem}
     .lb-h-label{font-size:.72rem}
     .lb-circle{width:54px;height:54px}
     .lb-circle-flag{font-size:2rem}
     .lb-circle-icon{font-size:1.3rem}
     .lb-circle-num{font-size:1rem}
-    .lb-circle-text{font-size:.62rem}
+    .lb-circle-text{font-size:.72rem}
+    .lb-circle-pill{height:34px;border-radius:10px}
     .lb-avatar,.lb-avatar-ph{width:42px;height:42px}
     .lb-avatar-ph{font-size:1.1rem}
     .lb-name{font-size:.95rem}
@@ -2761,8 +2762,8 @@ const STYLES=`
   .stepper button:disabled{opacity:.35;cursor:default}
   .stepper span{width:24px;text-align:center;font-weight:700;font-size:.9rem}
   .pts-hint{font-size:.7rem;color:var(--muted);font-weight:400}
-  /* leaderboard grid template: rank | name | goals | boot | champ | score */
-  .lb-header,.lb-row{display:grid;grid-template-columns:20px minmax(0,1fr) 38px 38px 38px 46px;align-items:center;column-gap:.35rem}
+  /* leaderboard grid template: rank | name | goals | champ | boot | score */
+  .lb-header,.lb-row{display:grid;grid-template-columns:20px minmax(0,1fr) 38px 38px 68px 46px;align-items:center;column-gap:.35rem}
   .lb-header{padding:.1rem .6rem .35rem}
   .lb-h-label{font-size:.6rem;color:var(--muted);font-weight:600;text-align:center;line-height:1.2}
   /* leaderboard rows */
@@ -2782,7 +2783,8 @@ const STYLES=`
   .lb-circle-flag{font-size:1.1rem;line-height:1}
   .lb-circle-icon{font-size:.9rem;line-height:1}
   .lb-circle-num{font-size:.78rem;font-weight:900;color:var(--green)}
-  .lb-circle-text{font-size:.48rem;font-weight:700;color:var(--green);text-align:center;line-height:1.2;word-break:break-all}
+  .lb-circle-text{font-size:.52rem;font-weight:700;color:var(--green);text-align:center;line-height:1.2;white-space:nowrap}
+  .lb-circle-pill{width:100%;height:26px;border-radius:8px;padding:0 4px}
   .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
