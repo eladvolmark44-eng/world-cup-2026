@@ -273,9 +273,10 @@ const ODDS_TTL_NORMAL = 60 * 60 * 1000;   // 1h when no match soon
 const ODDS_TTL_SOON   = 5 * 60 * 1000;    // 5min when match within 1h
 function hasMatchWithinHour(){
   const n=Date.now();
-  const withinHour=t=>t>n&&t-n<=60*60*1000;
-  if(GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;return withinHour(new Date(m.kickoff).getTime());}))return true;
-  return _koKickoffs.some(t=>withinHour(t));
+  // upcoming within 1h OR recently started (within 2h) — so TTL stays short during live matches
+  const relevant=t=>t>n-2*60*60*1000&&t<=n+60*60*1000;
+  if(GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;return relevant(new Date(m.kickoff).getTime());}))return true;
+  return _koKickoffs.some(t=>relevant(t));
 }
 let _koKickoffs=[];
 const ODDS_TEAM_MAP = {
@@ -399,15 +400,20 @@ async function fetchOdds(){
 function groupLabel(g){ return g==="יזיזות"?"⚽ יזיזות":`בית ${g}`; }
 function now() { return Date.now(); }
 
-function isMatchLocked(kickoff) { return now() >= new Date(kickoff).getTime() - LOCK_MS; }
-function isGlobalLocked() { return isMatchLocked("2026-06-11T22:00:00+03:00"); }
+// matchRes = results.matches[matchId] — lock when match actually started, not by schedule
+function isMatchLocked(matchId, matchRes) {
+  if (matchRes?.live === true || matchRes?.home != null) return true;
+  // Safety fallback: 20min after scheduled kickoff in case sync is delayed
+  const m = GROUP_MATCHES.find(g => g.id === matchId);
+  return m?.kickoff ? now() >= new Date(m.kickoff).getTime() + 20*60*1000 : true;
+}
+function isGlobalLocked() { return now() >= new Date("2026-06-11T22:00:00+03:00").getTime(); }
 function isGroupRevealed(group) { return now() >= new Date(GROUP_LAST_MATCH[group]).getTime(); }
 function isGroupStageOver() { return now() >= GROUP_STAGE_END_TS; }
 function isTournamentOver() { return now() >= new Date(TOURNAMENT_END).getTime(); }
-function canSeeMatchBet(matchId, viewerUid, ownerUid) {
+function canSeeMatchBet(matchId, viewerUid, ownerUid, results) {
   if (viewerUid === ownerUid) return true;
-  const match = GROUP_MATCHES.find(m => m.id === matchId);
-  return match ? isMatchLocked(match.kickoff) : false;
+  return isMatchLocked(matchId, results?.matches?.[matchId]);
 }
 function canSeeGroupBet(group, viewerUid, ownerUid) {
   return viewerUid === ownerUid || isGlobalLocked();
@@ -539,9 +545,9 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
   );
 }
 
-function MatchBetRow({match, savedBet, onSave, teamNames, odds}){
-  const locked = isMatchLocked(match.kickoff);
-  const matchOdds = odds?.[`${match.home}_${match.away}`];
+function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
+  const locked = isMatchLocked(match.id, res);
+  const matchOdds = !locked && odds?.[`${match.home}_${match.away}`];
   const [h, setH] = useState(savedBet?.home ?? null);
   const [a, setA] = useState(savedBet?.away ?? null);
   const [saving, setSaving] = useState(false);
@@ -661,7 +667,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
       {tab==="matches"&&(
         <div className="scroll-area">
           {GROUP_MATCHES.map(m=>{
-            const visible=canSeeMatchBet(m.id,viewerUid,player.uid);
+            const visible=canSeeMatchBet(m.id,viewerUid,player.uid,results);
             const bet=bets.matches?.[m.id];
             const real=results.matches?.[m.id];
             const hasReal=real?.home!=null&&real?.away!=null;
@@ -817,10 +823,10 @@ function MatchRow({m, res, teamNames, odds}){
   const hasRes = res?.home!=null && res?.away!=null;
   const isLive = res?.live===true;
   const isDone = hasRes && !isLive;
-  const locked = m.kickoff ? isMatchLocked(m.kickoff) : true;
+  const locked = isMatchLocked(m.id, res);
   const homeName = teamNames?.[m.home]||m.home||"?";
   const awayName = teamNames?.[m.away]||m.away||"?";
-  const matchOdds = !hasRes && odds ? odds[`${m.home}_${m.away}`] : null;
+  const matchOdds = !locked && !hasRes && odds ? odds[`${m.home}_${m.away}`] : null;
   return(
     <div className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
       <div className="sched-date">
@@ -930,7 +936,7 @@ function RevealedBetsView({participants, viewerUid, results, teamNames}){
   const [revDate,setRevDate]=useState(getDefaultMatchDate);
 
   // What's currently revealed?
-  const revealedMatches = GROUP_MATCHES.filter(m => canSeeMatchBet(m.id, "other", viewerUid));
+  const revealedMatches = GROUP_MATCHES.filter(m => canSeeMatchBet(m.id, "other", viewerUid, results));
   const revealedGroups = Object.keys(GROUPS_2026).filter(g => canSeeGroupBet(g, "other", viewerUid));
   const specialRevealed = canSeeSpecialBet("other", viewerUid);
 
@@ -1253,7 +1259,11 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
   const nowTs=Date.now();
   const liveMatches=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
   const nextMatch=liveMatches.length===0&&GROUP_MATCHES
-    .filter(m=>m.kickoff&&new Date(m.kickoff).getTime()>nowTs)
+    .filter(m=>{
+      if(!m.kickoff)return false;
+      const res=results.matches?.[m.id];
+      return res?.home==null; // no result yet = hasn't finished (includes delayed/not-started)
+    })
     .sort((a,b)=>new Date(a.kickoff).getTime()-new Date(b.kickoff).getTime())[0];
   const groupsPickedCount=Object.keys(GROUPS_2026).filter(g=>(myBets.groups?.[g]||[]).length===2).length;
   const ranked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},results,participants)})).sort((a,b)=>b.score-a.score);
@@ -1445,13 +1455,13 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
           <DateNav selectedDate={revDate} onChange={setRevDate}/>
           {dateMatches.length===0&&<div className="empty-msg">No games on this date</div>}
           {dateMatches.map(m=>{
-            const locked=isMatchLocked(m.kickoff);
             const real=results.matches?.[m.id];
+            const locked=isMatchLocked(m.id, real);
             const hasReal=real?.home!=null&&real?.away!=null;
             if(!locked){
               return(
                 <div key={m.id} className="results-match-block">
-                  <MatchBetRow match={m} savedBet={me?.bets?.matches?.[m.id]} onSave={onSaveMatch} teamNames={teamNames} odds={odds}/>
+                  <MatchBetRow match={m} savedBet={me?.bets?.matches?.[m.id]} onSave={onSaveMatch} teamNames={teamNames} odds={odds} res={results?.matches?.[m.id]}/>
                   <div className="rev-bets-row">
                     {participants.filter(p=>p.uid!==viewerUid).map(p=>(
                       <div key={p.uid} className="rev-bet-chip locked-chip">
