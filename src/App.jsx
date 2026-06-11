@@ -2775,9 +2775,9 @@ const STYLES=`
   .sched-score-live{background:rgba(255,77,109,.15);color:var(--red) !important}
   .sched-winning{color:var(--gold) !important}
   .sched-date{font-size:.82rem;color:var(--muted);margin-bottom:.28rem}
-  .sched-teams{display:flex;align-items:center;gap:.5rem;font-size:1rem;font-weight:600}
-  .sched-teams>span:first-child{flex:1;text-align:right;padding-right:.6rem}
-  .sched-teams>span:last-child{flex:1;text-align:left;padding-left:.6rem}
+  .sched-teams{display:flex;align-items:center;gap:.35rem;font-size:.9rem;font-weight:600}
+  .sched-teams>span:first-child{flex:1;text-align:right;padding-right:.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sched-teams>span:last-child{flex:1;text-align:left;padding-left:.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sched-vs{background:var(--card);border-radius:6px;padding:.12rem .45rem;font-size:.7rem;color:var(--muted)}
   .sched-score{background:rgba(0,216,127,.15);color:var(--green);border-radius:7px;padding:.12rem .65rem;font-weight:800;font-size:.88rem}
   .sched-winner{color:var(--green)}
