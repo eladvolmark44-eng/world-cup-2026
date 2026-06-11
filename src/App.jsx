@@ -1163,29 +1163,6 @@ function SpecialBetsCard({participants, results, teamNames}){
     <div className="home-card">
       <div className="home-card-title">⭐ הימורים מיוחדים</div>
 
-      {/* Golden Boot */}
-      <div className="sp-section">
-        <div className="sp-label">
-          👟 מלך שערים
-          {topScorer&&<span className="sp-live-val">{withStrikerFlag(topScorer.name)} ({topScorer.goals}⚽)</span>}
-          {!topScorer&&<span className="sp-pending">ממתין לנתונים</span>}
-        </div>
-        <div className="sp-chips">
-          {participants.map(p=>{
-            const bet=p.bets?.goldenBoot; if(!bet)return null;
-            const correct=over&&topScorer?.name&&bet.trim().toLowerCase()===topScorer.name.trim().toLowerCase();
-            const wrong=over&&topScorer?.name&&!correct;
-            return(
-              <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
-                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
-                <span className="sp-chip-val">{bet}</span>
-                {correct&&<span className="sp-pts">+12נק׳</span>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Champion */}
       <div className="sp-section">
         <div className="sp-label">
@@ -1202,6 +1179,29 @@ function SpecialBetsCard({participants, results, teamNames}){
               <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
                 <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
                 <span className="sp-chip-val">{withFlag(teamNames?.[bet]||bet)}</span>
+                {correct&&<span className="sp-pts">+12נק׳</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Golden Boot */}
+      <div className="sp-section">
+        <div className="sp-label">
+          👟 מלך שערים
+          {topScorer&&<span className="sp-live-val">{withStrikerFlag(topScorer.name)} ({topScorer.goals}⚽)</span>}
+          {!topScorer&&<span className="sp-pending">ממתין לנתונים</span>}
+        </div>
+        <div className="sp-chips">
+          {participants.map(p=>{
+            const bet=p.bets?.goldenBoot; if(!bet)return null;
+            const correct=over&&topScorer?.name&&bet.trim().toLowerCase()===topScorer.name.trim().toLowerCase();
+            const wrong=over&&topScorer?.name&&!correct;
+            return(
+              <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
+                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
+                <span className="sp-chip-val">{withStrikerFlag(bet)}</span>
                 {correct&&<span className="sp-pts">+12נק׳</span>}
               </div>
             );
@@ -1389,8 +1389,8 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
           <span/>
           <span/>
           <span className="lb-h-label">שערים</span>
-          <span className="lb-h-label">מלך<br/>השערים</span>
           <span className="lb-h-label">הזוכה</span>
+          <span className="lb-h-label">מלך<br/>השערים</span>
           <span className="lb-h-label">נקודות</span>
         </div>
         <div className="lb-list">
@@ -1414,15 +1414,15 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                     ?<span className="lb-circle-num">{goalsBet}</span>
                     :<span className="lb-circle-icon">⚽</span>}
                 </div>
-                <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
-                  {globalLocked&&bootFlag
-                    ?<span className="lb-circle-flag">{bootFlag}</span>
-                    :<span className="lb-circle-icon">👟</span>}
-                </div>
                 <div className={`lb-circle ${!globalLocked||!champBet?"lb-circle-locked":""}`}>
                   {globalLocked&&champFlag
                     ?<span className="lb-circle-flag">{champFlag}</span>
                     :<span className="lb-circle-icon">🏆</span>}
+                </div>
+                <div className={`lb-circle ${!globalLocked||!bootBet?"lb-circle-locked":""}`}>
+                  {globalLocked&&bootBet
+                    ?<span className="lb-circle-text">{bootBet}</span>
+                    :<span className="lb-circle-icon">👟</span>}
                 </div>
                 <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
               </div>
@@ -2700,6 +2700,7 @@ const STYLES=`
     .lb-circle-flag{font-size:2rem}
     .lb-circle-icon{font-size:1.3rem}
     .lb-circle-num{font-size:1rem}
+    .lb-circle-text{font-size:.62rem}
     .lb-avatar,.lb-avatar-ph{width:42px;height:42px}
     .lb-avatar-ph{font-size:1.1rem}
     .lb-name{font-size:.95rem}
@@ -2781,6 +2782,7 @@ const STYLES=`
   .lb-circle-flag{font-size:1.1rem;line-height:1}
   .lb-circle-icon{font-size:.9rem;line-height:1}
   .lb-circle-num{font-size:.78rem;font-weight:900;color:var(--green)}
+  .lb-circle-text{font-size:.48rem;font-weight:700;color:var(--green);text-align:center;line-height:1.2;word-break:break-all}
   .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
