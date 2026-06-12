@@ -468,10 +468,10 @@ function calcScore(bets={},results={},allP=[]){
   if(isTournamentOver()){
     if(bets.champion&&bets.champion===results.champion)t+=12;
     if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())t+=12;
-    if(bets.totalGoals!=null&&results.totalGoals!=null&&results.totalGoalsBonus!=null){
-      const myD=Math.abs(+bets.totalGoals-+results.totalGoals);
-      const diffs=allP.map(p=>Math.abs((p.bets?.totalGoals??9999)-+results.totalGoals));
-      if(myD===Math.min(...diffs))t+=+results.totalGoalsBonus;
+    if(bets.totalGoals!=null&&results.actualTotalGoals!=null){
+      const myD=Math.abs(+bets.totalGoals-+results.actualTotalGoals);
+      const diffs=allP.map(p=>Math.abs((p.bets?.totalGoals??9999)-+results.actualTotalGoals));
+      if(myD===Math.min(...diffs))t+=10;
     }
   }
   return t;
@@ -792,7 +792,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
             <label>⚽ ניחוש סה״כ שערים {globalLocked&&"🔒"}</label>
             <input disabled={globalLocked} type="number" placeholder="כמה שערים?" value={bets.totalGoals||""} onChange={e=>setBets(p=>({...p,totalGoals:e.target.value}))}/>
           </div>
-          <p className="section-note">💡 הקרוב ביותר מקבל 6–10 נק׳ (יוחלט לפני הגמר)</p>
+          <p className="section-note">💡 הקרוב ביותר לסך השערים מקבל 10 נק׳</p>
           {!globalLocked&&<button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור</button>}
         </div>
       )}
@@ -1226,7 +1226,7 @@ function SpecialBetsCard({participants, results, teamNames}){
               <div key={p.uid} className={`sp-chip ${isWinner?"sp-correct":wrong?"sp-wrong":""}`}>
                 <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
                 <span className="sp-chip-val">{bet}</span>
-                {isWinner&&<span className="sp-diff sp-exact">🎯</span>}
+                {isWinner&&<span className="sp-pts">+10נק׳</span>}
               </div>
             );
           })}
@@ -2558,7 +2558,7 @@ export default function App(){
                 ["🏆 גמר","כיוון: 8נק׳ · מדויק: +15נק׳"],
                 ["🥇 אלופה","12 נק׳ · מחושב בסיום הטורניר"],
                 ["👟 מלך שערים","12 נק׳ · מחושב בסיום הטורניר"],
-                ["⚽ סה״כ שערים","הקרוב ביותר מנצח — מחושב בסיום הטורניר (6–10 נק׳)"],
+                ["⚽ סה״כ שערים","הקרוב ביותר מקבל 10 נק׳ — מחושב בסיום הטורניר"],
                 ["🤖 תוצאות","מתעדכנות אוטומטית מ-API בזמן אמת"],
               ].map(([t,v])=>(
                 <div key={t} className="rule-row"><div className="rule-title">{t}</div><div className="rule-text">{v}</div></div>
