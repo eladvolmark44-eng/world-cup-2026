@@ -448,7 +448,7 @@ function calcScore(bets={},results={},allP=[]){
     const bet=bets.matches?.[m.id],real=results.matches?.[m.id];
     if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
     if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
-      t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=3;
+      t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=2;
     }
   });
   // KO match bets — points depend on stage
@@ -741,7 +741,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
       {tab==="matches"&&(
         <div className="scroll-area">
           <DateNav selectedDate={betDate} onChange={setBetDate}/>
-          <p className="section-note">⚡ 1נק׳ כיוון · +3נק׳ בול · נעילה בשריקת הפתיחה</p>
+          <p className="section-note">⚡ 1נק׳ כיוון · +2נק׳ בול · נעילה בשריקת הפתיחה</p>
           {GROUP_MATCHES.filter(m=>m.date===betDate).map(m=>(
             <MatchBetRow key={m.id} match={m}
               savedBet={user.bets?.matches?.[m.id]}
@@ -1297,7 +1297,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
                     if(!bet||bet.home==null)return null;
                     const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
                     const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
-                    const pts=hasReal?(exact?4:correct?1:0):null;
+                    const pts=hasReal?(exact?3:correct?1:0):null;
                     return(
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
@@ -1425,7 +1425,7 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
                     if(!bet||bet.home==null)return null;
                     const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
                     const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
-                    const pts=hasReal?(exact?4:correct?1:0):null;
+                    const pts=hasReal?(exact?3:correct?1:0):null;
                     return(
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
@@ -1692,7 +1692,7 @@ function RankingView({participants, results, teamNames, onSelectPlayer}){
       if(!bet||bet.home==null||!real||real.home==null)return;
       const correct=getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
       const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
-      if(correct)items.push({m,bet,real,pts:exact?4:1,exact});
+      if(correct)items.push({m,bet,real,pts:exact?3:1,exact});
     });
     return items;
   }
@@ -2551,7 +2551,7 @@ export default function App(){
                 ["🔓 חשיפת ניחושים","ניחוש משחק נחשף לכולם ברגע שריקת הפתיחה"],
                 ["🔐 נעילה וחשיפה","בתים · אלופה · מלך שערים · כמות שערים — ננעלים ונחשפים לכולם בשריקת הפתיחה של המשחק הראשון בטורניר"],
                 ["🏠 בתים","2נק׳ לקבוצה נכונה · 5נק׳ לשתיים · הניקוד מחושב בסיום שלב הבתים"],
-                ["⚽ שלב בתים — כיוון","1נק׳"],["✅ שלב בתים — מדויק","+3נק׳ בונוס"],
+                ["⚽ שלב בתים — כיוון","1נק׳"],["✅ שלב בתים — מדויק","3נק׳ (1+2 בונוס)"],
                 ["🏆 32 האחרונות / שמינית גמר","כיוון: 2נק׳ · מדויק: +5נק׳"],
                 ["🏆 רבע גמר","כיוון: 4נק׳ · מדויק: +8נק׳"],
                 ["🏆 חצי גמר / מקום שלישי","כיוון: 5נק׳ · מדויק: +10נק׳"],
