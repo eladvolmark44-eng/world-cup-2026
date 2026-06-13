@@ -2888,22 +2888,22 @@ export default function App(){
 
   // Trigger daily rank animation once per completed match day per user
   useEffect(()=>{
-    if(!authUser||!game?.results||!participants.length||gameLoading)return;
+    if(!authUser||!participants.length||gameLoading)return;
     const testMode=new URLSearchParams(window.location.search).has("testdra")||authUser.email==="eladvolm@gmail.com";
     const lastDay=testMode
-      ? (ALL_MATCH_DATES[0] || getLastCompletedMatchDay(game.results))
-      : getLastCompletedMatchDay(game.results);
+      ? (ALL_MATCH_DATES[0] || getLastCompletedMatchDay(game?.results))
+      : getLastCompletedMatchDay(game?.results);
     if(!lastDay)return;
     const key=`dra_${lastDay}_${authUser.uid}`;
     if(!testMode&&localStorage.getItem(key))return;
+    const results=game?.results||{};
     const ranked=[...participants]
-      .map(p=>({...p,score:calcScore(p.bets||{},game.results,participants)}))
+      .map(p=>({...p,score:calcScore(p.bets||{},results,participants)}))
       .sort((a,b)=>b.score-a.score);
     const myIdx=ranked.findIndex(p=>p.uid===authUser.uid);
     if(myIdx<0)return;
     const sym=rankSymbol(ranked,myIdx);
     if(!testMode)localStorage.setItem(key,"1");
-    // Small delay so the app loads first
     setTimeout(()=>setDailyRankAnim({date:lastDay,sym,score:ranked[myIdx].score,rank:myIdx}),1500);
   },[authUser?.uid,gameLoading,game?.results,participants.length]);
 
