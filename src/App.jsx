@@ -495,6 +495,19 @@ async function loadGame(){
   return snap.exists()?snap.data():{joinCode:generateCode(),results:{},playoffNames:{}};
 }
 async function saveGame(data){await setDoc(doc(db,"mundial2026","game"),data,{merge:true});}
+
+// Returns the display symbol for a player at position i in a sorted ranked array.
+// Ties share the same symbol; last-place tie(s) get 🗑️ (unless everyone is tied).
+function rankSymbol(ranked, i){
+  const MEDALS=["🥇","🥈","🥉"];
+  const score=ranked[i].score;
+  const minScore=ranked[ranked.length-1].score;
+  const maxScore=ranked[0].score;
+  if(maxScore===minScore) return MEDALS[0]||1; // all tied → all gold
+  if(score===minScore) return "🗑️";           // last place (possibly shared)
+  const rankPos=ranked.findIndex(p=>p.score===score); // first index with this score
+  return MEDALS[rankPos]||(rankPos+1);
+}
 async function saveParticipant(p){await setDoc(doc(db,"mundial2026","game","participants",p.uid),p,{merge:true});}
 
 // ── Preset bets for known players (applied on first sign-in by name match) ────
@@ -899,7 +912,7 @@ function Leaderboard({participants,results,onSelectPlayer}){
       {ranked.length===0&&<div className="empty-msg">עדיין אין משתתפים</div>}
       {ranked.map((p,i)=>(
         <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
-          <span className="lb-rank">{medals[i]||i+1}</span>
+          <span className="lb-rank">{rankSymbol(ranked,i)}</span>
           {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
           <span className="lb-name">{p.name}</span>
           <span className="lb-score">{p.score} נק׳</span>
@@ -1535,7 +1548,7 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
             const champFlag=champBet?(FLAG_MAP[teamNames?.[champBet]||champBet]||"🏆"):null;
             return(
               <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer({...p,rank:i+1})}>
-                <span className="lb-rank">{medals[i]||(i===ranked.length-1&&ranked.length>3?"🗑️":i+1)}</span>
+                <span className="lb-rank">{rankSymbol(ranked,i)}</span>
                 <div className="lb-name-col">
                   {p.photoURL
                     ?<img src={p.photoURL} className="lb-avatar" alt=""/>
@@ -1898,7 +1911,7 @@ function RankingView({participants, results, teamNames, onSelectPlayer}){
           return(
             <div key={p.uid}>
               <div className={`lb-row rank-${i+1}`} onClick={()=>setExpandedUid(isExpanded?null:p.uid)}>
-                <span className="lb-rank">{medals[i]||i+1}</span>
+                <span className="lb-rank">{rankSymbol(ranked,i)}</span>
                 {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
                 <span className="lb-name">{p.name}</span>
                 <span className="lb-score">{p.score} נק׳</span>
