@@ -1762,6 +1762,7 @@ function DailyRankAnimation({data,onClose}){
 function SpecialBetsCard({participants, results, teamNames}){
   if(!isGlobalLocked())return null;
   const over=isTournamentOver();
+  const [showScorers,setShowScorers]=useState(false);
   const topScorer=results.topScorer;       // {name, goals} — synced from football-data.org
   const actualGoals=results.actualTotalGoals; // number — computed from match scores
   const champion=results.champion;
@@ -1801,11 +1802,23 @@ function SpecialBetsCard({participants, results, teamNames}){
 
       {/* Golden Boot */}
       <div className="sp-section">
-        <div className="sp-label">
+        <div className="sp-label" style={{cursor:"pointer"}} onClick={()=>setShowScorers(s=>!s)}>
           👟 מלך שערים
-          {topScorer&&<span className="sp-live-val">{withStrikerFlag(topScorer.name)} ({topScorer.goals}⚽)</span>}
+          {topScorer&&<span className="sp-live-val">{withStrikerFlag(hePlayer(topScorer.name))} ({topScorer.goals}⚽) ›</span>}
           {!topScorer&&<span className="sp-pending">ממתין לנתונים</span>}
         </div>
+        {showScorers&&results.topScorers?.length?(
+          <div className="scorers-list">
+            {results.topScorers.map((s,i)=>(
+              <div key={i} className="scorers-row">
+                <span className="scorers-rank">{i+1}</span>
+                <span className="scorers-name">{withStrikerFlag(s.name)||s.name}</span>
+                <span className="scorers-team">{s.team}</span>
+                <span className="scorers-goals">{s.goals}⚽</span>
+              </div>
+            ))}
+          </div>
+        ):null}
         <div className="sp-chips">
           {participants.map(p=>{
             const bet=p.bets?.goldenBoot; if(!bet)return null;
@@ -2647,29 +2660,25 @@ async function fetchMatchDetail(gm){
       }
     }
   }catch(e){}
-  // SofaScore → stats (fallback) + events + lineup
+  // SofaScore → stats (fallback) + events + lineup (via proxy to get proper headers)
+  const sofaFetch=path=>fetch(sofaProxy(path)).then(r=>r.json()).catch(()=>null);
   try{
-    const sr=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
-    const sd=await sr.json();
-    const sofaEv=(sd.events||[]).find(e=>heb(e.homeTeam?.name||"")===gm.home&&heb(e.awayTeam?.name||"")===gm.away);
+    const sd=await sofaFetch(`/sport/football/scheduled-events/${iso}`);
+    const sofaEv=(sd?.events||[]).find(e=>heb(e.homeTeam?.name||"")===gm.home&&heb(e.awayTeam?.name||"")===gm.away);
     if(sofaEv?.id){
       if(!stats){
-        try{
-          const statR=await fetch(`https://api.sofascore.com/api/v1/event/${sofaEv.id}/statistics`);
-          const statD=await statR.json();
-          const all=statD.statistics?.find(s=>s.period==="ALL");
-          if(all){
-            const f=name=>{for(const grp of(all.groups||[])){const i=grp.statisticsItems?.find(x=>x.name===name);if(i)return i;}return null;};
-            const poss=f("Ball possession"),xg=f("Expected goals"),shots=f("Total shots"),soT=f("Shots on target"),blk=f("Blocked shots"),sav=f("Goalkeeper saves"),corn=f("Corner kicks"),offs=f("Offsides"),bc=f("Big chances"),atk=f("Attacks"),fouls=f("Fouls"),yel=f("Yellow cards"),red=f("Red cards"),pass=f("Total passes")??f("Passes"),passA=f("Accurate passes %")??f("Pass accuracy"),tack=f("Tackles");
-            const sv=(i,k)=>i?.[k]??null;
-            stats={home:{possession:sv(poss,"home"),xg:sv(xg,"home"),shotsOT:sv(soT,"home"),shots:sv(shots,"home"),blocked:sv(blk,"home"),saves:sv(sav,"home"),corners:sv(corn,"home"),offsides:sv(offs,"home"),bigChances:sv(bc,"home"),attacks:sv(atk,"home"),fouls:sv(fouls,"home"),yellows:sv(yel,"home"),reds:sv(red,"home"),passes:sv(pass,"home"),passAcc:sv(passA,"home"),tackles:sv(tack,"home")},away:{possession:sv(poss,"away"),xg:sv(xg,"away"),shotsOT:sv(soT,"away"),shots:sv(shots,"away"),blocked:sv(blk,"away"),saves:sv(sav,"away"),corners:sv(corn,"away"),offsides:sv(offs,"away"),bigChances:sv(bc,"away"),attacks:sv(atk,"away"),fouls:sv(fouls,"away"),yellows:sv(yel,"away"),reds:sv(red,"away"),passes:sv(pass,"away"),passAcc:sv(passA,"away"),tackles:sv(tack,"away")}};
-          }
-        }catch(e){}
+        const statD=await sofaFetch(`/event/${sofaEv.id}/statistics`);
+        const all=statD?.statistics?.find(s=>s.period==="ALL");
+        if(all){
+          const f=name=>{for(const grp of(all.groups||[])){const i=grp.statisticsItems?.find(x=>x.name===name);if(i)return i;}return null;};
+          const poss=f("Ball possession"),xg=f("Expected goals"),shots=f("Total shots"),soT=f("Shots on target"),blk=f("Blocked shots"),sav=f("Goalkeeper saves"),corn=f("Corner kicks"),offs=f("Offsides"),bc=f("Big chances"),atk=f("Attacks"),fouls=f("Fouls"),yel=f("Yellow cards"),red=f("Red cards"),pass=f("Total passes")??f("Passes"),passA=f("Accurate passes %")??f("Pass accuracy"),tack=f("Tackles");
+          const sv=(i,k)=>i?.[k]??null;
+          stats={home:{possession:sv(poss,"home"),xg:sv(xg,"home"),shotsOT:sv(soT,"home"),shots:sv(shots,"home"),blocked:sv(blk,"home"),saves:sv(sav,"home"),corners:sv(corn,"home"),offsides:sv(offs,"home"),bigChances:sv(bc,"home"),attacks:sv(atk,"home"),fouls:sv(fouls,"home"),yellows:sv(yel,"home"),reds:sv(red,"home"),passes:sv(pass,"home"),passAcc:sv(passA,"home"),tackles:sv(tack,"home")},away:{possession:sv(poss,"away"),xg:sv(xg,"away"),shotsOT:sv(soT,"away"),shots:sv(shots,"away"),blocked:sv(blk,"away"),saves:sv(sav,"away"),corners:sv(corn,"away"),offsides:sv(offs,"away"),bigChances:sv(bc,"away"),attacks:sv(atk,"away"),fouls:sv(fouls,"away"),yellows:sv(yel,"away"),reds:sv(red,"away"),passes:sv(pass,"away"),passAcc:sv(passA,"away"),tackles:sv(tack,"away")}};
+        }
       }
-      try{
-        const ir=await fetch(`https://api.sofascore.com/api/v1/event/${sofaEv.id}/incidents`);
-        const ij=await ir.json();
-        events=(ij.incidents||[])
+      const ij=await sofaFetch(`/event/${sofaEv.id}/incidents`);
+      if(ij?.incidents){
+        events=(ij.incidents)
           .filter(inc=>["goal","card","substitution","missedPenalty","penalty"].includes(inc.incidentType))
           .filter(inc=>inc.incidentType!=="penalty"||(inc.incidentClass==="missed"||inc.incidentClass==="saved"))
           .map(inc=>({
@@ -2680,10 +2689,9 @@ async function fetchMatchDetail(gm){
             playerOut:inc.playerOut?.name||"",assist:inc.assist1?.name||"",
             isHome:inc.isHome,homeScore:inc.homeScore,awayScore:inc.awayScore,
           }));
-      }catch(e){}
-      try{
-        const lr=await fetch(`https://api.sofascore.com/api/v1/event/${sofaEv.id}/lineups`);
-        const lj=await lr.json();
+      }
+      const lj=await sofaFetch(`/event/${sofaEv.id}/lineups`);
+      if(lj?.home||lj?.away){
         const parseSide=side=>{
           const ps=(lj[side]?.players||[]).map(p=>({
             name:p.player?.name||"",
@@ -2694,9 +2702,9 @@ async function fetchMatchDetail(gm){
           return{formation:lj[side]?.formation||"",starters:ps.filter(p=>p.starter),subs:ps.filter(p=>!p.starter)};
         };
         lineup={home:parseSide("home"),away:parseSide("away")};
-      }catch(e){}
+      }
     }
-  }catch(e){}
+  }catch(e){console.warn("fetchMatchDetail SofaScore failed:",e.message);}
   return{stats,events,lineup};
 }
 
@@ -3208,8 +3216,11 @@ export default function App(){
               const d = await r.json();
               if (d.scorers?.length) {
                 const top = d.scorers[0];
-                const hebName = apiNameToHeb(top.player?.name||"") || top.player?.name || "";
+                const hebName = hePlayer(top.player?.name||"")||top.player?.name||"";
                 topScorerUpdate = { name: hebName, goals: top.goals ?? 0 };
+                // Store full top-10 list for the scorer leaderboard
+                const topScorers = d.scorers.slice(0,10).map(s=>({name:hePlayer(s.player?.name||"")||s.player?.name||"",goals:s.goals??0,team:SOFA_TEAM_MAP[s.team?.name||""]||s.team?.name||""}));
+                await updateDoc(doc(db,"mundial2026","game"),{"results.topScorers":topScorers});
                 await setDoc(doc(db,"mundial2026","sync"),{lastTopScorerSync:new Date().toISOString()},{merge:true});
               }
             } catch(e) {}
@@ -3522,6 +3533,13 @@ const STYLES=`
   .sched-clickable:hover{background:rgba(255,255,255,.04)}
   .match-stats-page{display:flex;flex-direction:column;gap:.8rem;max-width:680px;margin:0 auto}
   .stats-loading,.stats-empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:.9rem}
+  .scorers-list{background:var(--card2);border-radius:10px;overflow:hidden;margin:.4rem 0}
+  .scorers-row{display:grid;grid-template-columns:1.4rem 1fr auto auto;align-items:center;gap:.4rem;padding:.35rem .7rem;font-size:.8rem}
+  .scorers-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.04)}
+  .scorers-rank{color:var(--muted);font-size:.72rem;font-weight:700;text-align:center}
+  .scorers-name{font-weight:600}
+  .scorers-team{font-size:.7rem;color:var(--muted)}
+  .scorers-goals{font-weight:700;color:var(--green);text-align:left}
   .mdt-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card2);position:sticky;top:0;z-index:1}
   .mdt-tab{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:.78rem;font-weight:600;padding:.55rem .3rem;cursor:pointer;font-family:'Heebo',sans-serif;transition:color .15s,border-color .15s;white-space:nowrap}
   .mdt-tab.mdt-active{color:var(--green);border-bottom-color:var(--green)}
