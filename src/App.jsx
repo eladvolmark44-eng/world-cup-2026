@@ -896,22 +896,27 @@ function StatsPanel({stats}){
   );
 }
 
+const DEMO_STATS={home:{possession:"58",shotsOT:"4",shots:"9",blocked:"3",saves:"2",corners:"5",offsides:"2",fouls:"11",yellows:"1",passes:"412",passAcc:"84",tackles:"14"},away:{possession:"42",shotsOT:"2",shots:"6",blocked:"2",saves:"3",corners:"2",offsides:"1",fouls:"14",yellows:"2",passes:"298",passAcc:"77",tackles:"18"}};
+
 function MatchStatsView({match, res, teamNames}){
   const [stats,setStats]=useState(null);
   const [loading,setLoading]=useState(true);
   useEffect(()=>{
     fetchMatchStats(match).then(s=>{setStats(s);setLoading(false);});
   },[match.id]);
+  const displayStats=stats||(!loading?DEMO_STATS:null);
+  const isDemo=!loading&&!stats;
   return(
     <div className="match-stats-page">
       <MatchRow m={match} res={res} teamNames={teamNames}/>
       {loading?(
         <div className="stats-loading">טוען סטטיסטיקות...</div>
-      ):stats?(
-        <StatsPanel stats={stats}/>
-      ):(
-        <div className="stats-empty">אין סטטיסטיקות זמינות למשחק זה</div>
-      )}
+      ):displayStats?(
+        <>
+          {isDemo&&<div className="stats-demo-note">נתונים לדוגמא בלבד</div>}
+          <StatsPanel stats={displayStats}/>
+        </>
+      ):null}
     </div>
   );
 }
@@ -2854,6 +2859,7 @@ const STYLES=`
   .sched-clickable:hover{background:rgba(255,255,255,.04)}
   .match-stats-page{display:flex;flex-direction:column;gap:.8rem;max-width:680px;margin:0 auto}
   .stats-loading,.stats-empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:.9rem}
+  .stats-demo-note{text-align:center;font-size:.72rem;color:var(--muted);padding:.3rem 0 .1rem;border-top:1px solid var(--border);margin-top:.4rem}
   .stats-panel{margin-top:.55rem;border-top:1px solid var(--border);padding-top:.5rem;display:flex;flex-direction:column;gap:.28rem}
   .stats-row{display:grid;grid-template-columns:2.4rem 1fr 2.4rem;align-items:center;gap:.4rem}
   .stats-val-home{font-size:.8rem;font-weight:700;text-align:right;color:var(--green)}
