@@ -528,31 +528,36 @@ function SignInScreen({onSignIn,loading}){
 }
 
 function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
+  const cur=picks||[];
   const toggle=t=>{
     if(locked)return;
-    const cur=picks||[];
-    if(cur.includes(t))onChange(cur.filter(x=>x!==t));
-    else if(cur.length<2)onChange([...cur,t]);
+    const count=cur.filter(x=>x===t).length;
+    if(count===0&&cur.length<2)onChange([...cur,t]);
+    else if(count===1&&cur.length<2)onChange([...cur,t]); // allow same team twice
+    else if(count===2)onChange([]); // both slots same team → clear
+    else onChange(cur.filter(x=>x!==t)); // remove
   };
   return(
     <div className="group-box">
       <div className="group-label">בית {groupId}</div>
       <div className="team-grid">
         {teams.map(t=>{
-          const idx=(picks||[]).indexOf(t);
+          const count=cur.filter(x=>x===t).length;
+          const firstIdx=cur.indexOf(t);
           const resolved=teamNames?.[t]||t;
           const isUnknownPlayoff=resolved.startsWith("פלייאוף");
-          const maxReached=(picks||[]).length>=2 && idx<0;
+          const maxReached=cur.length>=2&&count===0;
           return(
-            <button key={t} className={`team-btn ${idx>=0?"sel":""} ${locked||isUnknownPlayoff||maxReached?"locked":""} ${isUnknownPlayoff?"playoff-tbd":""}`} onClick={()=>toggle(t)} disabled={isUnknownPlayoff||maxReached}>
-              {idx===0&&<span className="badge">1</span>}
-              {idx===1&&<span className="badge">2</span>}
+            <button key={t} className={`team-btn ${count>0?"sel":""} ${locked||isUnknownPlayoff||maxReached?"locked":""} ${isUnknownPlayoff?"playoff-tbd":""}`} onClick={()=>toggle(t)} disabled={isUnknownPlayoff||maxReached}>
+              {count===2&&<span className="badge">1+2</span>}
+              {count===1&&firstIdx===0&&<span className="badge">1</span>}
+              {count===1&&firstIdx===1&&<span className="badge">2</span>}
               {withFlag(resolved)}
             </button>
           );
         })}
       </div>
-      {!locked&&(picks||[]).length<2&&<div className="hint">בחר {2-(picks||[]).length} עוד</div>}
+      {!locked&&cur.length<2&&<div className="hint">בחר {2-cur.length} עוד</div>}
     </div>
   );
 }
