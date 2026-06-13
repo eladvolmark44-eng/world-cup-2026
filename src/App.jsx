@@ -383,7 +383,7 @@ function parseOddsData(fixtures){
       const aO=mkt.outcomes.find(o=>o.name===f.away_team);
       if(hO&&dO&&aO){hS+=hO.price;dS+=dO.price;aS+=aO.price;cnt++;}
     }
-    if(cnt>0) map[`${homeH}_${awayH}`]={home:(hS/cnt).toFixed(2),draw:(dS/cnt).toFixed(2),away:(aS/cnt).toFixed(2)};
+    if(cnt>0) map[`${homeH}_${awayH}`]={home:(hS/cnt).toFixed(2),draw:(dS/cnt).toFixed(2),away:(aS/cnt).toFixed(2),ts:Date.now()};
   }
   return map;
 }
@@ -641,6 +641,7 @@ function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
           <span className="odds-cell"><span className="odds-label">בית</span><span className="odds-val">{matchOdds.home}</span></span>
           <span className="odds-cell"><span className="odds-label">תיקו</span><span className="odds-val">{matchOdds.draw}</span></span>
           <span className="odds-cell"><span className="odds-label">חוץ</span><span className="odds-val">{matchOdds.away}</span></span>
+          {matchOdds.ts&&<span className="odds-ts">עודכן {new Date(matchOdds.ts).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</span>}
         </div>
       )}
       <div className="match-body">
@@ -955,6 +956,7 @@ function MatchRow({m, res, teamNames, odds, onClick}){
           <span className="odds-cell"><span className="odds-label">בית</span><span className="odds-val">{matchOdds.home}</span></span>
           <span className="odds-cell"><span className="odds-label">תיקו</span><span className="odds-val">{matchOdds.draw}</span></span>
           <span className="odds-cell"><span className="odds-label">חוץ</span><span className="odds-val">{matchOdds.away}</span></span>
+          {matchOdds.ts&&<span className="odds-ts">עודכן {new Date(matchOdds.ts).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</span>}
         </div>
       )}
     </div>
@@ -2479,6 +2481,7 @@ export default function App(){
   const [selectedPlayer,setSelectedPlayer]=useState(null);
   const [toast,setToast]=useState(null);
   const [odds,setOdds]=useState({});
+  const [oddsTs,setOddsTs]=useState(null);
   const [showProfileEdit,setShowProfileEdit]=useState(false);
   const [showWinner,setShowWinner]=useState(false);
   const [liveStats,setLiveStats]=useState({});
@@ -2492,9 +2495,9 @@ export default function App(){
     let oddsTimer;
     function scheduleOddsPoll(){
       const delay=hasMatchWithinHour()?2*60*1000:hasMatchWithin3Hours()?5*60*1000:15*60*1000;
-      oddsTimer=setTimeout(async()=>{const o=await fetchOdds();setOdds(o);scheduleOddsPoll();},delay);
+      oddsTimer=setTimeout(async()=>{const o=await fetchOdds();if(Object.keys(o).length){setOdds(o);setOddsTs(Date.now());}scheduleOddsPoll();},delay);
     }
-    const init=setTimeout(()=>fetchOdds().then(setOdds), 3000);
+    const init=setTimeout(()=>fetchOdds().then(o=>{if(Object.keys(o).length){setOdds(o);setOddsTs(Date.now());}}), 3000);
     scheduleOddsPoll();
     return()=>{clearTimeout(init);clearTimeout(oddsTimer);};
   },[]);
@@ -3220,7 +3223,8 @@ const STYLES=`
   .match-row.locked-row{opacity:.75}
   .match-row.correct-row{border-right:3px solid var(--green)}
   .match-row.hidden-row{opacity:.6}
-  .match-odds{display:flex;justify-content:center;gap:.5rem;margin-bottom:.4rem;direction:rtl}
+  .match-odds{display:flex;justify-content:center;align-items:center;gap:.5rem;margin-bottom:.4rem;direction:rtl;flex-wrap:wrap}
+  .odds-ts{font-size:.6rem;color:rgba(255,255,255,.35);width:100%;text-align:center;margin-top:-.1rem}
   .odds-cell{display:flex;flex-direction:column;align-items:center;background:rgba(255,206,0,.08);border:1px solid rgba(255,206,0,.2);border-radius:8px;padding:.2rem .55rem;min-width:3.2rem}
   .odds-label{font-size:.6rem;color:var(--muted);font-weight:600}
   .odds-val{font-size:.85rem;font-weight:800;color:#f0c040}
