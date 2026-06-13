@@ -1397,17 +1397,19 @@ function getLastCompletedMatchDay(results){
 }
 
 const GIPHY_KEY="dc6zaTOxFJmzC";
-const GIPHY_TAGS={
-  first:["winner celebration","champion trophy","first place winner","gold medal celebration"],
-  second:["almost there","runner up","silver medal","close but no cigar"],
-  third:["bronze medal","third place","podium"],
-  last:["epic fail funny","loser funny","sad funny","fail"],
-  middle:["meh reaction","shrug","whatever reaction","average"],
+const TENOR_KEY="LIVDSRZULELA";
+const GIF_TAGS={
+  first:["celebration","winner","champion","trophy"],
+  second:["applause","almost","runner up"],
+  third:["bronze","podium","third place"],
+  last:["fail","loser","sad funny","epic fail"],
+  middle:["shrug","meh","whatever"],
 };
 
 function DailyRankAnimation({data,onClose}){
   const {date,sym,score,rank}=data;
-  const dayVariant=ALL_MATCH_DATES.indexOf(date)%3;
+  const testMode=new URLSearchParams(window.location.search).has("testdra");
+  const dayVariant=testMode?Math.floor(Math.random()*3):ALL_MATCH_DATES.indexOf(date)%3;
   let presetGroup,tagGroup;
   if(sym==="🥇"){presetGroup=DAILY_ANIM_PRESETS.first;tagGroup="first";}
   else if(sym==="🥈"){presetGroup=DAILY_ANIM_PRESETS.second;tagGroup="second";}
@@ -1415,15 +1417,34 @@ function DailyRankAnimation({data,onClose}){
   else if(sym==="🗑️"){presetGroup=DAILY_ANIM_PRESETS.last;tagGroup="last";}
   else{presetGroup=DAILY_ANIM_PRESETS.middle;tagGroup="middle";}
   const p=presetGroup[dayVariant];
-  const tag=GIPHY_TAGS[tagGroup][dayVariant%GIPHY_TAGS[tagGroup].length];
+  const tagList=GIF_TAGS[tagGroup];
+  const tag=tagList[Math.floor(Math.random()*tagList.length)];
 
   const [gifUrl,setGifUrl]=useState(null);
   useEffect(()=>{
     let cancelled=false;
-    fetch(`https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_KEY}&tag=${encodeURIComponent(tag)}&rating=g`)
-      .then(r=>r.json())
-      .then(j=>{if(!cancelled&&j?.data?.images?.fixed_height?.url)setGifUrl(j.data.images.fixed_height.url);})
-      .catch(()=>{});
+    async function fetchGif(){
+      // Try Giphy first
+      try{
+        const r=await fetch(`https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_KEY}&tag=${encodeURIComponent(tag)}&rating=g`);
+        const j=await r.json();
+        const imgs=j?.data?.images;
+        const url=imgs?.fixed_height?.url||imgs?.downsized?.url||imgs?.original?.url;
+        if(!cancelled&&url){setGifUrl(url);return;}
+      }catch(e){/* fall through */}
+      // Fallback: Tenor
+      try{
+        const r2=await fetch(`https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(tag)}&key=${TENOR_KEY}&client_key=worldcup2026&limit=20&contentfilter=medium`);
+        const j2=await r2.json();
+        const results=j2?.results||[];
+        if(results.length&&!cancelled){
+          const item=results[Math.floor(Math.random()*results.length)];
+          const url=item?.media_formats?.gif?.url||item?.media_formats?.mediumgif?.url;
+          if(url)setGifUrl(url);
+        }
+      }catch(e){/* show emoji fallback */}
+    }
+    fetchGif();
     return()=>{cancelled=true;};
   },[]);
 
