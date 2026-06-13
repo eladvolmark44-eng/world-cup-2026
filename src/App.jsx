@@ -269,12 +269,18 @@ function formatKickoffTime(kickoff) {
 // ── Betting Odds (The Odds API) ─────────────────────────────────────────────
 const ODDS_API_KEY    = "91d6f91ae83212b240af46baba466379";
 const ODDS_SPORT      = "soccer_fifa_world_cup";
-const ODDS_TTL_NORMAL = 60 * 60 * 1000;   // 1h when no match soon
-const ODDS_TTL_SOON   = 5 * 60 * 1000;    // 5min when match within 1h
+const ODDS_TTL_NORMAL = 30 * 60 * 1000;   // 30min — no match soon
+const ODDS_TTL_CLOSE  = 10 * 60 * 1000;   // 10min — match within 3h
+const ODDS_TTL_SOON   =  2 * 60 * 1000;   //  2min — match within 1h / live
 function hasMatchWithinHour(){
   const n=Date.now();
-  // upcoming within 1h OR recently started (within 2h) — so TTL stays short during live matches
   const relevant=t=>t>n-2*60*60*1000&&t<=n+60*60*1000;
+  if(GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;return relevant(new Date(m.kickoff).getTime());}))return true;
+  return _koKickoffs.some(t=>relevant(t));
+}
+function hasMatchWithin3Hours(){
+  const n=Date.now();
+  const relevant=t=>t>n-2*60*60*1000&&t<=n+3*60*60*1000;
   if(GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;return relevant(new Date(m.kickoff).getTime());}))return true;
   return _koKickoffs.some(t=>relevant(t));
 }
@@ -383,7 +389,7 @@ function parseOddsData(fixtures){
 }
 async function fetchOdds(){
   try{
-    const ttl=hasMatchWithinHour()?ODDS_TTL_SOON:ODDS_TTL_NORMAL;
+    const ttl=hasMatchWithinHour()?ODDS_TTL_SOON:hasMatchWithin3Hours()?ODDS_TTL_CLOSE:ODDS_TTL_NORMAL;
     const cached=localStorage.getItem("wc2026_odds_v1");
     if(cached){const{data,ts}=JSON.parse(cached);if(Date.now()-ts<ttl)return parseOddsData(data);}
     const ctrl=new AbortController();
@@ -2482,10 +2488,15 @@ export default function App(){
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
   useEffect(()=>{
-    // Delay odds fetch so Firebase+Auth load first, then fill in odds silently
+    // Adaptive odds polling: 2min near match, 5min within 3h, 15min otherwise
+    let oddsTimer;
+    function scheduleOddsPoll(){
+      const delay=hasMatchWithinHour()?2*60*1000:hasMatchWithin3Hours()?5*60*1000:15*60*1000;
+      oddsTimer=setTimeout(async()=>{const o=await fetchOdds();setOdds(o);scheduleOddsPoll();},delay);
+    }
     const init=setTimeout(()=>fetchOdds().then(setOdds), 3000);
-    const poll=setInterval(()=>fetchOdds().then(setOdds), 5*60*1000);
-    return()=>{clearTimeout(init);clearInterval(poll);};
+    scheduleOddsPoll();
+    return()=>{clearTimeout(init);clearTimeout(oddsTimer);};
   },[]);
 
   useEffect(()=>{
