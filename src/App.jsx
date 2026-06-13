@@ -851,6 +851,43 @@ function MatchRow({m, res, teamNames, odds}){
   );
 }
 
+function StatsPanel({stats}){
+  const rows=[
+    {key:"possession",label:"החזקה",pct:true},
+    {key:"shotsOT",label:"בעיטות לשער"},
+    {key:"shots",label:"סה״כ בעיטות"},
+    {key:"corners",label:"פינות"},
+    {key:"fouls",label:"פאולים"},
+    {key:"yellows",label:"צהובים"},
+  ];
+  return(
+    <div className="stats-panel">
+      {rows.map(({key,label,pct})=>{
+        const hv=parseFloat(stats.home[key])||0;
+        const av=parseFloat(stats.away[key])||0;
+        const total=hv+av||1;
+        const hPct=Math.round((hv/total)*100);
+        const aPct=100-hPct;
+        const hVal=pct?`${Math.round(hv)}%`:String(Math.round(hv)||stats.home[key]);
+        const aVal=pct?`${Math.round(av)}%`:String(Math.round(av)||stats.away[key]);
+        return(
+          <div key={key} className="stats-row">
+            <span className="stats-val-home">{hVal}</span>
+            <div className="stats-center">
+              <span className="stats-label">{label}</span>
+              <div className="stats-bar" dir="ltr">
+                <div className="stats-bar-away" style={{width:`${aPct}%`}}/>
+                <div className="stats-bar-home" style={{width:`${hPct}%`}}/>
+              </div>
+            </div>
+            <span className="stats-val-away">{aVal}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function DateNav({selectedDate,onChange}){
   const MONTHS=["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
   const parseDate=s=>{const [d,m]=s.split('/');return new Date(2026,parseInt(m)-1,parseInt(d)).getTime();};
@@ -1258,6 +1295,9 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
   };
   const nowTs=Date.now();
   const liveMatches=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
+  const lastDoneMatch=GROUP_MATCHES
+    .filter(m=>results.matches?.[m.id]?.home!=null&&!results.matches?.[m.id]?.live)
+    .sort((a,b)=>new Date(b.kickoff).getTime()-new Date(a.kickoff).getTime())[0]||null;
   const nextMatch=liveMatches.length===0&&GROUP_MATCHES
     .filter(m=>{
       if(!m.kickoff)return false;
@@ -1291,6 +1331,7 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
             return(
               <div key={m.id} className="results-match-block">
                 <MatchRow m={m} res={real} teamNames={teamNames}/>
+                {liveStats[m.id]&&<StatsPanel stats={liveStats[m.id]}/>}
                 <div className="rev-bets-row">
                   {participants.map(p=>{
                     const bet=p.bets?.matches?.[m.id];
@@ -1317,6 +1358,13 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
         <div className="home-card">
           <div className="home-card-title">⏰ המשחק הבא</div>
           <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds}/>
+        </div>
+      )}
+      {liveMatches.length===0&&lastDoneMatch&&liveStats[lastDoneMatch.id]&&(
+        <div className="home-card">
+          <div className="home-card-title">📊 סטטיסטיקות משחק אחרון</div>
+          <MatchRow m={lastDoneMatch} res={results.matches?.[lastDoneMatch.id]} teamNames={teamNames}/>
+          <StatsPanel stats={liveStats[lastDoneMatch.id]}/>
         </div>
       )}
       <div className="home-card">
@@ -1956,13 +2004,16 @@ function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
 }
 
 
-async function syncRedCards(){
+// Fetches live match data (red cards + statistics) from ESPN, falls back to SofaScore for stats.
+// setLiveStats: React setState callback for the stats panel; pass null to skip stats.
+async function syncMatchData(setLiveStats){
   try{
     const gameSnap=await getDoc(doc(db,"mundial2026","game"));
     const cur=gameSnap.exists()?gameSnap.data():{};
     const matches=cur.results?.matches||{};
     const nowMs=Date.now();
-    // Include live matches AND recently-played matches (kickoff within last 4h)
+    const heb=n=>SOFA_TEAM_MAP[n]||n;
+
     const activeMatchIds=Object.entries(matches).filter(([id,m])=>{
       if(m.live)return true;
       if(m.home!=null){
@@ -1971,23 +2022,26 @@ async function syncRedCards(){
       }
       return false;
     }).map(([id])=>id);
+
+    // Always include the last completed match so stats are visible after final whistle
+    const lastDone=GROUP_MATCHES
+      .filter(gm=>matches[gm.id]?.home!=null&&!matches[gm.id]?.live)
+      .sort((a,b)=>new Date(b.kickoff).getTime()-new Date(a.kickoff).getTime())[0];
+    if(lastDone&&!activeMatchIds.includes(lastDone.id))activeMatchIds.push(lastDone.id);
+
     if(!activeMatchIds.length)return;
 
-    const heb=n=>SOFA_TEAM_MAP[n]||n;
-
-    // One ESPN scoreboard call — gives event IDs for all current WC matches
     let espnEvents=[];
     try{
       const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard");
       const d=await r.json();
       espnEvents=d.events||[];
-    }catch(e){console.warn("ESPN scoreboard fetch failed:",e.message);return;}
+    }catch(e){console.warn("ESPN scoreboard failed:",e.message);return;}
 
-    const updates={};
+    const redUpdates={};
     for(const matchId of activeMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
-      // Find ESPN event by matching home/away team names
       const espnEv=espnEvents.find(e=>{
         const comp=e.competitions?.[0];
         const ht=heb(comp?.competitors?.find(c=>c.homeAway==="home")?.team?.displayName||"");
@@ -1995,26 +2049,63 @@ async function syncRedCards(){
         return ht===gm.home&&at===gm.away;
       });
       if(!espnEv?.id){console.warn("No ESPN event for",gm.home,"vs",gm.away);continue;}
+      let sd=null;
       try{
         const sr=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${espnEv.id}`);
-        const sd=await sr.json();
-        const homeTeamId=espnEv.competitions[0].competitors.find(c=>c.homeAway==="home")?.team?.id;
-        const reds={home:0,away:0};
-        for(const ev of(sd.keyEvents||[])){
-          const txt=(ev.type?.text||ev.text||"").toLowerCase();
-          if(!txt.includes("red"))continue;
-          if(ev.team?.id===homeTeamId)reds.home++; else reds.away++;
+        sd=await sr.json();
+      }catch(e){console.warn("ESPN summary failed:",e.message);continue;}
+
+      // Red cards
+      const homeTeamId=espnEv.competitions[0].competitors.find(c=>c.homeAway==="home")?.team?.id;
+      const reds={home:0,away:0};
+      for(const ev of(sd.keyEvents||[])){
+        const txt=(ev.type?.text||ev.text||"").toLowerCase();
+        if(!txt.includes("red"))continue;
+        if(ev.team?.id===homeTeamId)reds.home++; else reds.away++;
+      }
+      const prev=matches[matchId]?.reds||{home:0,away:0};
+      if(reds.home!==prev.home||reds.away!==prev.away)
+        redUpdates[`results.matches.${matchId}.reds`]=reds;
+
+      // Statistics
+      if(setLiveStats){
+        const homeT=sd.boxscore?.teams?.find(t=>t.homeAway==="home");
+        const awayT=sd.boxscore?.teams?.find(t=>t.homeAway==="away");
+        if(homeT?.statistics?.length&&awayT?.statistics?.length){
+          const g=(team,name)=>team.statistics.find(s=>s.name===name)?.displayValue||"0";
+          setLiveStats(prev=>({...prev,[matchId]:{
+            home:{possession:g(homeT,"possessionPct"),shotsOT:g(homeT,"shotsOnTarget"),shots:g(homeT,"totalShots"),corners:g(homeT,"cornerKicks"),fouls:g(homeT,"foulsCommitted"),yellows:g(homeT,"yellowCards")},
+            away:{possession:g(awayT,"possessionPct"),shotsOT:g(awayT,"shotsOnTarget"),shots:g(awayT,"totalShots"),corners:g(awayT,"cornerKicks"),fouls:g(awayT,"foulsCommitted"),yellows:g(awayT,"yellowCards")}
+          }}));
+        } else {
+          // SofaScore fallback for statistics
+          try{
+            const iso=new Date(gm.kickoff||Date.now()).toISOString().slice(0,10);
+            const sr2=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
+            const sd2=await sr2.json();
+            const ev=(sd2.events||[]).find(e=>heb(e.homeTeam?.name||"")===gm.home&&heb(e.awayTeam?.name||"")===gm.away);
+            if(ev?.id){
+              const statR=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/statistics`);
+              const statD=await statR.json();
+              const all=statD.statistics?.find(s=>s.period==="ALL");
+              if(all){
+                const f=name=>{for(const grp of(all.groups||[])){const i=grp.statisticsItems?.find(x=>x.name===name);if(i)return i;}return null;};
+                const poss=f("Ball possession"),shots=f("Total shots"),soT=f("Shots on target"),corn=f("Corner kicks"),fouls=f("Fouls"),yel=f("Yellow cards");
+                setLiveStats(prev=>({...prev,[matchId]:{
+                  home:{possession:poss?.home||"0",shotsOT:soT?.home||"0",shots:shots?.home||"0",corners:corn?.home||"0",fouls:fouls?.home||"0",yellows:yel?.home||"0"},
+                  away:{possession:poss?.away||"0",shotsOT:soT?.away||"0",shots:shots?.away||"0",corners:corn?.away||"0",fouls:fouls?.away||"0",yellows:yel?.away||"0"}
+                }}));
+              }
+            }
+          }catch(e){console.warn("SofaScore stats fallback failed:",e.message);}
         }
-        const prev=matches[matchId]?.reds||{home:0,away:0};
-        if(reds.home!==prev.home||reds.away!==prev.away)
-          updates[`results.matches.${matchId}.reds`]=reds;
-      }catch(e){console.warn("ESPN summary failed for",gm.home,"vs",gm.away,":",e.message);}
+      }
     }
-    if(Object.keys(updates).length){
-      console.log("Red card updates:",updates);
-      await updateDoc(doc(db,"mundial2026","game"),updates);
+    if(Object.keys(redUpdates).length){
+      console.log("Red card updates:",redUpdates);
+      await updateDoc(doc(db,"mundial2026","game"),redUpdates);
     }
-  }catch(e){console.warn("Red card sync failed:",e.message);}
+  }catch(e){console.warn("syncMatchData failed:",e.message);}
 }
 
 export default function App(){
@@ -2031,6 +2122,7 @@ export default function App(){
   const [odds,setOdds]=useState({});
   const [showProfileEdit,setShowProfileEdit]=useState(false);
   const [showWinner,setShowWinner]=useState(false);
+  const [liveStats,setLiveStats]=useState({});
   const toastRef=useRef(null);
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
@@ -2423,10 +2515,10 @@ export default function App(){
     };
 
     syncScores(auth.currentUser?.uid||"anon");
-    syncRedCards();
+    syncMatchData(setLiveStats);
     const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 15 * 1000);
-    const redPoll = setInterval(()=>syncRedCards(), 60 * 1000);
-    return()=>{u1();u2();clearInterval(poll);clearInterval(redPoll);};
+    const dataPoll = setInterval(()=>syncMatchData(setLiveStats), 30 * 1000);
+    return()=>{u1();u2();clearInterval(poll);clearInterval(dataPoll);};
   },[]);
 
   const handleSignIn=async()=>{
@@ -2643,6 +2735,15 @@ const STYLES=`
   .tab-ref-img{width:1.8rem;height:1.8rem;object-fit:contain}
   .redcard{display:inline-block;width:9px;height:13px;background:#ff6060;border-radius:2px;flex-shrink:0;vertical-align:middle}
   .rc-badge{display:inline-flex;align-items:center;gap:2px;margin-right:3px}
+  .stats-panel{margin-top:.55rem;border-top:1px solid var(--border);padding-top:.5rem;display:flex;flex-direction:column;gap:.28rem}
+  .stats-row{display:grid;grid-template-columns:2.4rem 1fr 2.4rem;align-items:center;gap:.4rem}
+  .stats-val-home{font-size:.8rem;font-weight:700;text-align:right;color:var(--green)}
+  .stats-val-away{font-size:.8rem;font-weight:700;text-align:left;color:var(--red)}
+  .stats-center{display:flex;flex-direction:column;gap:.12rem;align-items:center}
+  .stats-label{font-size:.7rem;color:var(--muted);white-space:nowrap}
+  .stats-bar{width:100%;height:4px;border-radius:2px;overflow:hidden;background:rgba(255,255,255,.08);display:flex}
+  .stats-bar-away{background:var(--red);flex-shrink:0}
+  .stats-bar-home{background:var(--green);flex-shrink:0}
   .main-tab.active{color:var(--green);border-bottom-color:var(--green)}
   .main-body{flex:1;overflow-y:auto;padding:1rem}
   .section{display:flex;flex-direction:column;gap:1rem;max-width:680px;margin:0 auto}
