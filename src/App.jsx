@@ -1407,9 +1407,10 @@ const GIF_TAGS={
 };
 
 function DailyRankAnimation({data,onClose}){
-  const {date,sym,score,rank}=data;
-  const testMode=new URLSearchParams(window.location.search).has("testdra");
-  const dayVariant=testMode?Math.floor(Math.random()*3):ALL_MATCH_DATES.indexOf(date)%3;
+  const {date,sym,score,rank,isTest}=data;
+  // Stable random values (useRef so they don't change on re-render)
+  const dayVariant=useRef(isTest?Math.floor(Math.random()*3):ALL_MATCH_DATES.indexOf(date)%3).current;
+  const tagRoll=useRef(Math.random()).current;
   let presetGroup,tagGroup;
   if(sym==="🥇"){presetGroup=DAILY_ANIM_PRESETS.first;tagGroup="first";}
   else if(sym==="🥈"){presetGroup=DAILY_ANIM_PRESETS.second;tagGroup="second";}
@@ -1418,7 +1419,7 @@ function DailyRankAnimation({data,onClose}){
   else{presetGroup=DAILY_ANIM_PRESETS.middle;tagGroup="middle";}
   const p=presetGroup[dayVariant];
   const tagList=GIF_TAGS[tagGroup];
-  const tag=tagList[Math.floor(Math.random()*tagList.length)];
+  const tag=tagList[Math.floor(tagRoll*tagList.length)];
 
   const [gifUrl,setGifUrl]=useState(null);
   useEffect(()=>{
@@ -1432,14 +1433,14 @@ function DailyRankAnimation({data,onClose}){
         const url=imgs?.fixed_height?.url||imgs?.downsized?.url||imgs?.original?.url;
         if(!cancelled&&url){setGifUrl(url);return;}
       }catch(e){/* fall through */}
-      // Fallback: Tenor
+      // Fallback: Tenor v1
       try{
-        const r2=await fetch(`https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(tag)}&key=${TENOR_KEY}&client_key=worldcup2026&limit=20&contentfilter=medium`);
+        const r2=await fetch(`https://api.tenor.com/v1/search?q=${encodeURIComponent(tag)}&key=${TENOR_KEY}&limit=20&media_filter=minimal`);
         const j2=await r2.json();
         const results=j2?.results||[];
         if(results.length&&!cancelled){
           const item=results[Math.floor(Math.random()*results.length)];
-          const url=item?.media_formats?.gif?.url||item?.media_formats?.mediumgif?.url;
+          const url=item?.media?.[0]?.gif?.url||item?.media?.[0]?.mediumgif?.url;
           if(url)setGifUrl(url);
         }
       }catch(e){/* show emoji fallback */}
@@ -2904,7 +2905,7 @@ export default function App(){
     if(myIdx<0)return;
     const sym=rankSymbol(ranked,myIdx);
     if(!testMode)localStorage.setItem(key,"1");
-    setTimeout(()=>setDailyRankAnim({date:lastDay,sym,score:ranked[myIdx].score,rank:myIdx}),1500);
+    setTimeout(()=>setDailyRankAnim({date:lastDay,sym,score:ranked[myIdx].score,rank:myIdx,isTest:testMode}),1500);
   },[authUser?.uid,gameLoading,game?.results,participants.length]);
 
   const handleSignIn=async()=>{
