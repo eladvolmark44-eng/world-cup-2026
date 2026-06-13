@@ -691,20 +691,69 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
           })}
         </div>
       )}
-      {tab==="special"&&(
-        <div className="scroll-area special-area">
-          {[
-            {label:"🏆 אלופה",key:"champion",can:canSeeSpecialBet(viewerUid,player.uid)},
-            {label:"👟 מלך שערים",key:"goldenBoot",can:canSeeSpecialBet(viewerUid,player.uid)},
-            {label:"⚽ ניחוש שערים",key:"totalGoals",can:canSeeSpecialBet(viewerUid,player.uid)},
-          ].map(({label,key,can})=>(
-            <div key={key} className="special-row">
-              <label>{label}</label>
-              <div className={`special-val ${!can?"hidden-val":""}`}>{can?(key==="goldenBoot"?withStrikerFlag(bets[key]):bets[key]||"—"):"🔒 יחשף בשריקת הפתיחה של המשחק הראשון"}</div>
-            </div>
-          ))}
-        </div>
-      )}
+      {tab==="special"&&(()=>{
+        // Betting accuracy stats from all finished group matches
+        const finished=GROUP_MATCHES.filter(m=>{
+          const r=results.matches?.[m.id];
+          return r?.home!=null&&r?.away!=null&&!r?.live;
+        });
+        let tot=0,nExact=0,nDir=0,nWrong=0,nMissed=0;
+        for(const m of finished){
+          const bet=bets.matches?.[m.id];
+          const real=results.matches[m.id];
+          if(!bet||bet.home==null){nMissed++;continue;}
+          tot++;
+          const isDir=getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
+          const isExact=isDir&&+bet.home===+real.home&&+bet.away===+real.away;
+          if(isExact)nExact++;
+          else if(isDir)nDir++;
+          else nWrong++;
+        }
+        const pct=n=>tot>0?Math.round(n/tot*100):0;
+        const can=canSeeSpecialBet(viewerUid,player.uid);
+        return(
+          <div className="scroll-area special-area">
+            {finished.length>0&&(
+              <div className="bet-stats-card">
+                <div className="bet-stats-title">📊 סטטיסטיקת ניחושים</div>
+                <div className="bet-stats-grid">
+                  <div className="bsg-item bsg-exact">
+                    <span className="bsg-num">{nExact}</span>
+                    <span className="bsg-label">🎯 מדויק</span>
+                    <span className="bsg-pct">{pct(nExact)}%</span>
+                  </div>
+                  <div className="bsg-item bsg-dir">
+                    <span className="bsg-num">{nDir}</span>
+                    <span className="bsg-label">✓ כיוון</span>
+                    <span className="bsg-pct">{pct(nDir)}%</span>
+                  </div>
+                  <div className="bsg-item bsg-wrong">
+                    <span className="bsg-num">{nWrong}</span>
+                    <span className="bsg-label">✗ טעות</span>
+                    <span className="bsg-pct">{pct(nWrong)}%</span>
+                  </div>
+                </div>
+                <div className="bsg-bar" dir="ltr">
+                  {nExact>0&&<div className="bsg-bar-exact" style={{flex:nExact}}/>}
+                  {nDir>0&&<div className="bsg-bar-dir" style={{flex:nDir}}/>}
+                  {nWrong>0&&<div className="bsg-bar-wrong" style={{flex:nWrong}}/>}
+                </div>
+                <div className="bsg-footer">מתוך {tot} ניחושים ({finished.length} משחקים, {nMissed} ללא ניחוש)</div>
+              </div>
+            )}
+            {[
+              {label:"🏆 אלופה",key:"champion",can},
+              {label:"👟 מלך שערים",key:"goldenBoot",can},
+              {label:"⚽ ניחוש שערים",key:"totalGoals",can},
+            ].map(({label,key,can})=>(
+              <div key={key} className="special-row">
+                <label>{label}</label>
+                <div className={`special-val ${!can?"hidden-val":""}`}>{can?(key==="goldenBoot"?withStrikerFlag(bets[key]):bets[key]||"—"):"🔒 יחשף בשריקת הפתיחה של המשחק הראשון"}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -3035,6 +3084,21 @@ const STYLES=`
   .sched-score{background:rgba(0,216,127,.15);color:var(--green);border-radius:7px;padding:.12rem .65rem;font-weight:800;font-size:.88rem}
   .sched-winner{color:var(--green)}
   .special-area{display:flex;flex-direction:column;gap:.9rem}
+  .bet-stats-card{background:var(--card2);border-radius:14px;padding:.85rem 1rem;display:flex;flex-direction:column;gap:.6rem}
+  .bet-stats-title{font-weight:700;font-size:.9rem;text-align:right}
+  .bet-stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem}
+  .bsg-item{display:flex;flex-direction:column;align-items:center;gap:.18rem;background:var(--card);border-radius:10px;padding:.5rem .3rem}
+  .bsg-num{font-size:1.5rem;font-weight:800;line-height:1}
+  .bsg-label{font-size:.7rem;color:var(--muted)}
+  .bsg-pct{font-size:.78rem;font-weight:700}
+  .bsg-exact .bsg-num,.bsg-exact .bsg-pct{color:var(--green)}
+  .bsg-dir .bsg-num,.bsg-dir .bsg-pct{color:#60a5fa}
+  .bsg-wrong .bsg-num,.bsg-wrong .bsg-pct{color:var(--red)}
+  .bsg-bar{height:6px;border-radius:3px;overflow:hidden;display:flex;background:rgba(255,255,255,.06)}
+  .bsg-bar-exact{background:var(--green)}
+  .bsg-bar-dir{background:#60a5fa}
+  .bsg-bar-wrong{background:var(--red)}
+  .bsg-footer{font-size:.7rem;color:var(--muted);text-align:center}
   .special-row{display:flex;flex-direction:column;gap:.38rem}
   .special-row label{font-weight:700;font-size:.88rem}
   .special-row select,.special-row input{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:.62rem 1rem;font-family:'Heebo',sans-serif;font-size:.92rem;outline:none;width:100%}
