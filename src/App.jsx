@@ -1367,13 +1367,18 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onSele
           <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds}/>
         </div>
       )}
-      {liveMatches.length===0&&lastDoneMatch&&liveStats[lastDoneMatch.id]&&(
-        <div className="home-card">
-          <div className="home-card-title">📊 סטטיסטיקות משחק אחרון</div>
-          <MatchRow m={lastDoneMatch} res={results.matches?.[lastDoneMatch.id]} teamNames={teamNames}/>
-          <StatsPanel stats={liveStats[lastDoneMatch.id]}/>
-        </div>
-      )}
+      {liveMatches.length===0&&lastDoneMatch&&(()=>{
+        const DEMO_STATS={home:{possession:"58",shotsOT:"4",shots:"9",blocked:"3",saves:"2",corners:"5",offsides:"2",fouls:"11",yellows:"1",passes:"412",passAcc:"84",tackles:"14"},away:{possession:"42",shotsOT:"2",shots:"6",blocked:"2",saves:"3",corners:"2",offsides:"1",fouls:"14",yellows:"2",passes:"298",passAcc:"77",tackles:"18"}};
+        const statsToShow=liveStats[lastDoneMatch.id]||DEMO_STATS;
+        const isDemo=!liveStats[lastDoneMatch.id];
+        return(
+          <div className="home-card">
+            <div className="home-card-title">📊 סטטיסטיקות משחק אחרון{isDemo&&<span style={{fontSize:".7rem",color:"var(--muted)",marginRight:".4rem"}}> (דמו)</span>}</div>
+            <MatchRow m={lastDoneMatch} res={results.matches?.[lastDoneMatch.id]} teamNames={teamNames}/>
+            <StatsPanel stats={statsToShow}/>
+          </div>
+        );
+      })()}
       <div className="home-card">
         <div className="home-card-title">🏆 טבלת דירוג</div>
         <div className="prizes-row" style={{marginBottom:".6rem"}}>
