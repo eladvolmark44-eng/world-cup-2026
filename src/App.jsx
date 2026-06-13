@@ -856,23 +856,31 @@ function StatsPanel({stats}){
     {key:"possession",label:"החזקה",pct:true},
     {key:"shotsOT",label:"בעיטות לשער"},
     {key:"shots",label:"סה״כ בעיטות"},
+    {key:"blocked",label:"בעיטות חסומות"},
+    {key:"saves",label:"הצלות שוער"},
     {key:"corners",label:"פינות"},
+    {key:"offsides",label:"נבדלים"},
     {key:"fouls",label:"פאולים"},
     {key:"yellows",label:"צהובים"},
+    {key:"passes",label:"מסירות"},
+    {key:"passAcc",label:"דיוק מסירות",pct:true},
+    {key:"tackles",label:"גבייה"},
   ];
   return(
     <div className="stats-panel">
       {rows.map(({key,label,pct})=>{
-        const hv=parseFloat(stats.home[key])||0;
-        const av=parseFloat(stats.away[key])||0;
+        const hRaw=stats.home[key];const aRaw=stats.away[key];
+        if(hRaw==null&&aRaw==null)return null;
+        const hv=parseFloat(hRaw)||0;
+        const av=parseFloat(aRaw)||0;
+        if(hv===0&&av===0)return null;
         const total=hv+av||1;
         const hPct=Math.round((hv/total)*100);
         const aPct=100-hPct;
-        const hVal=pct?`${Math.round(hv)}%`:String(Math.round(hv)||stats.home[key]);
-        const aVal=pct?`${Math.round(av)}%`:String(Math.round(av)||stats.away[key]);
+        const fmt=v=>pct?`${Math.round(v)}%`:String(Math.round(v));
         return(
           <div key={key} className="stats-row">
-            <span className="stats-val-home">{hVal}</span>
+            <span className="stats-val-home">{fmt(hv)}</span>
             <div className="stats-center">
               <span className="stats-label">{label}</span>
               <div className="stats-bar" dir="ltr">
@@ -880,7 +888,7 @@ function StatsPanel({stats}){
                 <div className="stats-bar-home" style={{width:`${hPct}%`}}/>
               </div>
             </div>
-            <span className="stats-val-away">{aVal}</span>
+            <span className="stats-val-away">{fmt(av)}</span>
           </div>
         );
       })}
@@ -1331,7 +1339,6 @@ function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, o
             return(
               <div key={m.id} className="results-match-block">
                 <MatchRow m={m} res={real} teamNames={teamNames}/>
-                {liveStats[m.id]&&<StatsPanel stats={liveStats[m.id]}/>}
                 <div className="rev-bets-row">
                   {participants.map(p=>{
                     const bet=p.bets?.matches?.[m.id];
@@ -2072,11 +2079,22 @@ async function syncMatchData(setLiveStats){
         const homeT=sd.boxscore?.teams?.find(t=>t.homeAway==="home");
         const awayT=sd.boxscore?.teams?.find(t=>t.homeAway==="away");
         if(homeT?.statistics?.length&&awayT?.statistics?.length){
-          const g=(team,name)=>team.statistics.find(s=>s.name===name)?.displayValue||"0";
-          setLiveStats(prev=>({...prev,[matchId]:{
-            home:{possession:g(homeT,"possessionPct"),shotsOT:g(homeT,"shotsOnTarget"),shots:g(homeT,"totalShots"),corners:g(homeT,"cornerKicks"),fouls:g(homeT,"foulsCommitted"),yellows:g(homeT,"yellowCards")},
-            away:{possession:g(awayT,"possessionPct"),shotsOT:g(awayT,"shotsOnTarget"),shots:g(awayT,"totalShots"),corners:g(awayT,"cornerKicks"),fouls:g(awayT,"foulsCommitted"),yellows:g(awayT,"yellowCards")}
-          }}));
+          const g=(team,name)=>{const s=team.statistics.find(s=>s.name===name);return s?.displayValue??null;};
+          const mkSide=t=>({
+            possession:g(t,"possessionPct"),
+            shotsOT:g(t,"shotsOnTarget"),
+            shots:g(t,"totalShots"),
+            blocked:g(t,"blockedShots"),
+            saves:g(t,"saves"),
+            corners:g(t,"cornerKicks"),
+            offsides:g(t,"offsides"),
+            fouls:g(t,"foulsCommitted"),
+            yellows:g(t,"yellowCards"),
+            passes:g(t,"totalPasses")??g(t,"passes"),
+            passAcc:g(t,"passAccuracyPct")??g(t,"passAccuracy"),
+            tackles:g(t,"tackles"),
+          });
+          setLiveStats(prev=>({...prev,[matchId]:{home:mkSide(homeT),away:mkSide(awayT)}}));
         } else {
           // SofaScore fallback for statistics
           try{
@@ -2090,10 +2108,15 @@ async function syncMatchData(setLiveStats){
               const all=statD.statistics?.find(s=>s.period==="ALL");
               if(all){
                 const f=name=>{for(const grp of(all.groups||[])){const i=grp.statisticsItems?.find(x=>x.name===name);if(i)return i;}return null;};
-                const poss=f("Ball possession"),shots=f("Total shots"),soT=f("Shots on target"),corn=f("Corner kicks"),fouls=f("Fouls"),yel=f("Yellow cards");
+                const poss=f("Ball possession"),shots=f("Total shots"),soT=f("Shots on target"),
+                  blk=f("Blocked shots"),sav=f("Goalkeeper saves"),corn=f("Corner kicks"),
+                  offs=f("Offsides"),fouls=f("Fouls"),yel=f("Yellow cards"),
+                  pass=f("Total passes")??f("Passes"),passA=f("Accurate passes %")??f("Pass accuracy"),
+                  tack=f("Tackles");
+                const side=(item,k)=>item?.[k]??null;
                 setLiveStats(prev=>({...prev,[matchId]:{
-                  home:{possession:poss?.home||"0",shotsOT:soT?.home||"0",shots:shots?.home||"0",corners:corn?.home||"0",fouls:fouls?.home||"0",yellows:yel?.home||"0"},
-                  away:{possession:poss?.away||"0",shotsOT:soT?.away||"0",shots:shots?.away||"0",corners:corn?.away||"0",fouls:fouls?.away||"0",yellows:yel?.away||"0"}
+                  home:{possession:side(poss,"home"),shotsOT:side(soT,"home"),shots:side(shots,"home"),blocked:side(blk,"home"),saves:side(sav,"home"),corners:side(corn,"home"),offsides:side(offs,"home"),fouls:side(fouls,"home"),yellows:side(yel,"home"),passes:side(pass,"home"),passAcc:side(passA,"home"),tackles:side(tack,"home")},
+                  away:{possession:side(poss,"away"),shotsOT:side(soT,"away"),shots:side(shots,"away"),blocked:side(blk,"away"),saves:side(sav,"away"),corners:side(corn,"away"),offsides:side(offs,"away"),fouls:side(fouls,"away"),yellows:side(yel,"away"),passes:side(pass,"away"),passAcc:side(passA,"away"),tackles:side(tack,"away")}
                 }}));
               }
             }
@@ -2517,7 +2540,7 @@ export default function App(){
     syncScores(auth.currentUser?.uid||"anon");
     syncMatchData(setLiveStats);
     const poll = setInterval(()=>syncScores(auth.currentUser?.uid||"anon"), 15 * 1000);
-    const dataPoll = setInterval(()=>syncMatchData(setLiveStats), 30 * 1000);
+    const dataPoll = setInterval(()=>syncMatchData(setLiveStats), 15 * 1000);
     return()=>{u1();u2();clearInterval(poll);clearInterval(dataPoll);};
   },[]);
 
