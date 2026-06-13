@@ -3555,7 +3555,7 @@ const STYLES=`
   .dra-particle{position:absolute;animation:dra-particle-fall linear infinite;line-height:1}
   .dra-card{background:rgba(0,0,0,.55);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,.18);border-radius:24px;padding:2rem 2rem 1.6rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.6rem;max-width:360px;width:100%;animation:dra-card-in .7s cubic-bezier(.34,1.56,.64,1) forwards;position:relative;z-index:1;box-shadow:0 24px 80px rgba(0,0,0,.6)}
   .dra-main-emoji{font-size:5rem;line-height:1;animation:dra-emoji-pop .8s cubic-bezier(.34,1.56,.64,1) forwards}
-  .dra-gif{width:100%;max-width:300px;height:200px;object-fit:cover;border-radius:12px;animation:dra-emoji-pop .8s cubic-bezier(.34,1.56,.64,1) forwards}
+  .dra-gif{width:100%;height:auto;max-height:240px;object-fit:contain;border-radius:12px;animation:dra-emoji-pop .8s cubic-bezier(.34,1.56,.64,1) forwards}
   .dra-rank-sym{font-size:2rem;margin-top:-.4rem}
   .dra-title{font-size:1.25rem;font-weight:900;color:#fff;animation:dra-title-in .5s .3s ease both;text-shadow:0 2px 8px rgba(0,0,0,.5)}
   .dra-score{font-size:2rem;font-weight:900;color:#FFD700;animation:dra-pulse 1.6s 1s ease-in-out infinite}
