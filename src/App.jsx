@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { PLAYER_NAME_HE, findPlayerNameHe } from "./playerNamesHe.js";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, updateDoc } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
@@ -92,6 +93,182 @@ function apiNameToHeb(apiName){
   for(const [heb,vs] of Object.entries(STRIKER_API_NAMES))
     if(vs.some(v=>norm(v)===na))return heb;
   return null;
+}
+
+const PLAYER_HEB={
+  // France
+  "Kylian Mbappé":"קיליאן אמבפה","Kylian Mbappe":"קיליאן אמבפה",
+  "Antoine Griezmann":"אנטואן גריזמן","Ousmane Dembélé":"עוסמאן דמבלה","Ousmane Dembele":"עוסמאן דמבלה",
+  "Marcus Thuram":"מרקוס תורם","Aurélien Tchouaméni":"אורליאן צ'ואמני","Aurelien Tchouameni":"אורליאן צ'ואמני",
+  "Eduardo Camavinga":"אדוארדו קמאווינגה","Adrien Rabiot":"אדריאן ראביו","Mike Maignan":"מייק מניאן",
+  "William Saliba":"ויליאם סאליבה","Dayot Upamecano":"דאיו אופמקאנו","Theo Hernandez":"תיאו הרנאנדס",
+  "Théo Hernandez":"תיאו הרנאנדס","Jules Kounde":"ז'ול קונדה","Jules Koundé":"ז'ול קונדה",
+  "Randal Kolo Muani":"ראנדאל קולו מואני","Bradley Barcola":"בראדלי בארקולה",
+  // Spain
+  "Lamine Yamal":"למין יאמאל","Pedri":"פדרי","Gavi":"גאווי","Rodri":"רודרי",
+  "Dani Olmo":"דני אולמו","Mikel Oyarzabal":"מיקל אויארסבאל","Ferran Torres":"פראן טורס",
+  "Nico Williams":"ניקו וויליאמס","Alejandro Balde":"אלחנדרו בלדה","Álvaro Morata":"אלוארו מוראטה",
+  "Alvaro Morata":"אלוארו מוראטה","Unai Simon":"אונאי סימון","Unai Simón":"אונאי סימון",
+  "David Raya":"דוויד ראיה","Fabian Ruiz":"פביאן רואיס","Fabián Ruiz":"פביאן רואיס",
+  "Marc Cucurella":"מארק קוקורייה","Dani Carvajal":"דני קארוואחאל","Aymeric Laporte":"איימריק לאפורט",
+  "Robin Le Normand":"רובן לה נורמאן","Martin Zubimendi":"מרטין זוביממדי",
+  // England
+  "Harry Kane":"הארי קיין","Jude Bellingham":"ג'וד בלינגהם","Bukayo Saka":"בוקאיו סאקה",
+  "Phil Foden":"פיל פודן","Declan Rice":"דקלן רייס","Jordan Pickford":"ג'ורדן פיקפורד",
+  "Trent Alexander-Arnold":"טרנט אלכסנדר-ארנולד","John Stones":"ג'ון סטונס",
+  "Marc Guehi":"מארק גאהי","Kieran Trippier":"קיירן טריפייר","Marcus Rashford":"מרקוס ראשפורד",
+  "Cole Palmer":"קול פאלמר","Ollie Watkins":"אולי ווטקינס","Anthony Gordon":"אנתוני גורדון",
+  "Kobbie Mainoo":"קובי מיינו","Luke Shaw":"לוק שאו","Conor Gallagher":"קונור גאלאגר",
+  // Argentina
+  "Lionel Messi":"ליאונל מסי","Lautaro Martínez":"לאוטרו מרטינז","Lautaro Martinez":"לאוטרו מרטינז",
+  "Ángel Di María":"אנחל די מריה","Angel Di Maria":"אנחל די מריה","Rodrigo De Paul":"רודריגו דה פאול",
+  "Alexis Mac Allister":"אלכסיס מאק אליסטר","Emiliano Martínez":"אמיליאנו מרטינז",
+  "Emiliano Martinez":"אמיליאנו מרטינז","Julián Álvarez":"חוליאן אלבארז","Julian Alvarez":"חוליאן אלבארז",
+  "Cristian Romero":"כריסטיאן רומרו","Lisandro Martínez":"ליסנדרו מרטינז",
+  "Lisandro Martinez":"ליסנדרו מרטינז","Paulo Dybala":"פאולו דיבלה","Leandro Paredes":"לאנדרו פארדס",
+  "Giovani Lo Celso":"ג'יובאני לו צ'לסו","Nicolás Tagliafico":"ניקולאס טאליאפיקו",
+  // Brazil
+  "Vinícius Júnior":"וויניסיוס ג'וניור","Vinicius Junior":"וויניסיוס ג'וניור","Raphinha":"ראפיניה",
+  "Rodrygo":"רודריגו","Neymar":"ניימאר","Alisson":"אליסון","Marquinhos":"מרקיניוס",
+  "Casemiro":"קאסמירו","Bruno Guimarães":"ברונו גימאראיש","Bruno Guimaraes":"ברונו גימאראיש",
+  "Antony":"אנטוני","Gabriel Martinelli":"גבריאל מרטינלי","Endrick":"אנדריק","Pedro":"פדרו",
+  "Richarlison":"ריצ'רליסון","Éder Militão":"אדר מיליטאו","Eder Militao":"אדר מיליטאו",
+  // Portugal
+  "Cristiano Ronaldo":"כריסטיאנו רונאלדו","Bruno Fernandes":"ברונו פרננדס",
+  "Bernardo Silva":"ברנרדו סילבה","Rúben Dias":"רובן דיאש","Ruben Dias":"רובן דיאש",
+  "João Félix":"ז'ואו פליקס","Joao Felix":"ז'ואו פליקס","Diogo Jota":"דיאוגו ז'וטה",
+  "Rafael Leão":"ראפאל לאאו","Rafael Leao":"ראפאל לאאו","Pepe":"פאפה",
+  "Rui Patrício":"רוי פטרישיו","Rui Patricio":"רוי פטרישיו","Vitinha":"ויטיניה",
+  "Gonçalo Ramos":"גונסאלו ראמוס","Goncalo Ramos":"גונסאלו ראמוס",
+  "João Cancelo":"ז'ואו קנסלו","Joao Cancelo":"ז'ואו קנסלו",
+  // Germany
+  "Florian Wirtz":"פלוריאן וירץ","Jamal Musiala":"ג'מאל מוסיאלה","Leroy Sané":"לרוי זאנה",
+  "Leroy Sane":"לרוי זאנה","Thomas Müller":"תומאס מולר","Thomas Muller":"תומאס מולר",
+  "Manuel Neuer":"מנואל נויאר","Joshua Kimmich":"יושוע קימיך","Kai Havertz":"קאי האברץ",
+  "Serge Gnabry":"זרז' גנאברי","Antonio Rüdiger":"אנטוניו רודיגר","Antonio Rudiger":"אנטוניו רודיגר",
+  "Leon Goretzka":"ליאון גורצקה","Ilkay Gündogan":"אילקאי גונדואן","Ilkay Gundogan":"אילקאי גונדואן",
+  "Niklas Süle":"ניקלס סולה","Niklas Sule":"ניקלס סולה",
+  "Nick Woltemade":"ניק וולטמאדה","Niclas Woltemade":"ניק וולטמאדה",
+  // Netherlands
+  "Virgil van Dijk":"וירחיל ואן דייק","Memphis Depay":"ממפיס דפאי","Cody Gakpo":"קודי גאקפו",
+  "Xavi Simons":"חאווי סימונס","Frenkie de Jong":"פרנקי דה יונג",
+  "Denzel Dumfries":"דנזל דמפריס","Nathan Aké":"נייתן אקה","Nathan Ake":"נייתן אקה",
+  "Stefan de Vrij":"סטפן דה וריי","Wout Weghorst":"ווט ווגהורסט",
+  // Norway
+  "Erling Haaland":"ארלינג האלנד","Martin Ødegaard":"מרטין אודגור","Martin Odegaard":"מרטין אודגור",
+  "Alexander Sørloth":"אלכסנדר סורלות","Alexander Sorloth":"אלכסנדר סורלות",
+  // Belgium
+  "Kevin De Bruyne":"קווין דה ברויינה","Romelu Lukaku":"רומלו לוקאקו",
+  "Thibaut Courtois":"טיבו קורטואה","Jeremy Doku":"ג'רמי דוקו","Axel Witsel":"אקסל ויצל",
+  "Jan Vertonghen":"יאן ורטונגן","Leandro Trossard":"לאנדרו טרוסאר",
+  // Morocco
+  "Hakim Ziyech":"חכים זייח","Achraf Hakimi":"אשרף חקימי","Yassine Bounou":"יאסין בונו",
+  "Sofyan Amrabat":"סופיאן אמראבט","Riyad Mahrez":"ריאד מהרז",
+  // Senegal
+  "Sadio Mané":"סאדיו מאנה","Sadio Mane":"סאדיו מאנה","Édouard Mendy":"אדוארד מנדי",
+  "Edouard Mendy":"אדוארד מנדי","Kalidou Koulibaly":"קאלידו קוליבלי",
+  "Ismaïla Sarr":"ישמעיל סאר","Ismaila Sarr":"ישמעיל סאר",
+  // USA
+  "Christian Pulisic":"כריסטיאן פוליסיץ'","Tyler Adams":"טיילר אדמס",
+  "Weston McKennie":"ווסטון מקני","Giovanni Reyna":"ג'יובאני ריינה","Gio Reyna":"ג'יו ריינה",
+  "Josh Sargent":"ג'וש סרג'נט","Antonee Robinson":"אנטוני רובינסון","Matt Turner":"מאט טרנר",
+  "Sergiño Dest":"סרג'ינו דסט","Sergino Dest":"סרג'ינו דסט","Tim Weah":"טים וי",
+  "Folarin Balogun":"פולרין באלוגון","Ricardo Pepi":"ריקרדו פפי",
+  // Mexico
+  "Hirving Lozano":"הירוינג לוסאנו","Raúl Jiménez":"ראול חימנז","Raul Jimenez":"ראול חימנז",
+  "Guillermo Ochoa":"גיירמו אוצ'ואה","Edson Álvarez":"אדסון אלוארז","Edson Alvarez":"אדסון אלוארז",
+  "Santiago Giménez":"סנטיאגו חימנז","Santiago Gimenez":"סנטיאגו חימנז",
+  // Japan
+  "Takumi Minamino":"טאקומי מינאמינו","Daichi Kamada":"דאיצ'י קמאדה","Ritsu Doan":"ריצו דואן",
+  "Kaoru Mitoma":"קאורו מיטומה","Shuichi Gonda":"שואיצ'י גונדה",
+  "Wataru Endo":"ווטארו אנדו","Takehiro Tomiyasu":"טאקהירו טומיאסו","Junya Ito":"ג'וניה איטו",
+  // South Korea
+  "Son Heung-min":"סון הה-מין","Son Heung Min":"סון הה-מין","Hwang Hee-chan":"הואנג הי-צ'אן",
+  "Kim Min-jae":"קים מין-ג'ה","Lee Kang-in":"לי קאנג-אין",
+  // Croatia
+  "Luka Modrić":"לוקה מודריץ'","Luka Modric":"לוקה מודריץ'","Ivan Perišić":"אייבן פריסיץ'",
+  "Ivan Perisic":"אייבן פריסיץ'","Mateo Kovačić":"מאטאו קובאצ'יץ'","Mateo Kovacic":"מאטאו קובאצ'יץ'",
+  "Joško Gvardiol":"יושקו גוורדיול","Josko Gvardiol":"יושקו גוורדיול",
+  "Dominik Livaković":"דומיניק ליוואקוביץ'","Dominik Livakovic":"דומיניק ליוואקוביץ'",
+  "Andrej Kramarić":"אנדריי קרמריץ'","Andrej Kramaric":"אנדריי קרמריץ'",
+  // Austria
+  "Marcel Sabitzer":"מרסל זאביצר","David Alaba":"דוויד אלאבה",
+  "Marko Arnautović":"מרקו ארנאוטוביץ'","Marko Arnautovic":"מרקו ארנאוטוביץ'",
+  "Christoph Baumgartner":"כריסטוף באומגרטנר",
+  // Uruguay
+  "Luis Suárez":"לואיס סוארס","Luis Suarez":"לואיס סוארס","Federico Valverde":"פדריקו ואלווארדה",
+  "Darwin Núñez":"דארווין נוניז","Darwin Nunez":"דארווין נוניז",
+  "Ronald Araújo":"רונאלד אראוחו","Ronald Araujo":"רונאלד אראוחו",
+  // Colombia
+  "James Rodríguez":"חיימס רודריגז","James Rodriguez":"חיימס רודריגז",
+  "Luis Díaz":"לואיס דיאז","Luis Diaz":"לואיס דיאז","Radamel Falcao":"ראדאמל פלקאו",
+  "David Ospina":"דוויד אוספינה",
+  // Switzerland
+  "Granit Xhaka":"גראניט ז'אקה","Xherdan Shaqiri":"ז'רדן שקירי","Yann Sommer":"יאן זומר",
+  "Manuel Akanji":"מנואל אקאנג'י","Breel Embolo":"ברל אמבולו","Remo Freuler":"ריאמו פרוילר",
+  "Denis Zakaria":"דניס זכריה","Gregor Kobel":"גרגור קובל","Silvan Widmer":"זילוון וידמר",
+  "Nico Elvedi":"ניקו אלווידי","Fabian Schär":"פביאן שאר","Fabian Schar":"פביאן שאר",
+  "Ruben Vargas":"רובן ורגס","Michel Aebischer":"מישל אביישר",
+  // Canada
+  "Alphonso Davies":"אלפונסו דייויס","Jonathan David":"ג'ונתן דיוויד","Cyle Larin":"סייל לרין",
+  "Tajon Buchanan":"טייג'ון בוקהנן","Atiba Hutchinson":"אטיבה האצ'ינסון","Milan Borjan":"מילאן בורג'אן",
+  "Kamal Miller":"קמאל מילר","Alistair Johnston":"אליסטייר ג'ונסטון",
+  // Qatar
+  "Akram Afif":"אקרם עפיף","Hassan Al-Haydos":"חסן אל-היידוס","Almoez Ali":"אלמועז עלי",
+  "Meshaal Barsham":"מישאל בארשאם",
+  // Ecuador
+  "Enner Valencia":"אנר וולנסיה","Moisés Caicedo":"מואיסס קאיסדו","Moises Caicedo":"מואיסס קאיסדו",
+  "Gonzalo Plata":"גונסאלו פלאטה","Piero Hincapié":"פיארו הינקאפיה","Piero Hincapie":"פיארו הינקאפיה",
+  // Czech Republic
+  "Tomáš Souček":"תומאש סוצ'ק","Tomas Soucek":"תומאש סוצ'ק","Patrik Schick":"פטריק שיק",
+  "Alex Kral":"אלקס קראל","Adam Hložek":"אדם הלוז'ק","Adam Hlozek":"אדם הלוז'ק",
+  // Bosnia
+  "Edin Džeko":"עדין ז'קו","Edin Dzeko":"עדין ז'קו",
+  "Miralem Pjanić":"מיראלם פיאניץ'","Miralem Pjanic":"מיראלם פיאניץ'",
+  "Sead Kolašinac":"סאד קולאשינץ'","Sead Kolasinac":"סאד קולאשינץ'",
+  // Scotland
+  "Scott McTominay":"סקוט מקטומיניי","Andrew Robertson":"אנדרו רוברטסון",
+  "John McGinn":"ג'ון מקגין","Lyndon Dykes":"לינדון דייקס","Angus Gunn":"אנגוס גאן",
+  // Sweden
+  "Victor Lindelöf":"ויקטור לינדלוף","Victor Lindelof":"ויקטור לינדלוף",
+  "Dejan Kulusevski":"דיאן קולוסבסקי","Viktor Gyökeres":"ויקטור גיוקרש","Viktor Gyokeres":"ויקטור גיוקרש",
+  "Emil Forsberg":"אמיל פורסברג","Alexander Isak":"אלכסנדר יזאק",
+  // Turkey
+  "Hakan Çalhanoğlu":"האקן קאלהאנוגלו","Hakan Calhanoglu":"האקן קאלהאנוגלו",
+  "Kenan Yıldız":"קנאן יילדיז","Kenan Yildiz":"קנאן יילדיז",
+  "Arda Güler":"ארדא גולר","Arda Guler":"ארדא גולר",
+  "Cengiz Ünder":"ג'נגיז אונדר","Cengiz Under":"ג'נגיז אונדר","Merih Demiral":"מריח דמיראל",
+  // Egypt
+  "Mohamed Salah":"מוחמד סאלח","Omar Marmoush":"עומר מרמוש","Mohamed Elneny":"מוחמד אל-נני",
+  // Iran
+  "Mehdi Taremi":"מהדי תרמי","Sardar Azmoun":"סרדר אזמון","Ali Gholizadeh":"עלי ג'ולי-זאדה",
+  // Saudi Arabia
+  "Salem Al-Dawsari":"סאלם אל-דוסרי","Mohammed Al-Owais":"מוחמד אל-אוויס",
+  "Saleh Al-Shehri":"סאלח אל-שהרי",
+  // Ghana
+  "Andre Ayew":"אנדרה איו","Jordan Ayew":"ג'ורדן איו",
+  "Thomas Partey":"תומאס פארטי","Mohammed Kudus":"מוחמד קודוס",
+  // Australia
+  "Mat Ryan":"מאט ריאן","Mathew Leckie":"מתיו לקי","Mitchell Duke":"מיטשל דוק","Aaron Mooy":"אהרון מוי",
+  // South Africa
+  "Percy Tau":"פרסי טאו","Themba Zwane":"תמבה זוואנה","Ronwen Williams":"רונוון וויליאמס",
+  // Paraguay
+  "Miguel Almirón":"מיגל אלמירון","Miguel Almiron":"מיגל אלמירון",
+  // Ivory Coast
+  "Sébastien Haller":"סבסטיאן האלר","Sebastien Haller":"סבסטיאן האלר",
+  "Franck Kessié":"פראנק קסיה","Franck Kessie":"פראנק קסיה","Simon Adingra":"סימון אדינגרה",
+  "Nicolas Pépé":"ניקולס פפה","Nicolas Pepe":"ניקולס פפה",
+  // Algeria
+  "Riyad Mahrez":"ריאד מהרז","Islam Slimani":"אסלאם סלימאני",
+  "Ismaël Bennacer":"ישמאיל בנאצר","Ismael Bennacer":"ישמאיל בנאצר",
+  "Saïd Benrahma":"סאיד בן-ראחמה","Said Benrahma":"סאיד בן-ראחמה",
+  // New Zealand
+  "Chris Wood":"כריס וד","Clayton Lewis":"קלייטון לואיס",
+};
+// hePlayer: resolves English player name → Hebrew; checks imported map first, then local PLAYER_HEB, then STRIKER_API_NAMES
+function hePlayer(name){
+  if(!name)return"";
+  return PLAYER_NAME_HE[name]||findPlayerNameHe(name)||PLAYER_HEB[name]||apiNameToHeb(name)||name;
 }
 
 const ADMIN_UID = "8tDgIRJQDFZyiTvaR0pP8nXShgH2";
@@ -1056,6 +1233,111 @@ function MatchStatsView({match, res, teamNames}){
           <StatsPanel stats={displayStats}/>
         </>
       ):null}
+    </div>
+  );
+}
+
+function MatchEvents({events,match,teamNames}){
+  if(!events.length)return<div className="mde-empty">אין אירועים זמינים</div>;
+  return(
+    <div className="mde-timeline">
+      {events.map((ev,i)=>{
+        const min=ev.addedTime>0?`${ev.time}+${ev.addedTime}′`:`${ev.time}′`;
+        let icon="";
+        if(ev.type==="goal"){icon=ev.cls==="ownGoal"?"⚽ (OG)":ev.cls==="penalty"?"⚽ (P)":"⚽";}
+        else if(ev.type==="card"){icon=ev.cls==="red"?"🟥":"🟨";}
+        else if(ev.type==="substitution"){icon="🔄";}
+        else if(ev.type==="missedPenalty"){icon="✗ P";}
+        const ph=hePlayer(ev.player);const ah=ev.assist?hePlayer(ev.assist):"";
+        const poh=ev.playerOut?hePlayer(ev.playerOut):"";
+        return(
+          <div key={i} className={`mde-row${ev.isHome?" mde-home":" mde-away"}`}>
+            <div className="mde-side-home">
+              {ev.isHome&&<><span className="mde-player">{ph}</span>
+                {ah&&<span className="mde-assist">↳ {ah}</span>}
+                {poh&&<span className="mde-sub-out">{poh} ↑</span>}</>}
+            </div>
+            <div className="mde-center"><span>{icon}</span><span className="mde-min">{min}</span></div>
+            <div className="mde-side-away">
+              {!ev.isHome&&<><span className="mde-player">{ph}</span>
+                {ah&&<span className="mde-assist">↳ {ah}</span>}
+                {poh&&<span className="mde-sub-out">{poh} ↑</span>}</>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MatchLineup({lineup,match,teamNames}){
+  if(!lineup)return<div className="mde-empty">הרכב לא זמין עדיין</div>;
+  const POS_ORDER={"G":0,"GK":0,"D":1,"DF":1,"M":2,"MF":2,"F":3,"FW":3};
+  const sortPs=ps=>[...ps].sort((a,b)=>(POS_ORDER[a.position]??2)-(POS_ORDER[b.position]??2));
+  const PlayerList=({players})=>players.map((p,i)=>(
+    <div key={i} className="mdl-player">
+      <span className="mdl-jersey">{p.jersey}</span>
+      <span className="mdl-name">{hePlayer(p.name)}</span>
+    </div>
+  ));
+  const homeS=sortPs(lineup.home?.starters||[]);const awayS=sortPs(lineup.away?.starters||[]);
+  const homeSb=lineup.home?.subs||[];const awaySb=lineup.away?.subs||[];
+  return(
+    <div className="mdl-wrap">
+      <div className="mdl-header-row">
+        <div className="mdl-team-label">{withFlag(teamNames?.[match.home]||match.home)}</div>
+        <div className="mdl-mid-label">הרכב פותח</div>
+        <div className="mdl-team-label">{withFlag(teamNames?.[match.away]||match.away)}</div>
+      </div>
+      {(lineup.home?.formation||lineup.away?.formation)?<div className="mdl-formations"><span>{lineup.home?.formation}</span><span>{lineup.away?.formation}</span></div>:null}
+      <div className="mdl-grid">
+        <div className="mdl-col mdl-home"><PlayerList players={homeS}/></div>
+        <div className="mdl-col mdl-away"><PlayerList players={awayS}/></div>
+      </div>
+      {(homeSb.length||awaySb.length)?<>
+        <div className="mdl-subs-hdr">שחלופים</div>
+        <div className="mdl-grid">
+          <div className="mdl-col mdl-home"><PlayerList players={homeSb}/></div>
+          <div className="mdl-col mdl-away"><PlayerList players={awaySb}/></div>
+        </div>
+      </>:null}
+    </div>
+  );
+}
+
+function MatchDetailView({match,res,teamNames}){
+  const [tab,setTab]=useState("events");
+  const [detail,setDetail]=useState(null);
+  const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    setLoading(true);setDetail(null);
+    fetchMatchDetail(match).then(d=>{setDetail(d);setLoading(false);});
+  },[match.id]);
+  const displayStats=useMemo(()=>{
+    if(!detail)return null;
+    const base=detail.stats
+      ?{home:{...detail.stats.home},away:{...detail.stats.away}}
+      :{home:{...DEMO_STATS.home},away:{...DEMO_STATS.away}};
+    if(res?.reds){base.home.reds=String(res.reds.home||0);base.away.reds=String(res.reds.away||0);}
+    return base;
+  },[detail,res?.reds?.home,res?.reds?.away]);
+  return(
+    <div className="match-stats-page">
+      <MatchRow m={match} res={res} teamNames={teamNames}/>
+      <div className="mdt-tabs">
+        <button className={`mdt-tab${tab==="events"?" mdt-active":""}`} onClick={()=>setTab("events")}>⚽ אירועים</button>
+        <button className={`mdt-tab${tab==="stats"?" mdt-active":""}`} onClick={()=>setTab("stats")}>📊 סטטיסטיקה</button>
+        <button className={`mdt-tab${tab==="lineup"?" mdt-active":""}`} onClick={()=>setTab("lineup")}>👕 הרכב</button>
+      </div>
+      {loading?(
+        <div className="stats-loading">טוען...</div>
+      ):(
+        <div className="mdt-content">
+          {tab==="events"&&<MatchEvents events={detail?.events||[]} match={match} teamNames={teamNames}/>}
+          {tab==="stats"&&(displayStats?<StatsPanel stats={displayStats}/>:<div className="mde-empty">סטטיסטיקה לא זמינה</div>)}
+          {tab==="lineup"&&<MatchLineup lineup={detail?.lineup} match={match} teamNames={teamNames}/>}
+        </div>
+      )}
     </div>
   );
 }
@@ -2338,6 +2620,86 @@ async function fetchMatchStats(gm){
   return null;
 }
 
+async function fetchMatchDetail(gm){
+  const heb=n=>SOFA_TEAM_MAP[n]||n;
+  const ymd=new Date(gm.kickoff||Date.now()).toISOString().slice(0,10).replace(/-/g,"");
+  const iso=new Date(gm.kickoff||Date.now()).toISOString().slice(0,10);
+  let stats=null,events=[],lineup=null;
+  // ESPN → stats
+  try{
+    const sb=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${ymd}`);
+    const sbj=await sb.json();
+    const espnEv=(sbj.events||[]).find(e=>{
+      const comp=e.competitions?.[0];
+      const ht=heb(comp?.competitors?.find(c=>c.homeAway==="home")?.team?.displayName||"");
+      const at=heb(comp?.competitors?.find(c=>c.homeAway==="away")?.team?.displayName||"");
+      return ht===gm.home&&at===gm.away;
+    });
+    if(espnEv?.id){
+      const sr=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${espnEv.id}`);
+      const sd=await sr.json();
+      const homeT=sd.boxscore?.teams?.find(t=>t.homeAway==="home");
+      const awayT=sd.boxscore?.teams?.find(t=>t.homeAway==="away");
+      if(homeT?.statistics?.length&&awayT?.statistics?.length){
+        const g=(team,name)=>{const sv=team.statistics.find(s=>s.name===name);return sv?.displayValue??null;};
+        const mk=t=>({possession:g(t,"possessionPct"),xg:g(t,"expectedGoals")??g(t,"xGoals"),shotsOT:g(t,"shotsOnTarget"),shots:g(t,"totalShots"),blocked:g(t,"blockedShots"),saves:g(t,"saves"),corners:g(t,"cornerKicks"),offsides:g(t,"offsides"),bigChances:g(t,"bigChances"),attacks:g(t,"totalAttacks"),fouls:g(t,"foulsCommitted"),yellows:g(t,"yellowCards"),reds:g(t,"redCards"),passes:g(t,"totalPasses")??g(t,"passes"),passAcc:g(t,"passAccuracyPct")??g(t,"passAccuracy"),tackles:g(t,"tackles")});
+        stats={home:mk(homeT),away:mk(awayT)};
+      }
+    }
+  }catch(e){}
+  // SofaScore → stats (fallback) + events + lineup
+  try{
+    const sr=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
+    const sd=await sr.json();
+    const sofaEv=(sd.events||[]).find(e=>heb(e.homeTeam?.name||"")===gm.home&&heb(e.awayTeam?.name||"")===gm.away);
+    if(sofaEv?.id){
+      if(!stats){
+        try{
+          const statR=await fetch(`https://api.sofascore.com/api/v1/event/${sofaEv.id}/statistics`);
+          const statD=await statR.json();
+          const all=statD.statistics?.find(s=>s.period==="ALL");
+          if(all){
+            const f=name=>{for(const grp of(all.groups||[])){const i=grp.statisticsItems?.find(x=>x.name===name);if(i)return i;}return null;};
+            const poss=f("Ball possession"),xg=f("Expected goals"),shots=f("Total shots"),soT=f("Shots on target"),blk=f("Blocked shots"),sav=f("Goalkeeper saves"),corn=f("Corner kicks"),offs=f("Offsides"),bc=f("Big chances"),atk=f("Attacks"),fouls=f("Fouls"),yel=f("Yellow cards"),red=f("Red cards"),pass=f("Total passes")??f("Passes"),passA=f("Accurate passes %")??f("Pass accuracy"),tack=f("Tackles");
+            const sv=(i,k)=>i?.[k]??null;
+            stats={home:{possession:sv(poss,"home"),xg:sv(xg,"home"),shotsOT:sv(soT,"home"),shots:sv(shots,"home"),blocked:sv(blk,"home"),saves:sv(sav,"home"),corners:sv(corn,"home"),offsides:sv(offs,"home"),bigChances:sv(bc,"home"),attacks:sv(atk,"home"),fouls:sv(fouls,"home"),yellows:sv(yel,"home"),reds:sv(red,"home"),passes:sv(pass,"home"),passAcc:sv(passA,"home"),tackles:sv(tack,"home")},away:{possession:sv(poss,"away"),xg:sv(xg,"away"),shotsOT:sv(soT,"away"),shots:sv(shots,"away"),blocked:sv(blk,"away"),saves:sv(sav,"away"),corners:sv(corn,"away"),offsides:sv(offs,"away"),bigChances:sv(bc,"away"),attacks:sv(atk,"away"),fouls:sv(fouls,"away"),yellows:sv(yel,"away"),reds:sv(red,"away"),passes:sv(pass,"away"),passAcc:sv(passA,"away"),tackles:sv(tack,"away")}};
+          }
+        }catch(e){}
+      }
+      try{
+        const ir=await fetch(`https://api.sofascore.com/api/v1/event/${sofaEv.id}/incidents`);
+        const ij=await ir.json();
+        events=(ij.incidents||[])
+          .filter(inc=>["goal","card","substitution","missedPenalty","penalty"].includes(inc.incidentType))
+          .filter(inc=>inc.incidentType!=="penalty"||(inc.incidentClass==="missed"||inc.incidentClass==="saved"))
+          .map(inc=>({
+            time:inc.time,addedTime:inc.addedTime||0,
+            type:inc.incidentType==="penalty"?"missedPenalty":inc.incidentType,
+            cls:inc.incidentClass,
+            player:inc.player?.name||inc.playerIn?.name||"",
+            playerOut:inc.playerOut?.name||"",assist:inc.assist1?.name||"",
+            isHome:inc.isHome,homeScore:inc.homeScore,awayScore:inc.awayScore,
+          }));
+      }catch(e){}
+      try{
+        const lr=await fetch(`https://api.sofascore.com/api/v1/event/${sofaEv.id}/lineups`);
+        const lj=await lr.json();
+        const parseSide=side=>{
+          const ps=(lj[side]?.players||[]).map(p=>({
+            name:p.player?.name||"",
+            jersey:p.player?.jerseyNumber!=null?String(p.player.jerseyNumber):"",
+            position:p.position||p.player?.position||"M",
+            starter:!p.substitute,
+          }));
+          return{formation:lj[side]?.formation||"",starters:ps.filter(p=>p.starter),subs:ps.filter(p=>!p.starter)};
+        };
+        lineup={home:parseSide("home"),away:parseSide("away")};
+      }catch(e){}
+    }
+  }catch(e){}
+  return{stats,events,lineup};
+}
+
 // Fetches live match data (red cards + statistics) from ESPN, falls back to SofaScore for stats.
 // setLiveStats: React setState callback for the stats panel; pass null to skip stats.
 async function syncMatchData(setLiveStats){
@@ -2978,10 +3340,10 @@ export default function App(){
       <div className="main-screen">
         <div className="main-header">
           <button className="back-btn" onClick={()=>setStatsMatch(null)}>→</button>
-          <span className="header-title">📊 סטטיסטיקות משחק</span>
+          <span className="header-title">📊 פרטי משחק</span>
         </div>
         <div className="main-body">
-          <MatchStatsView match={statsMatch.match} res={statsMatch.res} teamNames={teamNames}/>
+          <MatchDetailView match={statsMatch.match} res={statsMatch.res} teamNames={teamNames}/>
         </div>
       </div>
       <style>{STYLES}</style>
@@ -3160,6 +3522,34 @@ const STYLES=`
   .sched-clickable:hover{background:rgba(255,255,255,.04)}
   .match-stats-page{display:flex;flex-direction:column;gap:.8rem;max-width:680px;margin:0 auto}
   .stats-loading,.stats-empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:.9rem}
+  .mdt-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card2);position:sticky;top:0;z-index:1}
+  .mdt-tab{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:.78rem;font-weight:600;padding:.55rem .3rem;cursor:pointer;font-family:'Heebo',sans-serif;transition:color .15s,border-color .15s;white-space:nowrap}
+  .mdt-tab.mdt-active{color:var(--green);border-bottom-color:var(--green)}
+  .mdt-content{padding:.2rem 0}
+  .mde-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem}
+  .mde-timeline{display:flex;flex-direction:column;gap:.1rem;padding:.4rem .3rem}
+  .mde-row{display:grid;grid-template-columns:1fr 3.5rem 1fr;align-items:center;gap:.3rem;padding:.3rem .2rem;border-radius:6px;min-height:2.4rem}
+  .mde-home{background:rgba(37,99,235,.09)}
+  .mde-side-home{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:.05rem}
+  .mde-side-away{text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:.05rem}
+  .mde-center{text-align:center;display:flex;flex-direction:column;align-items:center;gap:.05rem;font-size:.85rem;color:var(--muted);font-weight:700}
+  .mde-min{font-size:.62rem;font-weight:600;color:var(--muted)}
+  .mde-player{font-size:.78rem;font-weight:600;color:var(--text)}
+  .mde-assist{font-size:.67rem;color:var(--muted)}
+  .mde-sub-out{font-size:.67rem;color:rgba(255,150,100,.75)}
+  .mdl-wrap{padding:.4rem .3rem}
+  .mdl-header-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.4rem;margin-bottom:.3rem}
+  .mdl-team-label{font-size:.78rem;font-weight:700;text-align:center}
+  .mdl-mid-label{font-size:.68rem;color:var(--muted);font-weight:700;white-space:nowrap}
+  .mdl-formations{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-weight:700;padding:.2rem .3rem .4rem;border-bottom:1px solid var(--border)}
+  .mdl-grid{display:grid;grid-template-columns:1fr 1fr;gap:.3rem;margin-bottom:.5rem}
+  .mdl-col{display:flex;flex-direction:column;gap:.12rem}
+  .mdl-home{direction:rtl}
+  .mdl-away{direction:ltr}
+  .mdl-player{display:flex;align-items:center;gap:.3rem;padding:.22rem .35rem;border-radius:5px;background:rgba(255,255,255,.03)}
+  .mdl-jersey{font-size:.67rem;color:var(--muted);min-width:1.4rem;text-align:center;flex-shrink:0}
+  .mdl-name{font-size:.77rem;font-weight:500}
+  .mdl-subs-hdr{font-size:.7rem;color:var(--muted);font-weight:700;text-align:center;padding:.4rem 0 .25rem;border-top:1px solid var(--border);margin-top:.1rem}
   .stats-demo-note{text-align:center;font-size:.72rem;color:var(--muted);padding:.3rem 0 .1rem;border-top:1px solid var(--border);margin-top:.4rem}
   .stats-panel{display:flex;flex-direction:column;gap:.5rem;padding-top:.3rem}
   .stats-section{background:var(--card2);border-radius:12px;overflow:hidden}
