@@ -2889,7 +2889,7 @@ export default function App(){
   // Trigger daily rank animation once per completed match day per user
   useEffect(()=>{
     if(!authUser||!game?.results||!participants.length||gameLoading)return;
-    const testMode=new URLSearchParams(window.location.search).has("testdra");
+    const testMode=new URLSearchParams(window.location.search).has("testdra")||authUser.email==="eladvolm@gmail.com";
     const lastDay=testMode
       ? (ALL_MATCH_DATES[0] || getLastCompletedMatchDay(game.results))
       : getLastCompletedMatchDay(game.results);
