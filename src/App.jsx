@@ -17,6 +17,7 @@ const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 const storage = getStorage(fbApp);
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
 const GROUPS_2026 = {
   A: ["מקסיקו","קוריאה","דרום אפריקה","צ'כיה"],
