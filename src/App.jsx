@@ -2400,12 +2400,15 @@ async function syncMatchData(setLiveStats){
         sd=await sr.json();
       }catch(e){console.warn("ESPN summary failed:",e.message);continue;}
 
-      // Red cards
+      // Red cards — match only explicit "red card" type to avoid false positives
+      // (e.g. event text may contain "red" for Yellow-Red double bookings or reversed decisions)
       const homeTeamId=espnEv.competitions[0].competitors.find(c=>c.homeAway==="home")?.team?.id;
       const reds={home:0,away:0};
       for(const ev of(sd.keyEvents||[])){
-        const txt=(ev.type?.text||ev.text||"").toLowerCase();
-        if(!txt.includes("red"))continue;
+        const typeText=(ev.type?.text||"").toLowerCase();
+        const isRedCard=typeText==="red card"||typeText==="red-card"||typeText==="red"||
+                        (ev.type?.id&&(ev.type.id==="22"||ev.type.id==="83")); // ESPN type IDs for red/second-yellow
+        if(!isRedCard)continue;
         if(ev.team?.id===homeTeamId)reds.home++; else reds.away++;
       }
       const prev=matches[matchId]?.reds||{home:0,away:0};
