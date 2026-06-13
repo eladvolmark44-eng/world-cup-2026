@@ -477,6 +477,33 @@ function calcScore(bets={},results={},allP=[]){
   return t;
 }
 
+// ── Monkey Bot ("הקוף של אמיר") ──────────────────────────────────────────────
+const MONKEY_BOT_UID = "monkey-bot-amir";
+const MONKEY_BOT_PHOTO = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+  '<circle cx="50" cy="50" r="50" fill="#8B4513"/>' +
+  '<circle cx="50" cy="54" r="30" fill="#D2691E"/>' +
+  '<circle cx="32" cy="35" r="12" fill="#8B4513"/>' +
+  '<circle cx="68" cy="35" r="12" fill="#8B4513"/>' +
+  '<circle cx="32" cy="33" r="8" fill="#DEB887"/>' +
+  '<circle cx="68" cy="33" r="8" fill="#DEB887"/>' +
+  '<circle cx="30" cy="32" r="4" fill="#111"/>' +
+  '<circle cx="66" cy="32" r="4" fill="#111"/>' +
+  '<ellipse cx="50" cy="66" rx="15" ry="11" fill="#DEB887"/>' +
+  '<circle cx="44" cy="65" r="3" fill="#111"/>' +
+  '<circle cx="56" cy="65" r="3" fill="#111"/>' +
+  '<path d="M43 74 Q50 79 57 74" stroke="#111" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+  '</svg>'
+);
+const MONKEY_BOT_BETS = {"matches":{"A1":{"home":1,"away":0},"A2":{"home":1,"away":1},"B1":{"home":3,"away":2},"D1":{"home":4,"away":0},"B2":{"home":3,"away":0},"C1":{"home":4,"away":3},"C2":{"home":2,"away":0},"D2":{"home":2,"away":2},"E1":{"home":2,"away":1},"F1":{"home":1,"away":0},"E2":{"home":3,"away":2},"F2":{"home":1,"away":0},"H1":{"home":1,"away":0},"G1":{"home":1,"away":0},"H2":{"home":2,"away":0},"G2":{"home":3,"away":0},"I1":{"home":3,"away":2},"I2":{"home":0,"away":3},"J1":{"home":1,"away":0},"J2":{"home":4,"away":0},"K1":{"home":1,"away":1},"L1":{"home":0,"away":3},"L2":{"home":1,"away":0},"K2":{"home":1,"away":1},"A3":{"home":1,"away":0},"B3":{"home":1,"away":0},"B4":{"home":2,"away":2},"A4":{"home":3,"away":3},"D3":{"home":1,"away":2},"C3":{"home":0,"away":0},"C4":{"home":3,"away":1},"D4":{"home":0,"away":1},"F3":{"home":2,"away":0},"E3":{"home":1,"away":0},"E4":{"home":1,"away":0},"F4":{"home":1,"away":2},"H3":{"home":3,"away":1},"G3":{"home":1,"away":1},"H4":{"home":1,"away":2},"G4":{"home":0,"away":0},"J3":{"home":2,"away":0},"I3":{"home":3,"away":3},"I4":{"home":0,"away":3},"J4":{"home":2,"away":2},"K3":{"home":2,"away":1},"L3":{"home":1,"away":0},"L4":{"home":0,"away":2},"K4":{"home":1,"away":0},"B5":{"home":2,"away":1},"B6":{"home":0,"away":0},"C5":{"home":0,"away":1},"C6":{"home":3,"away":0},"A5":{"home":3,"away":3},"A6":{"home":3,"away":0},"E5":{"home":3,"away":2},"E6":{"home":2,"away":1},"F5":{"home":0,"away":3},"F6":{"home":0,"away":1},"D5":{"home":1,"away":0},"D6":{"home":1,"away":0},"I5":{"home":3,"away":0},"I6":{"home":1,"away":4},"H5":{"home":2,"away":2},"H6":{"home":1,"away":1},"G5":{"home":0,"away":2},"G6":{"home":1,"away":4},"L5":{"home":2,"away":0},"L6":{"home":3,"away":2},"K5":{"home":1,"away":2},"K6":{"home":1,"away":0},"J5":{"home":3,"away":2},"J6":{"home":0,"away":1}},"groups":{"A":["קוריאה","צ'כיה"],"B":["שוויץ","קנדה"],"C":["ברזיל","מרוקו"],"D":["ארה\"ב","טורקיה"],"E":["גרמניה","אקוודור"],"F":["הולנד","שוודיה"],"G":["בלגיה","מצרים"],"H":["ספרד","אורוגוואי"],"I":["צרפת","נורווגיה"],"J":["ארגנטינה","אוסטריה"],"K":["פורטוגל","קולומביה"],"L":["אנגליה","קרואטיה"]},"champion":"ספרד","goldenBoot":"ויניסיוס ג'וניור","totalGoals":123};
+const MONKEY_BOT = {
+  uid: MONKEY_BOT_UID,
+  name: "הקוף של אמיר",
+  photoURL: MONKEY_BOT_PHOTO,
+  bets: MONKEY_BOT_BETS,
+  isBot: true,
+};
+
 function generateCode(){return Math.random().toString(36).substring(2,7).toUpperCase();}
 async function loadGame(){
   const snap=await getDoc(doc(db,"mundial2026","game"));
@@ -617,7 +644,7 @@ function PlayerBetsView({player,viewerUid,results,teamNames}){
         {player.photoURL
           ?<img src={player.photoURL} className="pbv-avatar" alt=""/>
           :<div className="pbv-avatar-ph">{(player.name||"?")[0]}</div>}
-        <div className="pbv-name">{player.name}</div>
+        <div className="pbv-name">{player.name}{player.isBot&&<span className="bot-badge"> 🤖</span>}</div>
         <div className="pbv-meta">
           {player.rank&&<span className="pbv-rank-badge">{medals[player.rank-1]||`#${player.rank}`}</span>}
           <span className="pbv-score-badge">{calcScore(bets,results,[])} נק׳</span>
@@ -1471,9 +1498,9 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
       <div className="home-card">
         <div className="home-card-title">🏆 טבלת דירוג</div>
         <div className="prizes-row" style={{marginBottom:".6rem"}}>
-          <span>👥 {participants.length} שחקנים</span>
-          <span>💰 {participants.length*50} ₪ בקופה</span>
-          <span>🥇 {participants.length*50} ₪ ראשון</span>
+          <span>👥 {participants.filter(p=>!p.isBot).length} שחקנים</span>
+          <span>💰 {participants.filter(p=>!p.isBot).length*50} ₪ בקופה</span>
+          <span>🥇 {participants.filter(p=>!p.isBot).length*50} ₪ ראשון</span>
           <span>🥈 מקום אחרון משלם 50₪</span>
         </div>
         {/* Column headers */}
@@ -1925,7 +1952,7 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
       icon: "🧹",
       danger: true,
       run: async () => {
-        for (const p of participants) {
+        for (const p of participants.filter(p=>!p.isBot)) {
           await saveParticipant({...p, bets: {...p.bets, matches: {}}});
         }
       }
@@ -1937,7 +1964,7 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
       icon: "☠️",
       danger: true,
       run: async () => {
-        for (const p of participants) {
+        for (const p of participants.filter(p=>!p.isBot)) {
           await saveParticipant({...p, bets: {}});
         }
         await saveGame({results: {}});
@@ -1963,7 +1990,7 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
       <h2>⚙️ פאנל מנהל</h2>
       <div className="admin-presence">
         <div className="admin-presence-title">👥 כניסות אחרונות</div>
-        {[...participants].sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0)).map(p=>(
+        {[...participants].filter(p=>!p.isBot).sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0)).map(p=>(
           <div key={p.uid} className="admin-presence-row">
             {p.photoURL
               ?<img src={p.photoURL} className="ap-avatar" alt=""/>
@@ -1991,7 +2018,7 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
         ))}
       </div>
       <div className="admin-stats">
-        <div className="admin-stat"><span className="admin-stat-val">{participants.length}</span><span>משתתפים</span></div>
+        <div className="admin-stat"><span className="admin-stat-val">{participants.filter(p=>!p.isBot).length}</span><span>משתתפים</span></div>
         <div className="admin-stat"><span className="admin-stat-val">{Object.keys(game.results?.matches||{}).length}</span><span>תוצאות שמורות</span></div>
         <div className="admin-stat"><span className="admin-stat-val">{GROUP_MATCHES.length}</span><span>משחקי ליגה</span></div>
       </div>
@@ -2332,7 +2359,8 @@ export default function App(){
       }
     });
     const u2=onSnapshot(collection(db,"mundial2026","game","participants"),snap=>{
-      setParticipants(snap.docs.map(d=>({...d.data(),uid:d.id})));
+      const real=snap.docs.map(d=>({...d.data(),uid:d.id}));
+      setParticipants([...real, MONKEY_BOT]);
     });
 
     const heb = n => SOFA_TEAM_MAP[n]||n;
@@ -3054,6 +3082,7 @@ const STYLES=`
   .pbv-avatar{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--green)}
   .pbv-avatar-ph{width:90px;height:90px;border-radius:50%;background:var(--green);color:#060e1a;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:2.3rem;flex-shrink:0}
   .pbv-name{font-size:1.2rem;font-weight:800;text-align:center}
+  .bot-badge{font-size:.85rem;opacity:.7}
   .pbv-meta{display:flex;align-items:center;gap:.5rem}
   .pbv-rank-badge{font-size:1.3rem}
   .pbv-score-badge{background:rgba(0,216,127,.15);color:var(--green);border-radius:20px;padding:.28rem .85rem;font-weight:800;font-size:.85rem}
