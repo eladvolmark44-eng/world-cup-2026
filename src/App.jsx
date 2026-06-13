@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { PLAYER_NAME_HE, findPlayerNameHe } from "./playerNamesHe.js";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, updateDoc } from "firebase/firestore";
@@ -1275,7 +1275,7 @@ function MatchEvents({events,match,res}){
             :<><span className="tl-name">{ph}</span>{ah&&<span className="tl-assist">↳ {ah}</span>}</>
         ):null;
         return(
-          <React.Fragment key={i}>
+          <Fragment key={i}>
             {showHT&&<div className="tl-ht"><span className="tl-ht-pill">{htLabel}</span></div>}
             <div className="tl-row">
               <div className="tl-side tl-side-home">{homeContent}</div>
@@ -1285,7 +1285,7 @@ function MatchEvents({events,match,res}){
               </div>
               <div className="tl-side tl-side-away">{awayContent}</div>
             </div>
-          </React.Fragment>
+          </Fragment>
         );
       })}
     </div>
