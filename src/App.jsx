@@ -17,7 +17,6 @@ const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 const storage = getStorage(fbApp);
 const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
 
 const GROUPS_2026 = {
   A: ["מקסיקו","קוריאה","דרום אפריקה","צ'כיה"],
@@ -2744,7 +2743,14 @@ export default function App(){
 
   const handleSignIn=async()=>{
     setSigningIn(true);
-    try{await signInWithPopup(auth,googleProvider);}catch(e){console.error(e);}
+    try{
+      const p=new GoogleAuthProvider();
+      if(sessionStorage.getItem("explicit_signout")){
+        p.setCustomParameters({prompt:"select_account"});
+        sessionStorage.removeItem("explicit_signout");
+      }
+      await signInWithPopup(auth,p);
+    }catch(e){console.error(e);}
     setSigningIn(false);
   };
   const handleSaveBets=async bets=>{
@@ -2824,7 +2830,7 @@ export default function App(){
             <div>מונדיאל<span style={{color:"var(--green)"}}>Bet</span><span style={{color:"var(--gold)"}}>2026</span></div>
             <div className="header-subtitle">על שם נייל קלארק</div>
           </div>
-          <button className="btn-signout" onClick={()=>signOut(auth)}>יציאה</button>
+          <button className="btn-signout" onClick={()=>{sessionStorage.setItem("explicit_signout","1");signOut(auth);}}>יציאה</button>
         </div>
         <div className="main-content">
         <div className="main-tabs">
