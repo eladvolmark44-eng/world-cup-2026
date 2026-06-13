@@ -1282,7 +1282,7 @@ function SpecialBetsCard({participants, results, teamNames}){
 }
 
 // ─── HOME VIEW ────────────────────────────────────────────────────────────────
-function HomeView({me, participants, results, teamNames, odds, onSelectPlayer, onSaveBets, onGoToGroups, showWinner, setShowWinner}){
+function HomeView({me, participants, results, teamNames, odds, liveStats, onSelectPlayer, onSaveBets, onGoToGroups, showWinner, setShowWinner}){
   const myBets=me?.bets||{};
   const globalLocked=isGlobalLocked();
   const [champion,setChampion]=useState(myBets.champion||"");
@@ -2645,6 +2645,7 @@ export default function App(){
               results={game.results||{}}
               teamNames={teamNames}
               odds={odds}
+              liveStats={liveStats}
               onSelectPlayer={setSelectedPlayer}
               onSaveBets={handleSaveBets}
               onGoToGroups={()=>{setTab("results");setResultsSubTab("groups");}}
