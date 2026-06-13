@@ -876,7 +876,7 @@ const STATS_SECTIONS=[
   {title:"עבירות",rows:[
     {key:"fouls",label:"עבירות"},
     {key:"yellows",label:"כרטיסים צהובים"},
-    {key:"reds",label:"כרטיסים אדומים"},
+    {key:"reds",label:"כרטיסים אדומים",alwaysShow:true},
   ]},
 ];
 
@@ -884,9 +884,10 @@ function StatsPanel({stats}){
   return(
     <div className="stats-panel">
       {STATS_SECTIONS.map(({title,rows})=>{
-        const visible=rows.filter(({key})=>{
+        const visible=rows.filter(({key,alwaysShow})=>{
           const h=stats.home[key],a=stats.away[key];
           if(h==null&&a==null)return false;
+          if(alwaysShow)return true;
           return parseFloat(h)||0||parseFloat(a)||0;
         });
         if(!visible.length)return null;
