@@ -1237,33 +1237,55 @@ function MatchStatsView({match, res, teamNames}){
   );
 }
 
-function MatchEvents({events,match,teamNames}){
+function MatchEvents({events,match,res}){
   if(!events.length)return<div className="mde-empty">אין אירועים זמינים</div>;
+  // Build half-time score from events or res
+  const htGoalsHome=events.filter(e=>e.type==="goal"&&e.isHome&&e.time<=45).length;
+  const htGoalsAway=events.filter(e=>e.type==="goal"&&!e.isHome&&e.time<=45).length;
+  const htLabel=`מחצית ${htGoalsHome} - ${htGoalsAway}`;
+  const firstSecondHalfIdx=events.findIndex(e=>e.time>45);
   return(
-    <div className="mde-timeline">
+    <div className="mde-tl">
       {events.map((ev,i)=>{
+        const showHT=firstSecondHalfIdx>0&&i===firstSecondHalfIdx;
         const min=ev.addedTime>0?`${ev.time}+${ev.addedTime}′`:`${ev.time}′`;
-        let icon="";
-        if(ev.type==="goal"){icon=ev.cls==="ownGoal"?"⚽ (OG)":ev.cls==="penalty"?"⚽ (P)":"⚽";}
-        else if(ev.type==="card"){icon=ev.cls==="red"?"🟥":"🟨";}
-        else if(ev.type==="substitution"){icon="🔄";}
-        else if(ev.type==="missedPenalty"){icon="✗ P";}
-        const ph=hePlayer(ev.player);const ah=ev.assist?hePlayer(ev.assist):"";
+        const ph=hePlayer(ev.player);
         const poh=ev.playerOut?hePlayer(ev.playerOut):"";
+        const ah=ev.assist?hePlayer(ev.assist):"";
+        let badge;
+        if(ev.type==="goal"){
+          if(ev.cls==="ownGoal")badge=<span className="tl-badge tl-og">OG</span>;
+          else if(ev.cls==="penalty")badge=<span className="tl-badge tl-goal">P⚽</span>;
+          else badge=<span className="tl-badge tl-goal">⚽</span>;
+        }else if(ev.type==="card"){
+          badge=<span className={`tl-card tl-card-${ev.cls}`}/>;
+        }else if(ev.type==="substitution"){
+          badge=<span className="tl-sub-badge"><span className="tl-in-arr">▲</span><span className="tl-out-arr">▼</span></span>;
+        }else if(ev.type==="missedPenalty"){
+          badge=<span className="tl-badge tl-miss">✕P</span>;
+        }
+        const homeContent=ev.isHome?(
+          ev.type==="substitution"
+            ?<><span className="tl-name tl-name-in">{ph}</span>{poh&&<span className="tl-name tl-name-out">{poh}</span>}</>
+            :<><span className="tl-name">{ph}</span>{ah&&<span className="tl-assist">↳ {ah}</span>}</>
+        ):null;
+        const awayContent=!ev.isHome?(
+          ev.type==="substitution"
+            ?<><span className="tl-name tl-name-in">{ph}</span>{poh&&<span className="tl-name tl-name-out">{poh}</span>}</>
+            :<><span className="tl-name">{ph}</span>{ah&&<span className="tl-assist">↳ {ah}</span>}</>
+        ):null;
         return(
-          <div key={i} className={`mde-row${ev.isHome?" mde-home":" mde-away"}`}>
-            <div className="mde-side-home">
-              {ev.isHome&&<><span className="mde-player">{ph}</span>
-                {ah&&<span className="mde-assist">↳ {ah}</span>}
-                {poh&&<span className="mde-sub-out">{poh} ↑</span>}</>}
+          <React.Fragment key={i}>
+            {showHT&&<div className="tl-ht"><span className="tl-ht-pill">{htLabel}</span></div>}
+            <div className="tl-row">
+              <div className="tl-side tl-side-home">{homeContent}</div>
+              <div className="tl-mid">
+                <div className="tl-badge-wrap">{badge}</div>
+                <span className="tl-min">{min}</span>
+              </div>
+              <div className="tl-side tl-side-away">{awayContent}</div>
             </div>
-            <div className="mde-center"><span>{icon}</span><span className="mde-min">{min}</span></div>
-            <div className="mde-side-away">
-              {!ev.isHome&&<><span className="mde-player">{ph}</span>
-                {ah&&<span className="mde-assist">↳ {ah}</span>}
-                {poh&&<span className="mde-sub-out">{poh} ↑</span>}</>}
-            </div>
-          </div>
+          </React.Fragment>
         );
       })}
     </div>
@@ -1333,7 +1355,7 @@ function MatchDetailView({match,res,teamNames}){
         <div className="stats-loading">טוען...</div>
       ):(
         <div className="mdt-content">
-          {tab==="events"&&<MatchEvents events={detail?.events||[]} match={match} teamNames={teamNames}/>}
+          {tab==="events"&&<MatchEvents events={detail?.events||[]} match={match} res={res}/>}
           {tab==="stats"&&(displayStats?<StatsPanel stats={displayStats}/>:<div className="mde-empty">סטטיסטיקה לא זמינה</div>)}
           {tab==="lineup"&&<MatchLineup lineup={detail?.lineup} match={match} teamNames={teamNames}/>}
         </div>
@@ -2662,51 +2684,54 @@ async function fetchMatchDetail(gm){
       }
 
       // Events from keyEvents
-      const typeText=t=>(t?.text||"").toLowerCase();
+      const tt=ev=>(ev.type?.text||"").toLowerCase();
       for(const ev of(sd.keyEvents||[])){
-        const tt=typeText(ev.type);
-        const isGoal=tt==="goal"||tt.includes("own goal")||tt.includes("penalty"&&ev.scoringPlay);
-        const isYellow=tt.includes("yellow")&&!tt.includes("second");
-        const isRed=tt.includes("red")||tt.includes("second yellow");
-        const isSub=tt.includes("substitut");
-        const isMissed=tt.includes("missed")||tt.includes("penalty - miss");
+        const t=tt(ev);
+        const isGoal=ev.scoringPlay===true||t==="goal"||t.includes("own goal");
+        const isYellow=t.includes("yellow")&&!t.includes("second");
+        const isRed=(t.includes("red card")||t.includes("second yellow")||
+          (ev.type?.id&&(ev.type.id==="22"||ev.type.id==="83")));
+        const isSub=t.includes("substitut");
+        const isMissed=t.includes("missed")||t.includes("penalty - miss");
         if(!isGoal&&!isYellow&&!isRed&&!isSub&&!isMissed)continue;
         const parts=ev.participants||[];
         const getP=role=>parts.find(p=>(p.type?.text||"").toLowerCase().includes(role))?.athlete?.displayName||"";
-        const clockStr=ev.clock?.displayValue||"";
-        const min=parseInt(clockStr.split(":")[0]||"0")||0;
-        const addedMin=clockStr.includes("+")?parseInt(clockStr.split("+")[1]||"0")||0:0;
+        const clockStr=ev.clock?.displayValue||ev.clock?.value||"";
+        const clockParts=String(clockStr).replace(/[^0-9:+]/g,"").split(/[+:]/);
+        const min=parseInt(clockParts[0]||"0")||0;
+        const addedMin=String(clockStr).includes("+")?parseInt(clockParts[clockParts.length-1]||"0")||0:0;
         const isHome=ev.team?.id===homeTeamId;
         let type="",cls="";
         if(isMissed){type="missedPenalty";cls="missed";}
-        else if(isGoal){
-          type="goal";
-          cls=tt.includes("own")?"ownGoal":tt.includes("penalty")?"penalty":"regular";
-        } else if(isYellow){type="card";cls="yellow";}
+        else if(isGoal){type="goal";cls=t.includes("own")?"ownGoal":t.includes("penalty")?"penalty":"regular";}
+        else if(isYellow){type="card";cls="yellow";}
         else if(isRed){type="card";cls="red";}
         else if(isSub){type="substitution";}
-        const player=isSub?getP("in"):getP("scor")||getP("taker")||getP("player")||parts[0]?.athlete?.displayName||"";
+        const player=isSub?getP("in"):getP("scor")||getP("goal")||parts[0]?.athlete?.displayName||"";
         const assist=getP("assist");
         const playerOut=isSub?getP("out"):"";
-        events.push({time:min,addedTime:addedMin,type,cls,player,assist,playerOut,isHome});
+        if(type)events.push({time:min,addedTime:addedMin,type,cls,player,assist,playerOut,isHome});
       }
       events.sort((a,b)=>a.time-b.time||(a.addedTime-b.addedTime));
 
-      // Lineup from boxscore.players
-      const bsPlayers=sd.boxscore?.players||[];
-      if(bsPlayers.length){
+      // Lineup — ESPN boxscore.players or rosters
+      const rawLineup=sd.boxscore?.players||sd.rosters||[];
+      if(rawLineup.length){
         const parseSide=homeAway=>{
-          const teamData=bsPlayers.find(t=>t.team?.homeAway===homeAway||
-            heb(t.team?.displayName||"")===(homeAway==="home"?gm.home:gm.away));
-          const athletes=teamData?.athletes||[];
-          const ps=athletes.map(a=>({
-            name:a.athlete?.displayName||"",
-            jersey:a.athlete?.jersey||"",
-            position:a.athlete?.position?.abbreviation||"M",
-            starter:!!a.starter,
-          }));
-          const formation=teamData?.formation||"";
-          return{formation,starters:ps.filter(p=>p.starter),subs:ps.filter(p=>!p.starter)};
+          const td=rawLineup.find(t=>
+            (t.team?.homeAway||t.homeAway)===homeAway||
+            heb(t.team?.displayName||t.displayName||"")===(homeAway==="home"?gm.home:gm.away));
+          const athletes=td?.athletes||td?.roster||[];
+          const ps=athletes.map(a=>{
+            const ath=a.athlete||a;
+            return{
+              name:ath.displayName||ath.fullName||"",
+              jersey:ath.jersey||a.jersey||"",
+              position:ath.position?.abbreviation||a.position||"M",
+              starter:a.starter!=null?!!a.starter:!a.substitute,
+            };
+          });
+          return{formation:td?.formation||"",starters:ps.filter(p=>p.starter),subs:ps.filter(p=>!p.starter)};
         };
         const h=parseSide("home"),aw=parseSide("away");
         if(h.starters.length||aw.starters.length)lineup={home:h,away:aw};
@@ -3553,16 +3578,31 @@ const STYLES=`
   .mdt-tab.mdt-active{color:var(--green);border-bottom-color:var(--green)}
   .mdt-content{padding:.2rem 0}
   .mde-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem}
-  .mde-timeline{display:flex;flex-direction:column;gap:.1rem;padding:.4rem .3rem}
-  .mde-row{display:grid;grid-template-columns:1fr 3.5rem 1fr;align-items:center;gap:.3rem;padding:.3rem .2rem;border-radius:6px;min-height:2.4rem}
-  .mde-home{background:rgba(37,99,235,.09)}
-  .mde-side-home{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:.05rem}
-  .mde-side-away{text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:.05rem}
-  .mde-center{text-align:center;display:flex;flex-direction:column;align-items:center;gap:.05rem;font-size:.85rem;color:var(--muted);font-weight:700}
-  .mde-min{font-size:.62rem;font-weight:600;color:var(--muted)}
-  .mde-player{font-size:.78rem;font-weight:600;color:var(--text)}
-  .mde-assist{font-size:.67rem;color:var(--muted)}
-  .mde-sub-out{font-size:.67rem;color:rgba(255,150,100,.75)}
+  /* ── Timeline ── */
+  .mde-tl{position:relative;padding:.3rem 0}
+  .mde-tl::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--border);transform:translateX(-50%)}
+  .tl-row{display:grid;grid-template-columns:1fr 3rem 1fr;align-items:center;min-height:2.6rem;position:relative;padding:.15rem 0}
+  .tl-side{display:flex;flex-direction:column;gap:.06rem;padding:0 .5rem}
+  .tl-side-home{text-align:right;align-items:flex-end}
+  .tl-side-away{text-align:left;align-items:flex-start}
+  .tl-mid{display:flex;flex-direction:column;align-items:center;gap:.08rem;z-index:1}
+  .tl-badge{display:flex;align-items:center;justify-content:center;border-radius:50%;width:1.7rem;height:1.7rem;font-size:.72rem;font-weight:700;border:2px solid var(--card)}
+  .tl-goal{background:var(--green);color:#000}
+  .tl-og{background:#888;color:#fff}
+  .tl-miss{background:rgba(255,77,77,.25);color:var(--red);font-size:.6rem}
+  .tl-card{display:inline-block;width:.75rem;height:1.1rem;border-radius:2px}
+  .tl-card-yellow{background:#ffd700}
+  .tl-card-red{background:var(--red)}
+  .tl-sub-badge{display:flex;flex-direction:column;align-items:center;line-height:1;background:var(--card2);border-radius:50%;width:1.7rem;height:1.7rem;justify-content:center;border:2px solid var(--border)}
+  .tl-in-arr{color:var(--green);font-size:.65rem}
+  .tl-out-arr{color:var(--red);font-size:.65rem}
+  .tl-min{font-size:.6rem;font-weight:700;color:var(--muted)}
+  .tl-name{font-size:.78rem;font-weight:600;color:var(--text)}
+  .tl-name-in{color:var(--green);font-size:.78rem;font-weight:600}
+  .tl-name-out{color:rgba(255,160,100,.8);font-size:.68rem}
+  .tl-assist{font-size:.65rem;color:var(--muted)}
+  .tl-ht{display:flex;justify-content:center;padding:.4rem 0;z-index:1;position:relative}
+  .tl-ht-pill{background:#1a2840;border:1px solid var(--border);border-radius:20px;padding:.22rem .8rem;font-size:.72rem;font-weight:700;color:var(--text)}
   .mdl-wrap{padding:.4rem .3rem}
   .mdl-header-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.4rem;margin-bottom:.3rem}
   .mdl-team-label{font-size:.78rem;font-weight:700;text-align:center}
