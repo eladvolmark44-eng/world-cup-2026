@@ -1346,6 +1346,93 @@ function WinnerAnnouncement({ winner, isFinal, onClose }) {
   );
 }
 
+// ─── DAILY RANK ANIMATION ─────────────────────────────────────────────────────
+const DAILY_ANIM_PRESETS = {
+  first: [
+    {emoji:"🥇",particles:["🎉","🎊","🌟","✨","💛"],bg:"linear-gradient(135deg,#FFD700 0%,#FF8C00 100%)",title:"מקום ראשון! 🏆",sub:"פשוט קטלת את כולם היום 👑"},
+    {emoji:"🎆",particles:["🎇","⭐","💥","🌠","💫"],bg:"linear-gradient(135deg,#0d0d2b 0%,#1a1a6e 100%)",title:"מוביל! 👑",sub:"הזיקוקים בשמיים בשבילך 🎆"},
+    {emoji:"👑",particles:["💰","🪙","💎","✨","🏅"],bg:"linear-gradient(135deg,#7B5E00 0%,#FFD700 100%)",title:"אלוף היום! 🥇",sub:"מלך/מלכת ההימורים 👑"},
+  ],
+  second: [
+    {emoji:"🥈",particles:["⚡","💨","❄️","🌊","🔷"],bg:"linear-gradient(135deg,#5a5a5a 0%,#C0C0C0 100%)",title:"מקום שני 🥈",sub:"כמעט — אבל לא ממש 😏"},
+    {emoji:"😤",particles:["💪","🔥","⚡","🎯","🏋️"],bg:"linear-gradient(135deg,#2d0057 0%,#7B2FBE 100%)",title:"מקום שני 🥈",sub:"מחר תחטוף מהם את הראשון! 💪"},
+    {emoji:"🎯",particles:["🌈","💫","✨","⭐","🎪"],bg:"linear-gradient(135deg,#003d5c 0%,#006994 100%)",title:"כמעט ראשון! 🥈",sub:"עוד צעד קטן לפסגה"},
+  ],
+  third: [
+    {emoji:"🥉",particles:["🔶","🟠","✨","🍊","💥"],bg:"linear-gradient(135deg,#5C3317 0%,#CD7F32 100%)",title:"מקום שלישי 🥉",sub:"פודיום! לא כולם מגיעים לכאן"},
+    {emoji:"🎪",particles:["🎭","🎠","🎡","🎊","🎉"],bg:"linear-gradient(135deg,#7a0000 0%,#FF4500 100%)",title:"מקום שלישי 🥉",sub:"עוד לא אמרת את המילה האחרונה!"},
+    {emoji:"💥",particles:["⚡","🔥","💫","🌟","💢"],bg:"linear-gradient(135deg,#0a3d00 0%,#1e7e00 100%)",title:"מקום שלישי! 🥉",sub:"הקרב על הפודיום נמשך 🔥"},
+  ],
+  last: [
+    {emoji:"🗑️",particles:["💩","🙈","😬","😅","🤦"],bg:"linear-gradient(135deg,#0a0a0a 0%,#2d0000 100%)",title:"מקום אחרון 🗑️",sub:"...ממש לא הלך היום, חבל"},
+    {emoji:"💩",particles:["😭","🤦","😩","🙈","💀"],bg:"linear-gradient(135deg,#1a0800 0%,#4a1500 100%)",title:"הפח שלך מחכה 🗑️",sub:"לפחות אי אפשר להיות יותר גרוע 😅"},
+    {emoji:"😭",particles:["💧","🌧️","☔","😢","🥶"],bg:"linear-gradient(135deg,#001433 0%,#003080 100%)",title:"מקום אחרון... 🗑️",sub:"הבאים יהיו טובים יותר! (בטח) 💧"},
+  ],
+  middle: [
+    {emoji:"😐",particles:["🤷","💭","🎯","⚽","📊"],bg:"linear-gradient(135deg,#0d2d00 0%,#1b5e20 100%)",title:"באמצע הטבלה 🎯",sub:"לא רע — אבל יש לאן לצמוח"},
+    {emoji:"💪",particles:["🔥","⚡","💥","🚀","🏃"],bg:"linear-gradient(135deg,#002147 0%,#003580 100%)",title:"עוד לא נגמר! 💪",sub:"הכל עדיין פתוח — בוא נעשן אותם"},
+    {emoji:"🚀",particles:["⭐","🌟","💫","✨","🛸"],bg:"linear-gradient(135deg,#1a0030 0%,#4a0080 100%)",title:"טסים למעלה 🚀",sub:"עוד לא אמרנו את המילה האחרונה!"},
+  ],
+};
+
+// Deterministic particle positions (no Math.random so no re-render flicker)
+const DAILY_PARTICLES = Array.from({length:24},(_,i)=>({
+  left: ((i*137.508)%100).toFixed(1)+"%",
+  top:  "-60px",
+  delay: ((i*0.18)%2.8).toFixed(2)+"s",
+  dur:   (2.8+(i*0.15)%2).toFixed(2)+"s",
+  size:  22+(i%4)*7,
+  rotate:(i*47)%360,
+}));
+
+function getLastCompletedMatchDay(results){
+  for(let i=ALL_MATCH_DATES.length-1;i>=0;i--){
+    const date=ALL_MATCH_DATES[i];
+    const dayMs=GROUP_MATCHES.filter(m=>m.date===date);
+    if(!dayMs.length)continue;
+    const allDone=dayMs.every(m=>{const r=results?.matches?.[m.id];return r?.home!=null&&!r?.live;});
+    if(allDone)return date;
+  }
+  return null;
+}
+
+function DailyRankAnimation({data,onClose}){
+  const {date,sym,score,rank}=data;
+  const dayVariant=ALL_MATCH_DATES.indexOf(date)%3;
+  let presetGroup;
+  if(sym==="🥇")presetGroup=DAILY_ANIM_PRESETS.first;
+  else if(sym==="🥈")presetGroup=DAILY_ANIM_PRESETS.second;
+  else if(sym==="🥉")presetGroup=DAILY_ANIM_PRESETS.third;
+  else if(sym==="🗑️")presetGroup=DAILY_ANIM_PRESETS.last;
+  else presetGroup=DAILY_ANIM_PRESETS.middle;
+  const p=presetGroup[dayVariant];
+
+  useEffect(()=>{const t=setTimeout(onClose,7000);return()=>clearTimeout(t);},[]);
+
+  return(
+    <div className="dra-overlay" style={{background:p.bg}} onClick={onClose}>
+      <div className="dra-particles" aria-hidden="true">
+        {DAILY_PARTICLES.map((pt,i)=>(
+          <span key={i} className="dra-particle" style={{
+            left:pt.left,top:pt.top,
+            animationDelay:pt.delay,animationDuration:pt.dur,
+            fontSize:pt.size+"px",
+          }}>{p.particles[i%p.particles.length]}</span>
+        ))}
+      </div>
+      <div className="dra-card" onClick={e=>e.stopPropagation()}>
+        <div className="dra-main-emoji">{p.emoji}</div>
+        <div className="dra-rank-sym">{sym}</div>
+        <div className="dra-title">{p.title}</div>
+        <div className="dra-score">{score} נק׳</div>
+        <div className="dra-date-tag">יום {date}</div>
+        <div className="dra-sub">{p.sub}</div>
+        <button className="dra-btn" onClick={onClose}>המשך</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── SPECIAL BETS CARD ────────────────────────────────────────────────────────
 function SpecialBetsCard({participants, results, teamNames}){
   if(!isGlobalLocked())return null;
@@ -2355,6 +2442,7 @@ export default function App(){
   const [showWinner,setShowWinner]=useState(false);
   const [liveStats,setLiveStats]=useState({});
   const [statsMatch,setStatsMatch]=useState(null);
+  const [dailyRankAnim,setDailyRankAnim]=useState(null);
   const toastRef=useRef(null);
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
@@ -2754,6 +2842,24 @@ export default function App(){
     return()=>{u1();u2();clearInterval(poll);clearInterval(dataPoll);};
   },[]);
 
+  // Trigger daily rank animation once per completed match day per user
+  useEffect(()=>{
+    if(!authUser||!game?.results||!participants.length||gameLoading)return;
+    const lastDay=getLastCompletedMatchDay(game.results);
+    if(!lastDay)return;
+    const key=`dra_${lastDay}_${authUser.uid}`;
+    if(localStorage.getItem(key))return;
+    const ranked=[...participants]
+      .map(p=>({...p,score:calcScore(p.bets||{},game.results,participants)}))
+      .sort((a,b)=>b.score-a.score);
+    const myIdx=ranked.findIndex(p=>p.uid===authUser.uid);
+    if(myIdx<0)return;
+    const sym=rankSymbol(ranked,myIdx);
+    localStorage.setItem(key,"1");
+    // Small delay so the app loads first
+    setTimeout(()=>setDailyRankAnim({date:lastDay,sym,score:ranked[myIdx].score,rank:myIdx}),1500);
+  },[authUser?.uid,gameLoading,game?.results,participants.length]);
+
   const handleSignIn=async()=>{
     setSigningIn(true);
     try{
@@ -2924,6 +3030,9 @@ export default function App(){
       </div>
       <style>{STYLES}</style>
     </div>
+    {dailyRankAnim&&(
+      <DailyRankAnimation data={dailyRankAnim} onClose={()=>setDailyRankAnim(null)}/>
+    )}
     {showWinner&&appLeader&&(
       <WinnerAnnouncement
         winner={appLeader}
@@ -3394,4 +3503,25 @@ const STYLES=`
   .wa-trigger-btn{background:rgba(255,215,0,.12);border:1.5px solid rgba(255,215,0,.4);color:#FFD700;border-radius:8px;padding:.25rem .7rem;font-family:'Heebo',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap}
   .wa-trigger-btn:hover{background:rgba(255,215,0,.22)}
   .wa-trigger-btn.wa-trigger-final{background:rgba(255,215,0,.2);border-color:#FFD700;animation:wa-score-pop 1.5s ease-in-out infinite}
+
+  /* ── Daily Rank Animation ── */
+  @keyframes dra-particle-fall{0%{transform:translateY(0) rotate(0deg) scale(1);opacity:1}100%{transform:translateY(110vh) rotate(720deg) scale(.5);opacity:0}}
+  @keyframes dra-card-in{0%{transform:scale(.4) rotate(-8deg);opacity:0}70%{transform:scale(1.07) rotate(2deg)}100%{transform:scale(1) rotate(0deg);opacity:1}}
+  @keyframes dra-emoji-pop{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.3) rotate(8deg)}80%{transform:scale(.9)}100%{transform:scale(1) rotate(0deg)}}
+  @keyframes dra-title-in{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+  @keyframes dra-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  @keyframes dra-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px) rotate(-2deg)}40%{transform:translateX(8px) rotate(2deg)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+  .dra-overlay{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:1.2rem;animation:wa-overlay-in .4s ease}
+  .dra-particles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+  .dra-particle{position:absolute;animation:dra-particle-fall linear infinite;line-height:1}
+  .dra-card{background:rgba(0,0,0,.55);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,.18);border-radius:24px;padding:2rem 2rem 1.6rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.6rem;max-width:300px;width:100%;animation:dra-card-in .7s cubic-bezier(.34,1.56,.64,1) forwards;position:relative;z-index:1;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+  .dra-main-emoji{font-size:5rem;line-height:1;animation:dra-emoji-pop .8s cubic-bezier(.34,1.56,.64,1) forwards}
+  .dra-rank-sym{font-size:2rem;margin-top:-.4rem}
+  .dra-title{font-size:1.25rem;font-weight:900;color:#fff;animation:dra-title-in .5s .3s ease both;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+  .dra-score{font-size:2rem;font-weight:900;color:#FFD700;animation:dra-pulse 1.6s 1s ease-in-out infinite}
+  .dra-date-tag{font-size:.72rem;color:rgba(255,255,255,.5);letter-spacing:.05em;text-transform:uppercase}
+  .dra-sub{font-size:.9rem;color:rgba(255,255,255,.8);padding:0 .5rem;text-align:center;animation:dra-title-in .5s .5s ease both}
+  .dra-btn{margin-top:.5rem;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);color:#fff;border-radius:12px;padding:.55rem 2rem;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:background .2s}
+  .dra-btn:hover{background:rgba(255,255,255,.22)}
 `;
