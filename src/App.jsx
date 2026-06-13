@@ -2877,16 +2877,14 @@ export default function App(){
     return()=>{u1();u2();clearInterval(poll);clearInterval(dataPoll);};
   },[]);
 
-  // Trigger daily rank animation once per completed match day per user
+  // Show daily rank animation once per calendar day per user (after any completed match day)
   useEffect(()=>{
     if(!authUser||!participants.length||gameLoading)return;
-    const testMode=new URLSearchParams(window.location.search).has("testdra")||authUser.email==="eladvolm@gmail.com";
-    const lastDay=testMode
-      ? (ALL_MATCH_DATES[0] || getLastCompletedMatchDay(game?.results))
-      : getLastCompletedMatchDay(game?.results);
+    const lastDay=getLastCompletedMatchDay(game?.results);
     if(!lastDay)return;
-    const key=`dra_${lastDay}_${authUser.uid}`;
-    if(!testMode&&localStorage.getItem(key))return;
+    const todayStr=new Date().toISOString().slice(0,10);
+    const key=`dra_${todayStr}_${authUser.uid}`;
+    if(localStorage.getItem(key))return;
     const results=game?.results||{};
     const ranked=[...participants]
       .map(p=>({...p,score:calcScore(p.bets||{},results,participants)}))
@@ -2894,8 +2892,8 @@ export default function App(){
     const myIdx=ranked.findIndex(p=>p.uid===authUser.uid);
     if(myIdx<0)return;
     const sym=rankSymbol(ranked,myIdx);
-    if(!testMode)localStorage.setItem(key,"1");
-    setTimeout(()=>setDailyRankAnim({date:lastDay,sym,score:ranked[myIdx].score,rank:myIdx,isTest:testMode}),1500);
+    localStorage.setItem(key,"1");
+    setTimeout(()=>setDailyRankAnim({date:lastDay,sym,score:ranked[myIdx].score,rank:myIdx,isTest:false}),1500);
   },[authUser?.uid,gameLoading,game?.results,participants.length]);
 
   const handleSignIn=async()=>{
