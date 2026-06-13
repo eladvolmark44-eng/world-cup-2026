@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, updateDoc } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
@@ -921,8 +921,19 @@ function MatchStatsView({match, res, teamNames}){
   useEffect(()=>{
     fetchMatchStats(match).then(s=>{setStats(s);setLoading(false);});
   },[match.id]);
-  const displayStats=stats||(!loading?DEMO_STATS:null);
   const isDemo=!loading&&!stats;
+  // Build display stats: API data (or demo), then override reds from Firestore (most reliable source)
+  const displayStats=useMemo(()=>{
+    if(loading)return null;
+    const base=stats
+      ?{home:{...stats.home},away:{...stats.away}}
+      :{home:{...DEMO_STATS.home},away:{...DEMO_STATS.away}};
+    if(res?.reds){
+      base.home.reds=String(res.reds.home||0);
+      base.away.reds=String(res.reds.away||0);
+    }
+    return base;
+  },[stats,loading,res?.reds?.home,res?.reds?.away]);
   return(
     <div className="match-stats-page">
       <MatchRow m={match} res={res} teamNames={teamNames}/>
