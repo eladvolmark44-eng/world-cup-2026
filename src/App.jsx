@@ -497,6 +497,31 @@ async function loadGame(){
 async function saveGame(data){await setDoc(doc(db,"mundial2026","game"),data,{merge:true});}
 async function saveParticipant(p){await setDoc(doc(db,"mundial2026","game","participants",p.uid),p,{merge:true});}
 
+// ── Preset bets for known players (applied on first sign-in by name match) ────
+const PRESET_BETS_BY_NAME = {
+  "ארקדי": {
+    groups: {
+      A:["מקסיקו","מקסיקו"],
+      B:["קנדה","שוויץ"],
+      C:["ברזיל","מרוקו"],
+      D:['ארה"ב',"טורקיה"],
+      E:["גרמניה","חוף השנהב"],
+      F:["הולנד","יפן"],
+      G:["בלגיה","מצרים"],
+      H:["ספרד","אורוגוואי"],
+      I:["צרפת","נורווגיה"],
+      J:["ארגנטינה","אוסטריה"],
+      K:["פורטוגל","קולומביה"],
+      L:["אנגליה","קרואטיה"],
+    }
+  },
+};
+function getPresetBets(displayName){
+  if(!displayName)return{};
+  const key=Object.keys(PRESET_BETS_BY_NAME).find(k=>displayName.includes(k));
+  return key?PRESET_BETS_BY_NAME[key]:{};
+}
+
 function NumStepper({value,onChange,min=0,max=99,disabled=false}){
   return(
     <div className="stepper">
@@ -2333,7 +2358,7 @@ export default function App(){
       if(user){
         const snap=await getDoc(doc(db,"mundial2026","game","participants",user.uid));
         if(!snap.exists())
-          await saveParticipant({uid:user.uid,name:user.displayName,photoURL:user.photoURL||null,bets:{}});
+          await saveParticipant({uid:user.uid,name:user.displayName,photoURL:user.photoURL||null,bets:getPresetBets(user.displayName)});
         await updateDoc(doc(db,"mundial2026","game","participants",user.uid),{lastSeen:Date.now()});
       }
     });
