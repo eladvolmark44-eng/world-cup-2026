@@ -1396,7 +1396,6 @@ function getLastCompletedMatchDay(results){
   return null;
 }
 
-const GIPHY_KEY="dc6zaTOxFJmzC";
 const TENOR_KEY="LIVDSRZULELA";
 const GIF_TAGS={
   first:["celebration","winner","champion","trophy"],
@@ -1425,19 +1424,10 @@ function DailyRankAnimation({data,onClose}){
   useEffect(()=>{
     let cancelled=false;
     async function fetchGif(){
-      // Try Giphy first
       try{
-        const r=await fetch(`https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_KEY}&tag=${encodeURIComponent(tag)}&rating=g`);
+        const r=await fetch(`https://api.tenor.com/v1/search?q=${encodeURIComponent(tag)}&key=${TENOR_KEY}&limit=30&media_filter=minimal`);
         const j=await r.json();
-        const imgs=j?.data?.images;
-        const url=imgs?.fixed_height?.url||imgs?.downsized?.url||imgs?.original?.url;
-        if(!cancelled&&url){setGifUrl(url);return;}
-      }catch(e){/* fall through */}
-      // Fallback: Tenor v1
-      try{
-        const r2=await fetch(`https://api.tenor.com/v1/search?q=${encodeURIComponent(tag)}&key=${TENOR_KEY}&limit=20&media_filter=minimal`);
-        const j2=await r2.json();
-        const results=j2?.results||[];
+        const results=j?.results||[];
         if(results.length&&!cancelled){
           const item=results[Math.floor(Math.random()*results.length)];
           const url=item?.media?.[0]?.gif?.url||item?.media?.[0]?.mediumgif?.url;
