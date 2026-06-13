@@ -819,7 +819,7 @@ function Leaderboard({participants,results,onSelectPlayer}){
   );
 }
 
-function MatchRow({m, res, teamNames, odds}){
+function MatchRow({m, res, teamNames, odds, onClick}){
   const hasRes = res?.home!=null && res?.away!=null;
   const isLive = res?.live===true;
   const isDone = hasRes && !isLive;
@@ -828,7 +828,7 @@ function MatchRow({m, res, teamNames, odds}){
   const awayName = teamNames?.[m.away]||m.away||"?";
   const matchOdds = !locked && !hasRes && odds ? odds[`${m.home}_${m.away}`] : null;
   return(
-    <div className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""}`}>
+    <div className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""} ${onClick?"sched-clickable":""}`} onClick={onClick}>
       <div className="sched-date">
         {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?groupLabel(m.group):m.stage||""}
         {isLive&&<span className="live-badge"> 🔴 {res?.minute ? `${res.minute}'` : 'חי'}</span>}
@@ -892,6 +892,26 @@ function StatsPanel({stats}){
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function MatchStatsView({match, res, teamNames}){
+  const [stats,setStats]=useState(null);
+  const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    fetchMatchStats(match).then(s=>{setStats(s);setLoading(false);});
+  },[match.id]);
+  return(
+    <div className="match-stats-page">
+      <MatchRow m={match} res={res} teamNames={teamNames}/>
+      {loading?(
+        <div className="stats-loading">טוען סטטיסטיקות...</div>
+      ):stats?(
+        <StatsPanel stats={stats}/>
+      ):(
+        <div className="stats-empty">אין סטטיסטיקות זמינות למשחק זה</div>
+      )}
     </div>
   );
 }
@@ -1282,7 +1302,7 @@ function SpecialBetsCard({participants, results, teamNames}){
 }
 
 // ─── HOME VIEW ────────────────────────────────────────────────────────────────
-function HomeView({me, participants, results, teamNames, odds, liveStats, onSelectPlayer, onSaveBets, onGoToGroups, showWinner, setShowWinner}){
+function HomeView({me, participants, results, teamNames, odds, liveStats, onMatchClick, onSelectPlayer, onSaveBets, onGoToGroups, showWinner, setShowWinner}){
   const myBets=me?.bets||{};
   const globalLocked=isGlobalLocked();
   const [champion,setChampion]=useState(myBets.champion||"");
@@ -1338,7 +1358,7 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onSele
             const hasReal=real?.home!=null&&real?.away!=null;
             return(
               <div key={m.id} className="results-match-block">
-                <MatchRow m={m} res={real} teamNames={teamNames}/>
+                <MatchRow m={m} res={real} teamNames={teamNames} onClick={()=>onMatchClick(m,real)}/>
                 <div className="rev-bets-row">
                   {participants.map(p=>{
                     const bet=p.bets?.matches?.[m.id];
@@ -1364,21 +1384,9 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onSele
       ):nextMatch&&(
         <div className="home-card">
           <div className="home-card-title">⏰ המשחק הבא</div>
-          <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds}/>
+          <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds} onClick={()=>onMatchClick(nextMatch,results.matches?.[nextMatch.id])}/>
         </div>
       )}
-      {liveMatches.length===0&&lastDoneMatch&&(()=>{
-        const DEMO_STATS={home:{possession:"58",shotsOT:"4",shots:"9",blocked:"3",saves:"2",corners:"5",offsides:"2",fouls:"11",yellows:"1",passes:"412",passAcc:"84",tackles:"14"},away:{possession:"42",shotsOT:"2",shots:"6",blocked:"2",saves:"3",corners:"2",offsides:"1",fouls:"14",yellows:"2",passes:"298",passAcc:"77",tackles:"18"}};
-        const statsToShow=liveStats[lastDoneMatch.id]||DEMO_STATS;
-        const isDemo=!liveStats[lastDoneMatch.id];
-        return(
-          <div className="home-card">
-            <div className="home-card-title">📊 סטטיסטיקות משחק אחרון{isDemo&&<span style={{fontSize:".7rem",color:"var(--muted)",marginRight:".4rem"}}> (דמו)</span>}</div>
-            <MatchRow m={lastDoneMatch} res={results.matches?.[lastDoneMatch.id]} teamNames={teamNames}/>
-            <StatsPanel stats={statsToShow}/>
-          </div>
-        );
-      })()}
       <div className="home-card">
         <div className="home-card-title">🏆 טבלת דירוג</div>
         <div className="prizes-row" style={{marginBottom:".6rem"}}>
@@ -1439,7 +1447,7 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onSele
 }
 
 // ─── RESULTS VIEW ─────────────────────────────────────────────────────────────
-function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMatch, onSaveBets, odds, subTab, setSubTab}){
+function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMatch, onSaveBets, odds, subTab, setSubTab, onMatchClick}){
   const [revDate,setRevDate]=useState(getDefaultMatchDate);
   const [groupBets,setGroupBets]=useState(me?.bets?.groups||{});
   useEffect(()=>{setGroupBets(me?.bets?.groups||{});},[JSON.stringify(me?.bets?.groups)]);
@@ -1478,7 +1486,7 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
             }
             return(
               <div key={m.id} className="results-match-block">
-                <MatchRow m={m} res={real} teamNames={teamNames}/>
+                <MatchRow m={m} res={real} teamNames={teamNames} onClick={onMatchClick?()=>onMatchClick(m,real):undefined}/>
                 <div className="rev-bets-row">
                   {participants.map(p=>{
                     const bet=p.bets?.matches?.[m.id];
@@ -2016,6 +2024,54 @@ function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
 }
 
 
+async function fetchMatchStats(gm){
+  const heb=n=>SOFA_TEAM_MAP[n]||n;
+  const ymd=new Date(gm.kickoff||Date.now()).toISOString().slice(0,10).replace(/-/g,"");
+  let espnEvents=[];
+  try{
+    const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${ymd}`);
+    const d=await r.json();
+    espnEvents=d.events||[];
+  }catch(e){}
+  const espnEv=espnEvents.find(e=>{
+    const comp=e.competitions?.[0];
+    const ht=heb(comp?.competitors?.find(c=>c.homeAway==="home")?.team?.displayName||"");
+    const at=heb(comp?.competitors?.find(c=>c.homeAway==="away")?.team?.displayName||"");
+    return ht===gm.home&&at===gm.away;
+  });
+  if(espnEv?.id){
+    try{
+      const sr=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${espnEv.id}`);
+      const sd=await sr.json();
+      const homeT=sd.boxscore?.teams?.find(t=>t.homeAway==="home");
+      const awayT=sd.boxscore?.teams?.find(t=>t.homeAway==="away");
+      if(homeT?.statistics?.length&&awayT?.statistics?.length){
+        const g=(team,name)=>{const sv=team.statistics.find(s=>s.name===name);return sv?.displayValue??null;};
+        const mk=t=>({possession:g(t,"possessionPct"),shotsOT:g(t,"shotsOnTarget"),shots:g(t,"totalShots"),blocked:g(t,"blockedShots"),saves:g(t,"saves"),corners:g(t,"cornerKicks"),offsides:g(t,"offsides"),fouls:g(t,"foulsCommitted"),yellows:g(t,"yellowCards"),passes:g(t,"totalPasses")??g(t,"passes"),passAcc:g(t,"passAccuracyPct")??g(t,"passAccuracy"),tackles:g(t,"tackles")});
+        return{home:mk(homeT),away:mk(awayT)};
+      }
+    }catch(e){}
+  }
+  try{
+    const iso=new Date(gm.kickoff||Date.now()).toISOString().slice(0,10);
+    const sr=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
+    const sd=await sr.json();
+    const ev=(sd.events||[]).find(e=>heb(e.homeTeam?.name||"")===gm.home&&heb(e.awayTeam?.name||"")===gm.away);
+    if(ev?.id){
+      const statR=await fetch(`https://api.sofascore.com/api/v1/event/${ev.id}/statistics`);
+      const statD=await statR.json();
+      const all=statD.statistics?.find(s=>s.period==="ALL");
+      if(all){
+        const f=name=>{for(const grp of(all.groups||[])){const i=grp.statisticsItems?.find(x=>x.name===name);if(i)return i;}return null;};
+        const poss=f("Ball possession"),shots=f("Total shots"),soT=f("Shots on target"),blk=f("Blocked shots"),sav=f("Goalkeeper saves"),corn=f("Corner kicks"),offs=f("Offsides"),fouls=f("Fouls"),yel=f("Yellow cards"),pass=f("Total passes")??f("Passes"),passA=f("Accurate passes %")??f("Pass accuracy"),tack=f("Tackles");
+        const sv=(i,k)=>i?.[k]??null;
+        return{home:{possession:sv(poss,"home"),shotsOT:sv(soT,"home"),shots:sv(shots,"home"),blocked:sv(blk,"home"),saves:sv(sav,"home"),corners:sv(corn,"home"),offsides:sv(offs,"home"),fouls:sv(fouls,"home"),yellows:sv(yel,"home"),passes:sv(pass,"home"),passAcc:sv(passA,"home"),tackles:sv(tack,"home")},away:{possession:sv(poss,"away"),shotsOT:sv(soT,"away"),shots:sv(shots,"away"),blocked:sv(blk,"away"),saves:sv(sav,"away"),corners:sv(corn,"away"),offsides:sv(offs,"away"),fouls:sv(fouls,"away"),yellows:sv(yel,"away"),passes:sv(pass,"away"),passAcc:sv(passA,"away"),tackles:sv(tack,"away")}};
+      }
+    }
+  }catch(e){}
+  return null;
+}
+
 // Fetches live match data (red cards + statistics) from ESPN, falls back to SofaScore for stats.
 // setLiveStats: React setState callback for the stats panel; pass null to skip stats.
 async function syncMatchData(setLiveStats){
@@ -2162,6 +2218,7 @@ export default function App(){
   const [showProfileEdit,setShowProfileEdit]=useState(false);
   const [showWinner,setShowWinner]=useState(false);
   const [liveStats,setLiveStats]=useState({});
+  const [statsMatch,setStatsMatch]=useState(null);
   const toastRef=useRef(null);
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
@@ -2612,6 +2669,22 @@ export default function App(){
     </div>
   );
 
+  if(statsMatch)return(
+    <div className="app" dir="rtl">
+      <Toast msg={toast}/>
+      <div className="main-screen">
+        <div className="main-header">
+          <button className="back-btn" onClick={()=>setStatsMatch(null)}>→</button>
+          <span className="header-title">📊 סטטיסטיקות משחק</span>
+        </div>
+        <div className="main-body">
+          <MatchStatsView match={statsMatch.match} res={statsMatch.res} teamNames={teamNames}/>
+        </div>
+      </div>
+      <style>{STYLES}</style>
+    </div>
+  );
+
   return(
     <>
     <div className="app" dir="rtl">
@@ -2651,6 +2724,7 @@ export default function App(){
               teamNames={teamNames}
               odds={odds}
               liveStats={liveStats}
+              onMatchClick={(match,res)=>setStatsMatch({match,res})}
               onSelectPlayer={setSelectedPlayer}
               onSaveBets={handleSaveBets}
               onGoToGroups={()=>{setTab("results");setResultsSubTab("groups");}}
@@ -2670,6 +2744,7 @@ export default function App(){
               odds={odds}
               subTab={resultsSubTab}
               setSubTab={setResultsSubTab}
+              onMatchClick={(match,res)=>setStatsMatch({match,res})}
             />
           )}
 
@@ -2775,6 +2850,10 @@ const STYLES=`
   .tab-ref-img{width:1.8rem;height:1.8rem;object-fit:contain}
   .redcard{display:inline-block;width:9px;height:13px;background:#ff6060;border-radius:2px;flex-shrink:0;vertical-align:middle}
   .rc-badge{display:inline-flex;align-items:center;gap:2px;margin-right:3px}
+  .sched-clickable{cursor:pointer;transition:background .15s}
+  .sched-clickable:hover{background:rgba(255,255,255,.04)}
+  .match-stats-page{display:flex;flex-direction:column;gap:.8rem;max-width:680px;margin:0 auto}
+  .stats-loading,.stats-empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:.9rem}
   .stats-panel{margin-top:.55rem;border-top:1px solid var(--border);padding-top:.5rem;display:flex;flex-direction:column;gap:.28rem}
   .stats-row{display:grid;grid-template-columns:2.4rem 1fr 2.4rem;align-items:center;gap:.4rem}
   .stats-val-home{font-size:.8rem;font-weight:700;text-align:right;color:var(--green)}
