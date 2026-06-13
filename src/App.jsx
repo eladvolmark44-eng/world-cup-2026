@@ -2038,12 +2038,23 @@ async function syncMatchData(setLiveStats){
 
     if(!activeMatchIds.length)return;
 
+    // Collect unique dates from active matches, fetch ESPN scoreboard per date
+    const dateSet=new Set(activeMatchIds.map(id=>{
+      const gm=GROUP_MATCHES.find(m=>m.id===id);
+      return gm?.kickoff?new Date(gm.kickoff).toISOString().slice(0,10).replace(/-/g,""):null;
+    }).filter(Boolean));
+    // Always include today so live matches are covered
+    dateSet.add(new Date().toISOString().slice(0,10).replace(/-/g,""));
+
     let espnEvents=[];
-    try{
-      const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard");
-      const d=await r.json();
-      espnEvents=d.events||[];
-    }catch(e){console.warn("ESPN scoreboard failed:",e.message);return;}
+    for(const ymd of dateSet){
+      try{
+        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${ymd}`);
+        const d=await r.json();
+        if(d.events?.length)espnEvents.push(...d.events);
+      }catch(e){console.warn("ESPN scoreboard failed for",ymd,":",e.message);}
+    }
+    if(!espnEvents.length){console.warn("ESPN: no events found for dates",{...dateSet});return;}
 
     const redUpdates={};
     for(const matchId of activeMatchIds){
