@@ -3161,7 +3161,7 @@ const STYLES=`
   .stats-panel{display:flex;flex-direction:column;gap:.5rem;padding-top:.3rem}
   .stats-section{background:var(--card2);border-radius:12px;overflow:hidden}
   .stats-section-title{text-align:right;padding:.42rem .8rem;font-size:.74rem;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)}
-  .stats-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:.45rem .8rem;gap:.5rem}
+  .stats-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:.45rem .8rem;gap:.5rem;direction:rtl}
   .stats-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.04)}
   .stats-val{font-size:.88rem;font-weight:600;min-width:2.2rem;text-align:center;white-space:nowrap}
   .stats-val-win{background:#2563eb;color:#fff;border-radius:20px;padding:.08rem .55rem;font-weight:700}
