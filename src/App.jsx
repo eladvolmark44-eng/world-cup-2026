@@ -1396,18 +1396,38 @@ function getLastCompletedMatchDay(results){
   return null;
 }
 
+const GIPHY_KEY="dc6zaTOxFJmzC";
+const GIPHY_TAGS={
+  first:["winner celebration","champion trophy","first place winner","gold medal celebration"],
+  second:["almost there","runner up","silver medal","close but no cigar"],
+  third:["bronze medal","third place","podium"],
+  last:["epic fail funny","loser funny","sad funny","fail"],
+  middle:["meh reaction","shrug","whatever reaction","average"],
+};
+
 function DailyRankAnimation({data,onClose}){
   const {date,sym,score,rank}=data;
   const dayVariant=ALL_MATCH_DATES.indexOf(date)%3;
-  let presetGroup;
-  if(sym==="🥇")presetGroup=DAILY_ANIM_PRESETS.first;
-  else if(sym==="🥈")presetGroup=DAILY_ANIM_PRESETS.second;
-  else if(sym==="🥉")presetGroup=DAILY_ANIM_PRESETS.third;
-  else if(sym==="🗑️")presetGroup=DAILY_ANIM_PRESETS.last;
-  else presetGroup=DAILY_ANIM_PRESETS.middle;
+  let presetGroup,tagGroup;
+  if(sym==="🥇"){presetGroup=DAILY_ANIM_PRESETS.first;tagGroup="first";}
+  else if(sym==="🥈"){presetGroup=DAILY_ANIM_PRESETS.second;tagGroup="second";}
+  else if(sym==="🥉"){presetGroup=DAILY_ANIM_PRESETS.third;tagGroup="third";}
+  else if(sym==="🗑️"){presetGroup=DAILY_ANIM_PRESETS.last;tagGroup="last";}
+  else{presetGroup=DAILY_ANIM_PRESETS.middle;tagGroup="middle";}
   const p=presetGroup[dayVariant];
+  const tag=GIPHY_TAGS[tagGroup][dayVariant%GIPHY_TAGS[tagGroup].length];
 
-  useEffect(()=>{const t=setTimeout(onClose,7000);return()=>clearTimeout(t);},[]);
+  const [gifUrl,setGifUrl]=useState(null);
+  useEffect(()=>{
+    let cancelled=false;
+    fetch(`https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_KEY}&tag=${encodeURIComponent(tag)}&rating=g`)
+      .then(r=>r.json())
+      .then(j=>{if(!cancelled&&j?.data?.images?.fixed_height?.url)setGifUrl(j.data.images.fixed_height.url);})
+      .catch(()=>{});
+    return()=>{cancelled=true;};
+  },[]);
+
+  useEffect(()=>{const t=setTimeout(onClose,9000);return()=>clearTimeout(t);},[]);
 
   return(
     <div className="dra-overlay" style={{background:p.bg}} onClick={onClose}>
@@ -1421,7 +1441,10 @@ function DailyRankAnimation({data,onClose}){
         ))}
       </div>
       <div className="dra-card" onClick={e=>e.stopPropagation()}>
-        <div className="dra-main-emoji">{p.emoji}</div>
+        {gifUrl
+          ? <img src={gifUrl} alt="" className="dra-gif"/>
+          : <div className="dra-main-emoji">{p.emoji}</div>
+        }
         <div className="dra-rank-sym">{sym}</div>
         <div className="dra-title">{p.title}</div>
         <div className="dra-score">{score} נק׳</div>
@@ -3517,6 +3540,7 @@ const STYLES=`
   .dra-particle{position:absolute;animation:dra-particle-fall linear infinite;line-height:1}
   .dra-card{background:rgba(0,0,0,.55);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,.18);border-radius:24px;padding:2rem 2rem 1.6rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.6rem;max-width:300px;width:100%;animation:dra-card-in .7s cubic-bezier(.34,1.56,.64,1) forwards;position:relative;z-index:1;box-shadow:0 24px 80px rgba(0,0,0,.6)}
   .dra-main-emoji{font-size:5rem;line-height:1;animation:dra-emoji-pop .8s cubic-bezier(.34,1.56,.64,1) forwards}
+  .dra-gif{width:160px;height:120px;object-fit:cover;border-radius:12px;animation:dra-emoji-pop .8s cubic-bezier(.34,1.56,.64,1) forwards}
   .dra-rank-sym{font-size:2rem;margin-top:-.4rem}
   .dra-title{font-size:1.25rem;font-weight:900;color:#fff;animation:dra-title-in .5s .3s ease both;text-shadow:0 2px 8px rgba(0,0,0,.5)}
   .dra-score{font-size:2rem;font-weight:900;color:#FFD700;animation:dra-pulse 1.6s 1s ease-in-out infinite}
