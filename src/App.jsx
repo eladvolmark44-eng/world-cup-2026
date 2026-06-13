@@ -921,7 +921,7 @@ function Leaderboard({participants,results,onSelectPlayer}){
         <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
           <span className="lb-rank">{rankSymbol(ranked,i)}</span>
           {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
-          <span className="lb-name">{p.name}{p.name.includes("דורון")&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+          <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
           <span className="lb-score">{p.score} נק׳</span>
           <span className="lb-arrow">›</span>
         </div>
@@ -1683,7 +1683,7 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
                   {p.photoURL
                     ?<img src={p.photoURL} className="lb-avatar" alt=""/>
                     :<div className="lb-avatar-ph">{p.name[0]}</div>}
-                  <span className="lb-name">{p.name}{p.name.includes("דורון")&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+                  <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
                 </div>
                 <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
                   {globalLocked&&goalsBet!=null&&goalsBet!==""
@@ -2043,7 +2043,7 @@ function RankingView({participants, results, teamNames, onSelectPlayer}){
               <div className={`lb-row rank-${i+1}`} onClick={()=>setExpandedUid(isExpanded?null:p.uid)}>
                 <span className="lb-rank">{rankSymbol(ranked,i)}</span>
                 {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
-                <span className="lb-name">{p.name}{p.name.includes("דורון")&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+                <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
                 <span className="lb-score">{p.score} נק׳</span>
                 <span className="lb-expand">{isExpanded?"▲":"▼"}</span>
               </div>
