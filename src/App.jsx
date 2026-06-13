@@ -851,44 +851,61 @@ function MatchRow({m, res, teamNames, odds, onClick}){
   );
 }
 
-function StatsPanel({stats}){
-  const rows=[
-    {key:"possession",label:"החזקה",pct:true},
-    {key:"shotsOT",label:"בעיטות לשער"},
-    {key:"shots",label:"סה״כ בעיטות"},
-    {key:"blocked",label:"בעיטות חסומות"},
-    {key:"saves",label:"הצלות שוער"},
-    {key:"corners",label:"פינות"},
+const STATS_SECTIONS=[
+  {title:"כללי",rows:[
+    {key:"possession",label:"החזקת כדור",pct:true},
+    {key:"corners",label:"קרנות"},
     {key:"offsides",label:"נבדלים"},
-    {key:"fouls",label:"פאולים"},
-    {key:"yellows",label:"צהובים"},
-    {key:"passes",label:"מסירות"},
+    {key:"bigChances",label:"יצירת מצבים מסוכנים"},
+    {key:"attacks",label:"התקפות"},
+  ]},
+  {title:"בעיטות",rows:[
+    {key:"xg",label:"שערים צפויים"},
+    {key:"shotsOT",label:"בעיטות לשער"},
+    {key:"shots",label:"בעיטות למסגרת"},
+    {key:"blocked",label:"בעיטות חסומות"},
+  ]},
+  {title:"מסירות",rows:[
+    {key:"passes",label:"מסירות שהושלמו"},
     {key:"passAcc",label:"דיוק מסירות",pct:true},
-    {key:"tackles",label:"גבייה"},
-  ];
+  ]},
+  {title:"הגנה",rows:[
+    {key:"tackles",label:"חטיפות"},
+    {key:"saves",label:"הצלות שוער"},
+  ]},
+  {title:"עבירות",rows:[
+    {key:"fouls",label:"עבירות"},
+    {key:"yellows",label:"כרטיסים צהובים"},
+    {key:"reds",label:"כרטיסים אדומים"},
+  ]},
+];
+
+function StatsPanel({stats}){
   return(
     <div className="stats-panel">
-      {rows.map(({key,label,pct})=>{
-        const hRaw=stats.home[key];const aRaw=stats.away[key];
-        if(hRaw==null&&aRaw==null)return null;
-        const hv=parseFloat(hRaw)||0;
-        const av=parseFloat(aRaw)||0;
-        if(hv===0&&av===0)return null;
-        const total=hv+av||1;
-        const hPct=Math.round((hv/total)*100);
-        const aPct=100-hPct;
-        const fmt=v=>pct?`${Math.round(v)}%`:String(Math.round(v));
+      {STATS_SECTIONS.map(({title,rows})=>{
+        const visible=rows.filter(({key})=>{
+          const h=stats.home[key],a=stats.away[key];
+          if(h==null&&a==null)return false;
+          return parseFloat(h)||0||parseFloat(a)||0;
+        });
+        if(!visible.length)return null;
         return(
-          <div key={key} className="stats-row">
-            <span className="stats-val-home">{fmt(hv)}</span>
-            <div className="stats-center">
-              <span className="stats-label">{label}</span>
-              <div className="stats-bar" dir="ltr">
-                <div className="stats-bar-away" style={{width:`${aPct}%`}}/>
-                <div className="stats-bar-home" style={{width:`${hPct}%`}}/>
-              </div>
-            </div>
-            <span className="stats-val-away">{fmt(av)}</span>
+          <div key={title} className="stats-section">
+            <div className="stats-section-title">{title}</div>
+            {visible.map(({key,label,pct})=>{
+              const hRaw=stats.home[key],aRaw=stats.away[key];
+              const hv=parseFloat(hRaw)||0,av=parseFloat(aRaw)||0;
+              const fmt=(v,raw)=>pct?`${Math.round(v)}%`:(raw!=null?String(raw):String(Math.round(v)));
+              const hWin=hv>av,aWin=av>hv;
+              return(
+                <div key={key} className="stats-row">
+                  <span className={`stats-val${hWin?" stats-val-win":""}`}>{fmt(hv,hRaw)}</span>
+                  <span className="stats-label">{label}</span>
+                  <span className={`stats-val${aWin?" stats-val-win":""}`}>{fmt(av,aRaw)}</span>
+                </div>
+              );
+            })}
           </div>
         );
       })}
@@ -896,7 +913,7 @@ function StatsPanel({stats}){
   );
 }
 
-const DEMO_STATS={home:{possession:"58",shotsOT:"4",shots:"9",blocked:"3",saves:"2",corners:"5",offsides:"2",fouls:"11",yellows:"1",passes:"412",passAcc:"84",tackles:"14"},away:{possession:"42",shotsOT:"2",shots:"6",blocked:"2",saves:"3",corners:"2",offsides:"1",fouls:"14",yellows:"2",passes:"298",passAcc:"77",tackles:"18"}};
+const DEMO_STATS={home:{possession:"65",xg:"1.42",shotsOT:"9",shots:"16",blocked:"6",saves:"0",corners:"3",offsides:"2",bigChances:"4",attacks:"150",fouls:"13",yellows:"1",reds:"0",passes:"509",passAcc:"89",tackles:"9"},away:{possession:"35",xg:"0.54",shotsOT:"9",shots:"9",blocked:"1",saves:"3",corners:"1",offsides:"1",bigChances:"1",attacks:"55",fouls:"17",yellows:"5",reds:"0",passes:"232",passAcc:"77",tackles:"10"}};
 
 function MatchStatsView({match, res, teamNames}){
   const [stats,setStats]=useState(null);
@@ -2052,7 +2069,7 @@ async function fetchMatchStats(gm){
       const awayT=sd.boxscore?.teams?.find(t=>t.homeAway==="away");
       if(homeT?.statistics?.length&&awayT?.statistics?.length){
         const g=(team,name)=>{const sv=team.statistics.find(s=>s.name===name);return sv?.displayValue??null;};
-        const mk=t=>({possession:g(t,"possessionPct"),shotsOT:g(t,"shotsOnTarget"),shots:g(t,"totalShots"),blocked:g(t,"blockedShots"),saves:g(t,"saves"),corners:g(t,"cornerKicks"),offsides:g(t,"offsides"),fouls:g(t,"foulsCommitted"),yellows:g(t,"yellowCards"),passes:g(t,"totalPasses")??g(t,"passes"),passAcc:g(t,"passAccuracyPct")??g(t,"passAccuracy"),tackles:g(t,"tackles")});
+        const mk=t=>({possession:g(t,"possessionPct"),xg:g(t,"expectedGoals")??g(t,"xGoals"),shotsOT:g(t,"shotsOnTarget"),shots:g(t,"totalShots"),blocked:g(t,"blockedShots"),saves:g(t,"saves"),corners:g(t,"cornerKicks"),offsides:g(t,"offsides"),bigChances:g(t,"bigChances"),attacks:g(t,"totalAttacks"),fouls:g(t,"foulsCommitted"),yellows:g(t,"yellowCards"),reds:g(t,"redCards"),passes:g(t,"totalPasses")??g(t,"passes"),passAcc:g(t,"passAccuracyPct")??g(t,"passAccuracy"),tackles:g(t,"tackles")});
         return{home:mk(homeT),away:mk(awayT)};
       }
     }catch(e){}
@@ -2068,9 +2085,9 @@ async function fetchMatchStats(gm){
       const all=statD.statistics?.find(s=>s.period==="ALL");
       if(all){
         const f=name=>{for(const grp of(all.groups||[])){const i=grp.statisticsItems?.find(x=>x.name===name);if(i)return i;}return null;};
-        const poss=f("Ball possession"),shots=f("Total shots"),soT=f("Shots on target"),blk=f("Blocked shots"),sav=f("Goalkeeper saves"),corn=f("Corner kicks"),offs=f("Offsides"),fouls=f("Fouls"),yel=f("Yellow cards"),pass=f("Total passes")??f("Passes"),passA=f("Accurate passes %")??f("Pass accuracy"),tack=f("Tackles");
+        const poss=f("Ball possession"),xg=f("Expected goals"),shots=f("Total shots"),soT=f("Shots on target"),blk=f("Blocked shots"),sav=f("Goalkeeper saves"),corn=f("Corner kicks"),offs=f("Offsides"),bc=f("Big chances"),atk=f("Attacks"),fouls=f("Fouls"),yel=f("Yellow cards"),red=f("Red cards"),pass=f("Total passes")??f("Passes"),passA=f("Accurate passes %")??f("Pass accuracy"),tack=f("Tackles");
         const sv=(i,k)=>i?.[k]??null;
-        return{home:{possession:sv(poss,"home"),shotsOT:sv(soT,"home"),shots:sv(shots,"home"),blocked:sv(blk,"home"),saves:sv(sav,"home"),corners:sv(corn,"home"),offsides:sv(offs,"home"),fouls:sv(fouls,"home"),yellows:sv(yel,"home"),passes:sv(pass,"home"),passAcc:sv(passA,"home"),tackles:sv(tack,"home")},away:{possession:sv(poss,"away"),shotsOT:sv(soT,"away"),shots:sv(shots,"away"),blocked:sv(blk,"away"),saves:sv(sav,"away"),corners:sv(corn,"away"),offsides:sv(offs,"away"),fouls:sv(fouls,"away"),yellows:sv(yel,"away"),passes:sv(pass,"away"),passAcc:sv(passA,"away"),tackles:sv(tack,"away")}};
+        return{home:{possession:sv(poss,"home"),xg:sv(xg,"home"),shotsOT:sv(soT,"home"),shots:sv(shots,"home"),blocked:sv(blk,"home"),saves:sv(sav,"home"),corners:sv(corn,"home"),offsides:sv(offs,"home"),bigChances:sv(bc,"home"),attacks:sv(atk,"home"),fouls:sv(fouls,"home"),yellows:sv(yel,"home"),reds:sv(red,"home"),passes:sv(pass,"home"),passAcc:sv(passA,"home"),tackles:sv(tack,"home")},away:{possession:sv(poss,"away"),xg:sv(xg,"away"),shotsOT:sv(soT,"away"),shots:sv(shots,"away"),blocked:sv(blk,"away"),saves:sv(sav,"away"),corners:sv(corn,"away"),offsides:sv(offs,"away"),bigChances:sv(bc,"away"),attacks:sv(atk,"away"),fouls:sv(fouls,"away"),yellows:sv(yel,"away"),reds:sv(red,"away"),passes:sv(pass,"away"),passAcc:sv(passA,"away"),tackles:sv(tack,"away")}};
       }
     }
   }catch(e){}
@@ -2860,15 +2877,14 @@ const STYLES=`
   .match-stats-page{display:flex;flex-direction:column;gap:.8rem;max-width:680px;margin:0 auto}
   .stats-loading,.stats-empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:.9rem}
   .stats-demo-note{text-align:center;font-size:.72rem;color:var(--muted);padding:.3rem 0 .1rem;border-top:1px solid var(--border);margin-top:.4rem}
-  .stats-panel{margin-top:.55rem;border-top:1px solid var(--border);padding-top:.5rem;display:flex;flex-direction:column;gap:.28rem}
-  .stats-row{display:grid;grid-template-columns:2.4rem 1fr 2.4rem;align-items:center;gap:.4rem}
-  .stats-val-home{font-size:.8rem;font-weight:700;text-align:right;color:var(--green)}
-  .stats-val-away{font-size:.8rem;font-weight:700;text-align:left;color:var(--red)}
-  .stats-center{display:flex;flex-direction:column;gap:.12rem;align-items:center}
-  .stats-label{font-size:.7rem;color:var(--muted);white-space:nowrap}
-  .stats-bar{width:100%;height:4px;border-radius:2px;overflow:hidden;background:rgba(255,255,255,.08);display:flex}
-  .stats-bar-away{background:var(--red);flex-shrink:0}
-  .stats-bar-home{background:var(--green);flex-shrink:0}
+  .stats-panel{display:flex;flex-direction:column;gap:.5rem;padding-top:.3rem}
+  .stats-section{background:var(--card2);border-radius:12px;overflow:hidden}
+  .stats-section-title{text-align:right;padding:.42rem .8rem;font-size:.74rem;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)}
+  .stats-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:.45rem .8rem;gap:.5rem}
+  .stats-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.04)}
+  .stats-val{font-size:.88rem;font-weight:600;min-width:2.2rem;text-align:center;white-space:nowrap}
+  .stats-val-win{background:#2563eb;color:#fff;border-radius:20px;padding:.08rem .55rem;font-weight:700}
+  .stats-label{text-align:center;font-size:.8rem;color:var(--muted);white-space:nowrap}
   .main-tab.active{color:var(--green);border-bottom-color:var(--green)}
   .main-body{flex:1;overflow-y:auto;padding:1rem}
   .section{display:flex;flex-direction:column;gap:1rem;max-width:680px;margin:0 auto}
