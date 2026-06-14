@@ -2427,6 +2427,39 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [running, setRunning] = useState(false);
   const [editUid, setEditUid] = useState(null);
   const [editDate, setEditDate] = useState("");
+  const [betUid, setBetUid] = useState("");
+  const [betMatchId, setBetMatchId] = useState("");
+  const [betHome, setBetHome] = useState(0);
+  const [betAway, setBetAway] = useState(0);
+  const [betSaving, setBetSaving] = useState(false);
+
+  const onBetMatchChange = (uid, mid) => {
+    setBetMatchId(mid);
+    if(uid && mid) {
+      const existing = participants.find(p=>p.uid===uid)?.bets?.matches?.[mid];
+      setBetHome(existing?.home ?? 0);
+      setBetAway(existing?.away ?? 0);
+    }
+  };
+  const onBetUidChange = (uid) => {
+    setBetUid(uid);
+    if(uid && betMatchId) {
+      const existing = participants.find(p=>p.uid===uid)?.bets?.matches?.[betMatchId];
+      setBetHome(existing?.home ?? 0);
+      setBetAway(existing?.away ?? 0);
+    }
+  };
+  const saveBet = async () => {
+    if(!betUid||!betMatchId)return;
+    const p=participants.find(p=>p.uid===betUid);
+    if(!p)return;
+    setBetSaving(true);
+    try{
+      await saveParticipant({...p,bets:{...(p.bets||{}),matches:{...(p.bets?.matches||{}),[betMatchId]:{home:betHome,away:betAway}}}});
+      showToast("✅ הימור עודכן");
+    }catch(e){showToast("❌ "+e.message);}
+    setBetSaving(false);
+  };
 
   const actions = [
     {
@@ -2439,18 +2472,6 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
         for (const p of participants.filter(p=>!p.isBot)) {
           await saveParticipant({...p, bets: {...p.bets, matches: {}}});
         }
-      }
-    },
-    {
-      id: "setAmirD2",
-      label: "הגדר הימור אמיר: אוסטרליה-טורקיה 0:0",
-      desc: "מגדיר את הימור D2 של אמיר ל-0:0",
-      icon: "🎯",
-      danger: false,
-      run: async () => {
-        const amir=participants.find(p=>!p.isBot&&(p.name?.toLowerCase().includes("amir")||p.name?.includes("אמיר")));
-        if(!amir)throw new Error("לא נמצא משתתף בשם אמיר");
-        await saveParticipant({...amir,bets:{...(amir.bets||{}),matches:{...(amir.bets?.matches||{}),D2:{home:0,away:0}}}});
       }
     },
     {
@@ -2524,6 +2545,29 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
           <span className="admin-action-desc">מציג את חלון הניצחון עם קונפטי למנצח הנוכחי</span>
         </div>
         <button className="btn-admin-winner" onClick={onTriggerWinner}>הפעל</button>
+      </div>
+      <div className="admin-bet-editor">
+        <div className="admin-bet-title">✏️ עריכת הימור</div>
+        <div className="admin-bet-selects">
+          <select className="admin-bet-sel" value={betUid} onChange={e=>onBetUidChange(e.target.value)}>
+            <option value="">— בחר שחקן —</option>
+            {participants.filter(p=>!p.isBot).map(p=><option key={p.uid} value={p.uid}>{p.name}</option>)}
+          </select>
+          <select className="admin-bet-sel" value={betMatchId} onChange={e=>onBetMatchChange(betUid,e.target.value)}>
+            <option value="">— בחר משחק —</option>
+            {GROUP_MATCHES.map(m=><option key={m.id} value={m.id}>{m.home} – {m.away} ({m.date})</option>)}
+          </select>
+        </div>
+        {betUid&&betMatchId&&(
+          <div className="admin-bet-row">
+            <span className="admin-bet-team">{GROUP_MATCHES.find(m=>m.id===betMatchId)?.home}</span>
+            <input type="number" min="0" max="20" value={betHome} onChange={e=>setBetHome(+e.target.value)} className="admin-score-in"/>
+            <span className="admin-bet-sep">:</span>
+            <input type="number" min="0" max="20" value={betAway} onChange={e=>setBetAway(+e.target.value)} className="admin-score-in"/>
+            <span className="admin-bet-team">{GROUP_MATCHES.find(m=>m.id===betMatchId)?.away}</span>
+            <button className="btn-admin-save-bet" onClick={saveBet} disabled={betSaving}>{betSaving?"שומר...":"שמור"}</button>
+          </div>
+        )}
       </div>
       <div className="admin-actions">
         {actions.map(a=>(
@@ -3925,6 +3969,17 @@ const STYLES=`
   .admin-winner-section{background:var(--card2);border:1px solid rgba(0,216,127,.3);border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
   .btn-admin-winner{background:linear-gradient(135deg,#00d87f,#00b86a);color:#060e1a;border:none;border-radius:8px;padding:.4rem 1.1rem;font-size:.85rem;font-weight:800;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap;flex-shrink:0}
   .btn-admin-winner:hover{opacity:.88}
+  .admin-bet-editor{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;display:flex;flex-direction:column;gap:.7rem}
+  .admin-bet-title{font-size:.82rem;font-weight:700;color:var(--text)}
+  .admin-bet-selects{display:flex;flex-direction:column;gap:.4rem}
+  .admin-bet-sel{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.38rem .6rem;font-size:.8rem;font-family:'Heebo',sans-serif;width:100%}
+  .admin-bet-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .admin-bet-team{font-size:.78rem;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .admin-bet-team:last-of-type{text-align:left}
+  .admin-score-in{width:2.8rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:.3rem .4rem;font-size:.95rem;font-weight:700;text-align:center;font-family:'Heebo',sans-serif}
+  .admin-bet-sep{font-weight:800;font-size:1rem}
+  .btn-admin-save-bet{background:var(--green);color:#060e1a;border:none;border-radius:8px;padding:.4rem .9rem;font-size:.82rem;font-weight:800;cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap;flex-shrink:0;margin-right:auto}
+  .btn-admin-save-bet:disabled{opacity:.6;cursor:default}
   .admin-actions{display:flex;flex-direction:column;gap:.6rem}
   .admin-action-row{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
   .admin-action-danger{border-color:rgba(255,77,109,.3)}
