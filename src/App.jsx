@@ -1098,7 +1098,7 @@ function Leaderboard({participants,results,onSelectPlayer}){
         <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
           <span className="lb-rank">{rankSymbol(ranked,i)}</span>
           {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
-          <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+          <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
           <span className="lb-score">{p.score} נק׳</span>
           <span className="lb-arrow">›</span>
         </div>
@@ -1998,7 +1998,7 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
                   {p.photoURL
                     ?<img src={p.photoURL} className="lb-avatar" alt=""/>
                     :<div className="lb-avatar-ph">{p.name[0]}</div>}
-                  <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+                  <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
                 </div>
                 <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
                   {globalLocked&&goalsBet!=null&&goalsBet!==""
@@ -2358,7 +2358,7 @@ function RankingView({participants, results, teamNames, onSelectPlayer}){
               <div className={`lb-row rank-${i+1}`} onClick={()=>setExpandedUid(isExpanded?null:p.uid)}>
                 <span className="lb-rank">{rankSymbol(ranked,i)}</span>
                 {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
-                <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+                <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
                 <span className="lb-score">{p.score} נק׳</span>
                 <span className="lb-expand">{isExpanded?"▲":"▼"}</span>
               </div>
@@ -2428,6 +2428,18 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
         for (const p of participants.filter(p=>!p.isBot)) {
           await saveParticipant({...p, bets: {...p.bets, matches: {}}});
         }
+      }
+    },
+    {
+      id: "setAmirD2",
+      label: "הגדר הימור אמיר: אוסטרליה-טורקיה 0:0",
+      desc: "מגדיר את הימור D2 של אמיר ל-0:0",
+      icon: "🎯",
+      danger: false,
+      run: async () => {
+        const amir=participants.find(p=>!p.isBot&&(p.name?.toLowerCase().includes("amir")||p.name?.includes("אמיר")));
+        if(!amir)throw new Error("לא נמצא משתתף בשם אמיר");
+        await saveParticipant({...amir,bets:{...(amir.bets||{}),matches:{...(amir.bets?.matches||{}),D2:{home:0,away:0}}}});
       }
     },
     {
@@ -3571,6 +3583,7 @@ const STYLES=`
   .main-tab.active .tab-score{border-color:var(--green);color:var(--green)}
   .tab-ref-img{width:1.8rem;height:1.8rem;object-fit:contain}
   .redcard{display:inline-block;width:9px;height:13px;background:#ff6060;border-radius:2px;flex-shrink:0;vertical-align:middle}
+  .yellowcard{display:inline-block;width:9px;height:13px;background:#ffd700;border-radius:2px;flex-shrink:0;vertical-align:middle}
   .rc-badge{display:inline-flex;align-items:center;gap:2px;margin-right:3px}
   .sched-clickable{cursor:pointer;transition:background .15s}
   .sched-clickable:hover{background:rgba(255,255,255,.04)}
@@ -3767,6 +3780,7 @@ const STYLES=`
   .live-badge{font-size:.65rem;color:var(--red);font-weight:800;animation:pulse 1s ease-in-out infinite}
   .done-badge{font-size:.65rem;color:var(--green)}
   .redcard{display:inline-block;width:9px;height:13px;background:#ff6060;border-radius:2px;flex-shrink:0;vertical-align:middle}
+  .yellowcard{display:inline-block;width:9px;height:13px;background:#ffd700;border-radius:2px;flex-shrink:0;vertical-align:middle}
   .rc-badge{display:inline-flex;align-items:center;gap:2px;margin:0 3px}
 
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
