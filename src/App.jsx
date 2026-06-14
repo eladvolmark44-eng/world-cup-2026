@@ -1994,7 +1994,7 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
             const isLast=i===ranked.length-1&&ranked.length>1;
             const stripeColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
             return(
-              <div key={p.uid} className={`lb-row rank-${i+1}`} style={{position:'relative',borderTop:isLast?'2px dashed #ff4040':undefined}} onClick={()=>onSelectPlayer({...p,rank:i+1})}>
+              <div key={p.uid} className={`lb-row rank-${i+1}`} style={{position:'relative',borderTop:isLast?'2px dashed #5a7ba0':undefined}} onClick={()=>onSelectPlayer({...p,rank:i+1})}>
                 {stripeColor&&<span style={{position:'absolute',right:0,top:0,bottom:0,width:'4px',background:stripeColor,borderRadius:'0 13px 13px 0'}}/>}
                 <span className="lb-rank">{rankSymbol(ranked,i)}</span>
                 <div className="lb-name-col">
@@ -2025,9 +2025,9 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
           {ranked.length===0&&<div className="empty-msg">עדיין אין משתתפים</div>}
         </div>
         <div className="st-legend">
-          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ffd700"}}/> מקום 1</span>
-          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#4a9eff"}}/> מקום 2</span>
-          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ff4040"}}/> מקום אחרון</span>
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ffd700"}}/> מוק׳ ליגת האלופות</span>
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#4a9eff"}}/> מוק׳ קורנפלקס ליג</span>
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ff4040"}}/> ירידה</span>
         </div>
       </div>
       <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}/>
