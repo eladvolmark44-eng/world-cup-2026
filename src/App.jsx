@@ -1124,9 +1124,9 @@ function MatchRow({m, res, teamNames, odds, onClick}){
         {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
       </div>
       <div className="sched-teams">
-        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}{res?.reds?.home>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.home,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
+        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}{isLive&&res?.reds?.home>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.home,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
         {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
-        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}{withFlag(awayName)}</span>
+        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{isLive&&res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}{withFlag(awayName)}</span>
       </div>
       {matchOdds&&(
         <div className="match-odds" style={{marginTop:".3rem",marginBottom:0}}>
@@ -2864,6 +2864,12 @@ async function syncMatchData(setLiveStats){
             }
           }catch(e){console.warn("SofaScore stats fallback failed:",e.message);}
         }
+      }
+    }
+    // Clear stale reds from completed (non-live) matches — one-time cleanup of false positives
+    for(const [matchId,m] of Object.entries(matches)){
+      if(!m.live&&((m.reds?.home||0)>0||(m.reds?.away||0)>0)){
+        redUpdates[`results.matches.${matchId}.reds`]={home:0,away:0};
       }
     }
     if(Object.keys(redUpdates).length){
