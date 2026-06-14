@@ -1150,9 +1150,9 @@ const STATS_SECTIONS=[
   ]},
   {title:"בעיטות",rows:[
     {key:"xg",label:"שערים צפויים"},
-    {key:"shotsOT",label:"בעיטות לשער"},
-    {key:"shots",label:"בעיטות למסגרת"},
-    {key:"blocked",label:"בעיטות חסומות"},
+    {key:"shotsOT",label:"בעיטות למסגרת"},
+    {key:"shots",label:"בעיטות לשער"},
+    {key:"blocked",label:"בעיטות שנעצרו"},
   ]},
   {title:"מסירות",rows:[
     {key:"passes",label:"מסירות שהושלמו"},
