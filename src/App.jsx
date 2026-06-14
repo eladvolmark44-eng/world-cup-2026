@@ -3144,8 +3144,9 @@ async function syncMatchData(setLiveStats){
       if(!espnEv?.id){console.warn("No ESPN event for",gm.home,"vs",gm.away);continue;}
 
       // Extract score from the already-fetched scoreboard response — no extra API call.
-      // Only update score when ESPN confirms the match is live; never touch the live flag
-      // (syncScores owns that lifecycle to avoid flipping live→false on slow ESPN updates).
+      // Only write when ESPN confirms the match is in-progress, and always set live:true
+      // alongside the score so a match never appears "finished" with a score but no live flag.
+      // We never write live:false here — syncScores owns the FT (post) transition.
       {
         const comp=espnEv.competitions?.[0];
         const isLiveOnEspn=comp?.status?.type?.name==="STATUS_IN_PROGRESS";
@@ -3155,9 +3156,10 @@ async function syncMatchData(setLiveStats){
           const newHome=homeC?.score!=null?parseInt(homeC.score,10):null;
           const newAway=awayC?.score!=null?parseInt(awayC.score,10):null;
           const prev=matches[matchId]||{};
-          if(newHome!=null&&newAway!=null&&(prev.home!==newHome||prev.away!==newAway)){
+          if(newHome!=null&&newAway!=null&&(prev.home!==newHome||prev.away!==newAway||prev.live!==true)){
             redUpdates[`results.matches.${matchId}.home`]=newHome;
             redUpdates[`results.matches.${matchId}.away`]=newAway;
+            redUpdates[`results.matches.${matchId}.live`]=true;
           }
         }
       }
