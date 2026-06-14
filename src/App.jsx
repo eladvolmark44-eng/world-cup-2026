@@ -1223,7 +1223,7 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
           <p className="section-note">💡 הקרוב ביותר לסך השערים מקבל 10 נק׳</p>
           <div className="special-row fun-bet-row">
             <label>🚀 איראן – ישראל</label>
-            <p className="fun-bet-subtitle">כמה שיגורים כל מדינה תירה?</p>
+            <p className="fun-bet-subtitle">כמה טילים כל מדינה תירה?</p>
             <div className="fun-bet-scoreline">
               <div className="fun-bet-team-col">
                 <span className="fun-bet-flag">🇮🇷</span>
@@ -2045,7 +2045,7 @@ function SpecialBetsCard({participants, results, teamNames}){
             ?<span className="sp-live-val">🇮🇷 {results.funResult.iran} – {results.funResult.israel} 🇮🇱</span>
             :<span className="sp-pending">ממתין לתוצאה</span>}
         </div>
-        <p className="fun-bet-subtitle" style={{margin:".2rem 0 .5rem",fontSize:".75rem",color:"var(--muted)"}}>כמה שיגורים כל מדינה תירה?</p>
+        <p className="fun-bet-subtitle" style={{margin:".2rem 0 .5rem",fontSize:".75rem",color:"var(--muted)"}}>כמה טילים כל מדינה תירה?</p>
         {results.funRevealed
           ?<div className="sp-chips">
             {participants.map(p=>{
