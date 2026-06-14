@@ -1228,15 +1228,16 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
               <div className="fun-bet-team-col">
                 <span className="fun-bet-flag">🇮🇷</span>
                 <span className="fun-bet-tname">איראן</span>
-                <NumStepper value={bets.funBet?.iran??null} onChange={v=>setBets(p=>({...p,funBet:{...(p.funBet||{}),iran:v}}))} max={9999}/>
+                <NumStepper value={bets.funBet?.iran??0} onChange={v=>setBets(p=>({...p,funBet:{...(p.funBet||{}),iran:v}}))} max={9999}/>
               </div>
               <span className="fun-bet-dash">–</span>
               <div className="fun-bet-team-col">
                 <span className="fun-bet-flag">🇮🇱</span>
                 <span className="fun-bet-tname">ישראל</span>
-                <NumStepper value={bets.funBet?.israel??null} onChange={v=>setBets(p=>({...p,funBet:{...(p.funBet||{}),israel:v}}))} max={9999}/>
+                <NumStepper value={bets.funBet?.israel??0} onChange={v=>setBets(p=>({...p,funBet:{...(p.funBet||{}),israel:v}}))} max={9999}/>
               </div>
             </div>
+            <button className="btn-green" style={{marginTop:".4rem"}} onClick={()=>onSave(bets)}>💾 שמור</button>
           </div>
           {!globalLocked&&<button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור</button>}
         </div>
@@ -4104,11 +4105,13 @@ const STYLES=`
   .special-row select:disabled,.special-row input:disabled{opacity:.45}
   .fun-bet-row{border:1.5px dashed rgba(239,68,68,.4);border-radius:12px;padding:.7rem .8rem;background:rgba(239,68,68,.04)}
   .fun-bet-subtitle{margin:.1rem 0 .5rem;font-size:.75rem;color:var(--muted);font-weight:400}
-  .fun-bet-scoreline{display:flex;align-items:center;justify-content:center;gap:1rem;direction:rtl}
-  .fun-bet-team-col{display:flex;flex-direction:column;align-items:center;gap:.35rem}
-  .fun-bet-flag{font-size:1.6rem;line-height:1}
-  .fun-bet-tname{font-size:.8rem;font-weight:700}
-  .fun-bet-dash{font-size:1.4rem;font-weight:800;color:var(--muted);margin-top:1.2rem}
+  .fun-bet-scoreline{display:flex;align-items:center;justify-content:center;gap:1.2rem;direction:rtl}
+  .fun-bet-team-col{display:flex;flex-direction:column;align-items:center;gap:.4rem}
+  .fun-bet-flag{font-size:2rem;line-height:1}
+  .fun-bet-tname{font-size:.85rem;font-weight:700}
+  .fun-bet-dash{font-size:1.6rem;font-weight:800;color:var(--muted);margin-top:1.6rem}
+  .fun-bet-team-col .stepper span{width:44px;font-size:1rem}
+  .fun-bet-team-col .stepper button{width:30px;height:30px;font-size:1.1rem}
   .fun-bet-section .sp-label{background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(239,68,68,.08));border-radius:8px;padding:.35rem .6rem;gap:.4rem;flex-wrap:wrap}
   .fun-bet-hidden{font-size:.82rem;color:var(--muted);text-align:center;padding:.5rem;background:var(--card2);border-radius:8px}
   .admin-fun-bet-section{background:var(--card2);border-radius:12px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.7rem;border:1.5px dashed rgba(239,68,68,.35)}
