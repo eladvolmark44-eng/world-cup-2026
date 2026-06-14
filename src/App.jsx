@@ -2764,7 +2764,18 @@ async function syncMatchData(setLiveStats){
       .sort((a,b)=>new Date(b.kickoff).getTime()-new Date(a.kickoff).getTime())[0];
     if(lastDone&&!activeMatchIds.includes(lastDone.id))activeMatchIds.push(lastDone.id);
 
-    if(!activeMatchIds.length)return;
+    // Clear stale reds from completed (non-live) matches regardless of active match state
+    const redUpdates={};
+    for(const [matchId,m] of Object.entries(matches)){
+      if(!m.live&&((m.reds?.home||0)>0||(m.reds?.away||0)>0)){
+        redUpdates[`results.matches.${matchId}.reds`]={home:0,away:0};
+      }
+    }
+
+    if(!activeMatchIds.length){
+      if(Object.keys(redUpdates).length)await updateDoc(doc(db,"mundial2026","game"),redUpdates);
+      return;
+    }
 
     // Collect unique dates from active matches, fetch ESPN scoreboard per date
     const dateSet=new Set(activeMatchIds.map(id=>{
@@ -2782,9 +2793,11 @@ async function syncMatchData(setLiveStats){
         if(d.events?.length)espnEvents.push(...d.events);
       }catch(e){console.warn("ESPN scoreboard failed for",ymd,":",e.message);}
     }
-    if(!espnEvents.length){console.warn("ESPN: no events found for dates",{...dateSet});return;}
+    if(!espnEvents.length){
+      if(Object.keys(redUpdates).length)await updateDoc(doc(db,"mundial2026","game"),redUpdates);
+      return;
+    }
 
-    const redUpdates={};
     for(const matchId of activeMatchIds){
       const gm=GROUP_MATCHES.find(m=>m.id===matchId);
       if(!gm)continue;
@@ -2866,14 +2879,7 @@ async function syncMatchData(setLiveStats){
         }
       }
     }
-    // Clear stale reds from completed (non-live) matches — one-time cleanup of false positives
-    for(const [matchId,m] of Object.entries(matches)){
-      if(!m.live&&((m.reds?.home||0)>0||(m.reds?.away||0)>0)){
-        redUpdates[`results.matches.${matchId}.reds`]={home:0,away:0};
-      }
-    }
     if(Object.keys(redUpdates).length){
-      console.log("Red card updates:",redUpdates);
       await updateDoc(doc(db,"mundial2026","game"),redUpdates);
     }
   }catch(e){console.warn("syncMatchData failed:",e.message);}
