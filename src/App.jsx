@@ -443,9 +443,11 @@ function formatKickoffTime(kickoff) {
   return m ? m[1] : "";
 }
 
-// ── Betting Odds (The Odds API) ─────────────────────────────────────────────
-const ODDS_API_KEY    = "91d6f91ae83212b240af46baba466379";
-const ODDS_SPORT      = "soccer_fifa_world_cup";
+// ── Betting Odds (The Odds API, via /api/odds-proxy) ────────────────────────
+// The browser hits our serverless proxy, not the-odds-api directly: the proxy
+// holds the key server-side and lets Vercel's CDN serve one cached response to
+// every user, so the shared free-tier quota (500/month) isn't burned by N browsers.
+const ODDS_PROXY_URL  = "/api/odds-proxy";
 const ODDS_TTL_NORMAL = 30 * 60 * 1000;   // 30min — no match soon
 const ODDS_TTL_CLOSE  = 10 * 60 * 1000;   // 10min — match within 3h
 const ODDS_TTL_SOON   =  2 * 60 * 1000;   //  2min — match within 1h / live
@@ -560,7 +562,13 @@ function parseOddsData(fixtures){
       const aO=mkt.outcomes.find(o=>o.name===f.away_team);
       if(hO&&dO&&aO){hS+=hO.price;dS+=dO.price;aS+=aO.price;cnt++;}
     }
-    if(cnt>0) map[`${homeH}_${awayH}`]={home:(hS/cnt).toFixed(2),draw:(dS/cnt).toFixed(2),away:(aS/cnt).toFixed(2),ts:Date.now()};
+    if(cnt>0){
+      // Store both orderings so the lookup (which keys on GROUP_MATCHES' fixed
+      // home/away order) still hits even when the feed lists the teams reversed.
+      const ts=Date.now();
+      map[`${homeH}_${awayH}`]={home:(hS/cnt).toFixed(2),draw:(dS/cnt).toFixed(2),away:(aS/cnt).toFixed(2),ts};
+      map[`${awayH}_${homeH}`]={home:(aS/cnt).toFixed(2),draw:(dS/cnt).toFixed(2),away:(hS/cnt).toFixed(2),ts};
+    }
   }
   return map;
 }
@@ -571,13 +579,145 @@ async function fetchOdds(){
     if(cached){const{data,ts}=JSON.parse(cached);if(Date.now()-ts<ttl)return parseOddsData(data);}
     const ctrl=new AbortController();
     const t=setTimeout(()=>ctrl.abort(),8000);
-    const res=await fetch(`https://api.the-odds-api.com/v4/sports/${ODDS_SPORT}/odds/?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`,{signal:ctrl.signal});
+    const res=await fetch(ODDS_PROXY_URL,{signal:ctrl.signal});
     clearTimeout(t);
     if(!res.ok) return {};
     const data=await res.json();
     if(Array.isArray(data)){localStorage.setItem("wc2026_odds_v1",JSON.stringify({data,ts:Date.now()}));return parseOddsData(data);}
     return {};
   }catch{return {};}
+}
+
+// ── API health checks (admin panel) ─────────────────────────────────────────
+// One descriptor per external data source. `url`/`headers` are lazy (functions)
+// so module-level constants like AF_KEY are read at probe time, not init time.
+// `count` extracts how many records came back; an empty-but-OK response is
+// flagged yellow (could just mean "no matches right now"), a 401/403/quota is red.
+const PROBE_TIMEOUT_MS = 10000;
+const todayISOForProbe = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const API_SOURCES = [
+  {
+    id:"odds", label:"The Odds API · יחסים", needsToken:true,
+    url:()=>ODDS_PROXY_URL,
+    count:d=>Array.isArray(d)?d.length:0,
+  },
+  {
+    id:"espn", label:"ESPN · תוצאות + נוקאאוט", needsToken:false,
+    url:()=>"https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard",
+    count:d=>d?.events?.length||0,
+  },
+  {
+    id:"sofa", label:"SofaScore · תוצאות חיות", needsToken:false,
+    url:()=>"https://api.sofascore.com/api/v1/sport/football/events/live",
+    count:d=>d?.events?.length||0,
+  },
+  {
+    id:"sportsdb", label:"TheSportsDB · תוצאות", needsToken:true,
+    url:()=>`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${todayISOForProbe()}&s=Soccer`,
+    count:d=>d?.events?.length||0,
+  },
+  {
+    id:"apifootball", label:"API-Football · אדומים + גיבוי", needsToken:true,
+    url:()=>"https://v3.football.api-sports.io/status",
+    headers:()=>({"x-apisports-key":AF_KEY}),
+    // /status doesn't consume the daily quota and reports remaining requests.
+    classify:(status,d)=>{
+      if(status===401||status===403) return {level:"error",msg:"טוקן לא תקין / נחסם"};
+      const errs=d?.errors;
+      const hasErrs=errs && (Array.isArray(errs)?errs.length:Object.keys(errs).length);
+      if(hasErrs) return {level:"error",msg:"שגיאה מה-API",detail:JSON.stringify(errs)};
+      const reqs=d?.response?.requests;
+      if(reqs) return {level:reqs.current>=reqs.limit_day?"warn":"ok",msg:`תקין · ${reqs.current}/${reqs.limit_day} בקשות היום`};
+      return {level:"warn",msg:"מגיב אך ללא נתוני מכסה"};
+    },
+  },
+  {
+    id:"footballdata", label:"football-data.org · גיבוי WC", needsToken:true,
+    url:()=>fdProxy("/v4/competitions/WC"),
+    count:d=>d?.code?1:0,
+  },
+];
+
+function _probeDetail(body){
+  if(!body) return null;
+  if(body.error) return String(body.error);
+  if(body.message) return String(body.message);
+  if(body.errors){
+    return Array.isArray(body.errors)
+      ? body.errors.join("; ")
+      : Object.entries(body.errors).map(([k,v])=>`${k}: ${v}`).join("; ");
+  }
+  return null;
+}
+
+async function probeApiSource(src){
+  const started=Date.now();
+  try{
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),PROBE_TIMEOUT_MS);
+    const res=await fetch(src.url(),{headers:src.headers?src.headers():{},signal:ctrl.signal});
+    clearTimeout(timer);
+    let body=null;
+    try{body=await res.json();}catch{body=null;}
+    const ms=Date.now()-started;
+    if(src.classify) return {...src.classify(res.status,body),ms,httpStatus:res.status};
+    if(res.status===401||res.status===403)
+      return {level:"error",msg:"טוקן לא תקין / נגמרה מכסה",detail:_probeDetail(body),ms,httpStatus:res.status};
+    if(res.status===429)
+      return {level:"warn",msg:"חריגת קצב (rate limit)",detail:_probeDetail(body),ms,httpStatus:res.status};
+    if(!res.ok)
+      return {level:"error",msg:`HTTP ${res.status}`,detail:_probeDetail(body),ms,httpStatus:res.status};
+    const count=src.count?src.count(body):0;
+    if(count>0) return {level:"ok",msg:`תקין · ${count} רשומות`,ms,httpStatus:res.status};
+    return {level:"warn",msg:"מגיב אך ריק (אולי אין משחקים כעת)",ms,httpStatus:res.status};
+  }catch(e){
+    return {level:"error",msg:e.name==="AbortError"?"timeout (לא הגיב)":`לא נגיש: ${e.message}`,ms:Date.now()-started};
+  }
+}
+
+function ApiHealthPanel(){
+  const [results,setResults]=useState({});
+  const [running,setRunning]=useState(false);
+  const ICON={ok:"🟢",warn:"🟡",error:"🔴",loading:"⏳"};
+  const runAll=async()=>{
+    setRunning(true);
+    setResults(Object.fromEntries(API_SOURCES.map(s=>[s.id,{level:"loading"}])));
+    await Promise.all(API_SOURCES.map(async s=>{
+      const r=await probeApiSource(s);
+      setResults(prev=>({...prev,[s.id]:r}));
+    }));
+    setRunning(false);
+  };
+  return(
+    <div className="api-health">
+      <div className="api-health-hdr">
+        <span>🩺 בריאות ה-API</span>
+        <button className="btn-admin-act" onClick={runAll} disabled={running}>{running?"בודק...":"בדוק הכל"}</button>
+      </div>
+      <div className="api-health-list">
+        {API_SOURCES.map(s=>{
+          const r=results[s.id];
+          return(
+            <div key={s.id} className="api-health-row">
+              <span className="api-status-icon">{r?(ICON[r.level]||"⚪"):"⚪"}</span>
+              <div className="api-health-info">
+                <span className="api-health-name">{s.label}{s.needsToken&&<span className="api-token-tag" title="דורש טוקן">🔑</span>}</span>
+                <span className="api-health-msg">
+                  {r?(r.level==="loading"?"בודק...":r.msg):"לא נבדק"}
+                  {r&&r.ms!=null&&r.level!=="loading"?` · ${r.ms}ms`:""}
+                </span>
+                {r?.detail&&<span className="api-health-detail">{r.detail}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="section-note">🟢 תקין · 🟡 מגיב אך ריק/מכסה גבוהה · 🔴 שגיאה או טוקן שנגמר · 🔑 דורש טוקן. בדיקות <code>/api/*</code> עובדות רק בפרודקשן (Vercel), לא ב-dev מקומי.</p>
+    </div>
+  );
 }
 
 function groupLabel(g){ return g==="יזיזות"?"⚽ יזיזות":`בית ${g}`; }
@@ -2544,6 +2684,7 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
         <div className="admin-stat"><span className="admin-stat-val">{Object.keys(game.results?.matches||{}).length}</span><span>תוצאות שמורות</span></div>
         <div className="admin-stat"><span className="admin-stat-val">{GROUP_MATCHES.length}</span><span>משחקי ליגה</span></div>
       </div>
+      <ApiHealthPanel/>
       <div className="admin-winner-section">
         <div className="admin-action-info">
           <span className="admin-action-label">🎉 אנימציית מנצח</span>
@@ -3995,6 +4136,16 @@ const STYLES=`
   .btn-admin-act:hover{border-color:var(--green);color:var(--green)}
   .btn-admin-red{border-color:rgba(255,77,109,.4);color:var(--red)}
   .btn-admin-red:hover{background:rgba(255,77,109,.1);border-color:var(--red)}
+  .api-health{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;display:flex;flex-direction:column;gap:.7rem}
+  .api-health-hdr{display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:.92rem}
+  .api-health-list{display:flex;flex-direction:column;gap:.45rem}
+  .api-health-row{display:flex;align-items:flex-start;gap:.6rem;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.5rem .7rem}
+  .api-status-icon{font-size:.95rem;line-height:1.3;flex-shrink:0}
+  .api-health-info{display:flex;flex-direction:column;gap:.12rem;min-width:0;flex:1}
+  .api-health-name{font-weight:700;font-size:.83rem;display:flex;align-items:center;gap:.3rem}
+  .api-token-tag{font-size:.7rem}
+  .api-health-msg{font-size:.74rem;color:var(--muted)}
+  .api-health-detail{font-size:.68rem;color:var(--muted);opacity:.7;word-break:break-word;direction:ltr;text-align:left}
   .admin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem}
   .admin-confirm{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;width:100%;max-width:360px;display:flex;flex-direction:column;gap:.8rem;text-align:center}
   .admin-confirm-title{font-size:1rem;font-weight:800;color:var(--gold)}
