@@ -2114,10 +2114,10 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
                     {sorted.map((t,i)=>{
                       const s=st[t], q=qualified.includes(t);
                       const isLast=i===sorted.length-1;
-                      const dot=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
+                      const lineColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
                       return(
-                        <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`}>
-                          <td className="st-num">{dot&&<span className="st-dot" style={{background:dot}}/>}{i+1}</td>
+                        <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`} style={lineColor?{boxShadow:`inset -4px 0 0 ${lineColor}`}:{}}>
+                          <td className="st-num">{i+1}</td>
                           <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
                           <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
                           <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
@@ -2234,10 +2234,10 @@ function GroupStandingsView({results, teamNames}){
                 {sorted.map((t,i)=>{
                   const s=st[t], q=qualified.includes(t);
                   const isLast=i===sorted.length-1;
-                  const dot=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
+                  const lineColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
                   return(
-                    <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`}>
-                      <td className="st-num">{dot&&<span className="st-dot" style={{background:dot}}/>}{i+1}</td>
+                    <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`} style={lineColor?{boxShadow:`inset -4px 0 0 ${lineColor}`}:{}}>
+                      <td className="st-num">{i+1}</td>
                       <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
                       <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
                       <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
@@ -2252,9 +2252,9 @@ function GroupStandingsView({results, teamNames}){
       })}
     </div>
     <div className="st-legend">
-      <span className="st-legend-item"><span className="st-dot" style={{background:"#ffd700"}}/> מוק׳ ליגת האלופות</span>
-      <span className="st-legend-item"><span className="st-dot" style={{background:"#4a9eff"}}/> מוק׳ קורנפלקס ליג</span>
-      <span className="st-legend-item"><span className="st-dot" style={{background:"#ff4040"}}/> ירידה</span>
+      <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ffd700"}}/> מוק׳ ליגת האלופות</span>
+      <span className="st-legend-item"><span className="st-line-ind" style={{background:"#4a9eff"}}/> מוק׳ קורנפלקס ליג</span>
+      <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ff4040"}}/> ירידה</span>
     </div>
     </>
   );
@@ -4032,11 +4032,11 @@ const STYLES=`
   .st-table th{color:var(--muted);font-weight:600;padding:.2rem .22rem;text-align:center;border-bottom:1px solid var(--border)}
   .st-table td{padding:.2rem .22rem;text-align:center;border-bottom:1px solid rgba(255,255,255,.03)}
   .st-tc{text-align:right!important;min-width:68px;padding-right:.35rem!important}
-  .st-num{color:var(--muted);font-size:.66rem;width:20px;display:flex;align-items:center;gap:3px;justify-content:flex-end}
-  .st-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .st-num{color:var(--muted);font-size:.66rem;width:16px;text-align:center}
+  .st-line-ind{display:inline-block;width:4px;height:14px;border-radius:2px;flex-shrink:0;vertical-align:middle}
   .st-relegate td{border-top:2px solid #ff4040}
   .st-legend{display:flex;gap:1rem;justify-content:center;padding:.6rem .5rem .3rem;flex-wrap:wrap}
-  .st-legend-item{display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--muted)}
+  .st-legend-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)}
   .st-ptc{font-weight:700}
   .st-ptv{font-weight:800;color:var(--green)}
   .st-gd-pos{color:var(--green)}
