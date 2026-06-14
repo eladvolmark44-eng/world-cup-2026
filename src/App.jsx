@@ -2640,14 +2640,14 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [funRevealSaving, setFunRevealSaving] = useState(false);
   const saveFunResult = async () => {
     setFunSaving(true);
-    try { await saveGame({"results.funResult": {iran: funIran, israel: funIsrael}}); showToast("✅ תוצאת הפצצה נשמרה!"); }
+    try { await updateDoc(doc(db,"mundial2026","game"),{"results.funResult": {iran: funIran, israel: funIsrael}}); showToast("✅ תוצאת הפצצה נשמרה!"); }
     catch(e) { showToast("❌ "+e.message); }
     setFunSaving(false);
   };
   const toggleFunReveal = async () => {
     setFunRevealSaving(true);
     const next = !game?.results?.funRevealed;
-    try { await saveGame({"results.funRevealed": next}); showToast(next?"✅ הימורים נחשפו!":"✅ הימורים הוסתרו"); }
+    try { await updateDoc(doc(db,"mundial2026","game"),{"results.funRevealed": next}); showToast(next?"✅ הימורים נחשפו!":"✅ הימורים הוסתרו"); }
     catch(e) { showToast("❌ "+e.message); }
     setFunRevealSaving(false);
   };
