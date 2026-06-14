@@ -1221,24 +1221,6 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
             <input disabled={globalLocked} type="number" placeholder="כמה שערים?" value={bets.totalGoals||""} onChange={e=>setBets(p=>({...p,totalGoals:e.target.value}))}/>
           </div>
           <p className="section-note">💡 הקרוב ביותר לסך השערים מקבל 10 נק׳</p>
-          <div className="special-row fun-bet-row">
-            <label>🚀 איראן – ישראל</label>
-            <p className="fun-bet-subtitle">כמה טילים כל מדינה תירה?</p>
-            <div className="fun-bet-scoreline">
-              <div className="fun-bet-team-col">
-                <span className="fun-bet-flag">🇮🇷</span>
-                <span className="fun-bet-tname">איראן</span>
-                <NumStepper value={bets.funBet?.iran??0} onChange={v=>setBets(p=>({...p,funBet:{...(p.funBet||{}),iran:v}}))} max={9999}/>
-              </div>
-              <span className="fun-bet-dash">–</span>
-              <div className="fun-bet-team-col">
-                <span className="fun-bet-flag">🇮🇱</span>
-                <span className="fun-bet-tname">ישראל</span>
-                <NumStepper value={bets.funBet?.israel??0} onChange={v=>setBets(p=>({...p,funBet:{...(p.funBet||{}),israel:v}}))} max={9999}/>
-              </div>
-            </div>
-            <button className="btn-green" style={{marginTop:".4rem"}} onClick={()=>onSave(bets)}>💾 שמור</button>
-          </div>
           {!globalLocked&&<button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור</button>}
         </div>
       )}
@@ -1937,7 +1919,7 @@ function DailyRankAnimation({data,onClose}){
 }
 
 // ─── SPECIAL BETS CARD ────────────────────────────────────────────────────────
-function SpecialBetsCard({participants, results, teamNames}){
+function SpecialBetsCard({participants, results, teamNames, funIran=0, funIsrael=0, onFunIranChange, onFunIsraelChange, onSaveFunBet, funSaving}){
   if(!isGlobalLocked())return null;
   const over=isTournamentOver();
   const [showScorers,setShowScorers]=useState(false);
@@ -2045,12 +2027,28 @@ function SpecialBetsCard({participants, results, teamNames}){
             ?<span className="sp-live-val">🇮🇷 {results.funResult.iran} – {results.funResult.israel} 🇮🇱</span>
             :<span className="sp-pending">ממתין לתוצאה</span>}
         </div>
-        <p className="fun-bet-subtitle" style={{margin:".2rem 0 .5rem",fontSize:".75rem",color:"var(--muted)"}}>כמה טילים כל מדינה תירה?</p>
+        <p className="fun-bet-subtitle" style={{margin:".2rem 0 .6rem",fontSize:".75rem",color:"var(--muted)"}}>כמה טילים כל מדינה תירה?</p>
+        <div className="fun-bet-scoreline">
+          <div className="fun-bet-team-col">
+            <span className="fun-bet-flag">🇮🇷</span>
+            <span className="fun-bet-tname">איראן</span>
+            <NumStepper value={funIran} onChange={onFunIranChange} max={9999}/>
+          </div>
+          <span className="fun-bet-dash">–</span>
+          <div className="fun-bet-team-col">
+            <span className="fun-bet-flag">🇮🇱</span>
+            <span className="fun-bet-tname">ישראל</span>
+            <NumStepper value={funIsrael} onChange={onFunIsraelChange} max={9999}/>
+          </div>
+        </div>
+        <button className="btn-green" style={{marginTop:".6rem",width:"100%"}} onClick={onSaveFunBet} disabled={funSaving}>
+          {funSaving?"שומר...":"💾 שמור"}
+        </button>
         {results.funRevealed
-          ?<div className="sp-chips">
+          ?<div className="sp-chips" style={{marginTop:".6rem"}}>
             {participants.map(p=>{
               const bet=p.bets?.funBet;
-              if(!bet||bet.iran==null||bet.israel==null)return null;
+              if(!bet||typeof bet!=="object"||bet.iran==null)return null;
               return(
                 <div key={p.uid} className="sp-chip">
                   <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
@@ -2059,7 +2057,7 @@ function SpecialBetsCard({participants, results, teamNames}){
               );
             })}
           </div>
-          :<div className="fun-bet-hidden">🔒 הימורים יחשפו ע״י המנהל</div>
+          :<div className="fun-bet-hidden" style={{marginTop:".5rem"}}>🔒 הימורי האחרים יחשפו ע״י המנהל</div>
         }
       </div>
     </div>
@@ -2075,16 +2073,28 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
   const [totalGoals,setTotalGoals]=useState(myBets.totalGoals||"");
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
+  const existingFunBet=typeof myBets.funBet==="object"?myBets.funBet:null;
+  const [funIran,setFunIran]=useState(existingFunBet?.iran??0);
+  const [funIsrael,setFunIsrael]=useState(existingFunBet?.israel??0);
+  const [funSaving,setFunSaving]=useState(false);
   useEffect(()=>{
     setChampion(myBets.champion||"");
     setGoldenBoot(myBets.goldenBoot||"");
     setTotalGoals(myBets.totalGoals||"");
-  },[myBets.champion,myBets.goldenBoot,myBets.totalGoals]);
+    const fb=typeof myBets.funBet==="object"?myBets.funBet:null;
+    setFunIran(fb?.iran??0);
+    setFunIsrael(fb?.israel??0);
+  },[myBets.champion,myBets.goldenBoot,myBets.totalGoals,JSON.stringify(myBets.funBet)]);
   const handleSaveSpecial=async()=>{
     setSaving(true);
     await onSaveBets({...myBets,champion,goldenBoot,totalGoals});
     setSaving(false);setSaved(true);
     setTimeout(()=>setSaved(false),2000);
+  };
+  const handleSaveFunBet=async()=>{
+    setFunSaving(true);
+    await onSaveBets({...myBets,funBet:{iran:funIran,israel:funIsrael}});
+    setFunSaving(false);
   };
   const nowTs=Date.now();
   const liveMatches=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
@@ -2214,7 +2224,10 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
           <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ff4040"}}/> ירידה</span>
         </div>
       </div>
-      <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}/>
+      <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}
+        funIran={funIran} funIsrael={funIsrael}
+        onFunIranChange={setFunIran} onFunIsraelChange={setFunIsrael}
+        onSaveFunBet={handleSaveFunBet} funSaving={funSaving}/>
     </div>
   );
 }
