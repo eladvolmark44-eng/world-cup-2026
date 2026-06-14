@@ -1221,6 +1221,17 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
             <input disabled={globalLocked} type="number" placeholder="כמה שערים?" value={bets.totalGoals||""} onChange={e=>setBets(p=>({...p,totalGoals:e.target.value}))}/>
           </div>
           <p className="section-note">💡 הקרוב ביותר לסך השערים מקבל 10 נק׳</p>
+          <div className="special-row fun-bet-row">
+            <label>🚀 איראן – ישראל <span className="fun-bet-tag">לצחוק · לא נחשב בניקוד</span></label>
+            <div className="fun-bet-btns">
+              {[["איראן","🇮🇷 איראן"],["תיקו","🤝 תיקו"],["ישראל","🇮🇱 ישראל"]].map(([val,label])=>(
+                <button key={val} className={`fun-bet-btn${bets.funBet===val?" fun-bet-active":""}`}
+                  onClick={()=>setBets(p=>({...p,funBet:val}))}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           {!globalLocked&&<button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור</button>}
         </div>
       )}
@@ -2018,6 +2029,29 @@ function SpecialBetsCard({participants, results, teamNames}){
           })}
         </div>
       </div>
+
+      {/* Fun bet - Iran vs Israel */}
+      <div className="sp-section fun-bet-section">
+        <div className="sp-label">
+          🚀 איראן – ישראל
+          {results.funResult&&<span className="sp-live-val">{results.funResult==="איראן"?"🇮🇷 איראן":results.funResult==="ישראל"?"🇮🇱 ישראל":"🤝 תיקו"}</span>}
+          {!results.funResult&&<span className="sp-pending">ממתין לתוצאה</span>}
+          <span className="fun-bet-tag" style={{marginRight:"auto"}}>לצחוק</span>
+        </div>
+        <div className="sp-chips">
+          {participants.map(p=>{
+            const bet=p.bets?.funBet; if(!bet)return null;
+            const correct=results.funResult&&bet===results.funResult;
+            const wrong=results.funResult&&!correct;
+            return(
+              <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
+                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
+                <span className="sp-chip-val">{bet==="איראן"?"🇮🇷 איראן":bet==="ישראל"?"🇮🇱 ישראל":"🤝 תיקו"}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2577,6 +2611,15 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [betHome, setBetHome] = useState(0);
   const [betAway, setBetAway] = useState(0);
   const [betSaving, setBetSaving] = useState(false);
+  const [funResult, setFunResult] = useState(game?.results?.funResult || "");
+  const [funSaving, setFunSaving] = useState(false);
+  const saveFunResult = async () => {
+    if(!funResult) return;
+    setFunSaving(true);
+    try { await saveGame({"results.funResult": funResult}); showToast("✅ תוצאת הפצצה נשמרה!"); }
+    catch(e) { showToast("❌ "+e.message); }
+    setFunSaving(false);
+  };
 
   const onBetMatchChange = (uid, mid) => {
     setBetMatchId(mid);
@@ -2691,6 +2734,21 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
           <span className="admin-action-desc">מציג את חלון הניצחון עם קונפטי למנצח הנוכחי</span>
         </div>
         <button className="btn-admin-winner" onClick={onTriggerWinner}>הפעל</button>
+      </div>
+      <div className="admin-fun-bet-section">
+        <div className="admin-action-info">
+          <span className="admin-action-label">🚀 תוצאת איראן – ישראל</span>
+          <span className="admin-action-desc">לא נחשב בניקוד — רק לצחוק</span>
+        </div>
+        <div className="admin-fun-bet-row">
+          <select className="admin-bet-sel" value={funResult} onChange={e=>setFunResult(e.target.value)}>
+            <option value="">— תוצאה —</option>
+            <option value="איראן">🇮🇷 איראן ניצחה</option>
+            <option value="תיקו">🤝 תיקו</option>
+            <option value="ישראל">🇮🇱 ישראל ניצחה</option>
+          </select>
+          <button className="btn-admin-save-bet" onClick={saveFunResult} disabled={funSaving||!funResult}>{funSaving?"שומר...":"שמור"}</button>
+        </div>
       </div>
       <div className="admin-bet-editor">
         <div className="admin-bet-title">✏️ עריכת הימור</div>
@@ -4025,6 +4083,15 @@ const STYLES=`
   .special-row select,.special-row input{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:.62rem 1rem;font-family:'Heebo',sans-serif;font-size:.92rem;outline:none;width:100%}
   .special-row select:focus,.special-row input:focus{border-color:var(--green)}
   .special-row select:disabled,.special-row input:disabled{opacity:.45}
+  .fun-bet-row{border:1.5px dashed rgba(239,68,68,.4);border-radius:12px;padding:.7rem .8rem;background:rgba(239,68,68,.04)}
+  .fun-bet-tag{font-size:.68rem;color:var(--muted);font-weight:400;background:var(--card2);border-radius:20px;padding:.1rem .5rem;margin-right:.4rem}
+  .fun-bet-btns{display:flex;gap:.5rem;direction:rtl}
+  .fun-bet-btn{flex:1;background:var(--card2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:.6rem .4rem;font-family:'Heebo',sans-serif;font-size:.85rem;cursor:pointer;transition:all .2s;font-weight:600}
+  .fun-bet-btn:hover{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.08)}
+  .fun-bet-active{border-color:#ef4444!important;background:rgba(239,68,68,.18)!important;color:#ef4444!important}
+  .fun-bet-section .sp-label{background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(239,68,68,.08));border-radius:8px;padding:.35rem .6rem;gap:.4rem;flex-wrap:wrap}
+  .admin-fun-bet-section{background:var(--card2);border-radius:12px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.6rem;border:1.5px dashed rgba(239,68,68,.35)}
+  .admin-fun-bet-row{display:flex;gap:.6rem;align-items:center}
   .special-val{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.62rem 1rem;font-size:.92rem;font-weight:700;color:var(--green)}
   .hidden-val{color:var(--muted) !important;font-style:italic;font-weight:400}
   .playoff-editor{display:flex;flex-direction:column;gap:.8rem}
