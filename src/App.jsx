@@ -1222,14 +1222,20 @@ function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMatchesBet, teamNa
           </div>
           <p className="section-note">💡 הקרוב ביותר לסך השערים מקבל 10 נק׳</p>
           <div className="special-row fun-bet-row">
-            <label>🚀 איראן – ישראל <span className="fun-bet-tag">לצחוק · לא נחשב בניקוד</span></label>
-            <div className="fun-bet-btns">
-              {[["איראן","🇮🇷 איראן"],["תיקו","🤝 תיקו"],["ישראל","🇮🇱 ישראל"]].map(([val,label])=>(
-                <button key={val} className={`fun-bet-btn${bets.funBet===val?" fun-bet-active":""}`}
-                  onClick={()=>setBets(p=>({...p,funBet:val}))}>
-                  {label}
-                </button>
-              ))}
+            <label>🚀 איראן – ישראל</label>
+            <p className="fun-bet-subtitle">כמה שיגורים כל מדינה תירה?</p>
+            <div className="fun-bet-scoreline">
+              <div className="fun-bet-team-col">
+                <span className="fun-bet-flag">🇮🇷</span>
+                <span className="fun-bet-tname">איראן</span>
+                <NumStepper value={bets.funBet?.iran??null} onChange={v=>setBets(p=>({...p,funBet:{...(p.funBet||{}),iran:v}}))} max={9999}/>
+              </div>
+              <span className="fun-bet-dash">–</span>
+              <div className="fun-bet-team-col">
+                <span className="fun-bet-flag">🇮🇱</span>
+                <span className="fun-bet-tname">ישראל</span>
+                <NumStepper value={bets.funBet?.israel??null} onChange={v=>setBets(p=>({...p,funBet:{...(p.funBet||{}),israel:v}}))} max={9999}/>
+              </div>
             </div>
           </div>
           {!globalLocked&&<button className="btn-green" onClick={()=>onSave(bets)}>💾 שמור</button>}
@@ -2030,27 +2036,30 @@ function SpecialBetsCard({participants, results, teamNames}){
         </div>
       </div>
 
-      {/* Fun bet - Iran vs Israel */}
+      {/* Fun bet - Iran vs Israel missiles */}
       <div className="sp-section fun-bet-section">
         <div className="sp-label">
           🚀 איראן – ישראל
-          {results.funResult&&<span className="sp-live-val">{results.funResult==="איראן"?"🇮🇷 איראן":results.funResult==="ישראל"?"🇮🇱 ישראל":"🤝 תיקו"}</span>}
-          {!results.funResult&&<span className="sp-pending">ממתין לתוצאה</span>}
-          <span className="fun-bet-tag" style={{marginRight:"auto"}}>לצחוק</span>
+          {results.funResult
+            ?<span className="sp-live-val">🇮🇷 {results.funResult.iran} – {results.funResult.israel} 🇮🇱</span>
+            :<span className="sp-pending">ממתין לתוצאה</span>}
         </div>
-        <div className="sp-chips">
-          {participants.map(p=>{
-            const bet=p.bets?.funBet; if(!bet)return null;
-            const correct=results.funResult&&bet===results.funResult;
-            const wrong=results.funResult&&!correct;
-            return(
-              <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
-                <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
-                <span className="sp-chip-val">{bet==="איראן"?"🇮🇷 איראן":bet==="ישראל"?"🇮🇱 ישראל":"🤝 תיקו"}</span>
-              </div>
-            );
-          })}
-        </div>
+        <p className="fun-bet-subtitle" style={{margin:".2rem 0 .5rem",fontSize:".75rem",color:"var(--muted)"}}>כמה שיגורים כל מדינה תירה?</p>
+        {results.funRevealed
+          ?<div className="sp-chips">
+            {participants.map(p=>{
+              const bet=p.bets?.funBet;
+              if(!bet||bet.iran==null||bet.israel==null)return null;
+              return(
+                <div key={p.uid} className="sp-chip">
+                  <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
+                  <span className="sp-chip-val">🇮🇷 {bet.iran} – {bet.israel} 🇮🇱</span>
+                </div>
+              );
+            })}
+          </div>
+          :<div className="fun-bet-hidden">🔒 הימורים יחשפו ע״י המנהל</div>
+        }
       </div>
     </div>
   );
@@ -2611,14 +2620,22 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [betHome, setBetHome] = useState(0);
   const [betAway, setBetAway] = useState(0);
   const [betSaving, setBetSaving] = useState(false);
-  const [funResult, setFunResult] = useState(game?.results?.funResult || "");
+  const [funIran, setFunIran] = useState(game?.results?.funResult?.iran ?? 0);
+  const [funIsrael, setFunIsrael] = useState(game?.results?.funResult?.israel ?? 0);
   const [funSaving, setFunSaving] = useState(false);
+  const [funRevealSaving, setFunRevealSaving] = useState(false);
   const saveFunResult = async () => {
-    if(!funResult) return;
     setFunSaving(true);
-    try { await saveGame({"results.funResult": funResult}); showToast("✅ תוצאת הפצצה נשמרה!"); }
+    try { await saveGame({"results.funResult": {iran: funIran, israel: funIsrael}}); showToast("✅ תוצאת הפצצה נשמרה!"); }
     catch(e) { showToast("❌ "+e.message); }
     setFunSaving(false);
+  };
+  const toggleFunReveal = async () => {
+    setFunRevealSaving(true);
+    const next = !game?.results?.funRevealed;
+    try { await saveGame({"results.funRevealed": next}); showToast(next?"✅ הימורים נחשפו!":"✅ הימורים הוסתרו"); }
+    catch(e) { showToast("❌ "+e.message); }
+    setFunRevealSaving(false);
   };
 
   const onBetMatchChange = (uid, mid) => {
@@ -2737,18 +2754,20 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
       </div>
       <div className="admin-fun-bet-section">
         <div className="admin-action-info">
-          <span className="admin-action-label">🚀 תוצאת איראן – ישראל</span>
-          <span className="admin-action-desc">לא נחשב בניקוד — רק לצחוק</span>
+          <span className="admin-action-label">🚀 איראן – ישראל · שיגורים</span>
+          <span className="admin-action-desc">לא נחשב בניקוד</span>
         </div>
         <div className="admin-fun-bet-row">
-          <select className="admin-bet-sel" value={funResult} onChange={e=>setFunResult(e.target.value)}>
-            <option value="">— תוצאה —</option>
-            <option value="איראן">🇮🇷 איראן ניצחה</option>
-            <option value="תיקו">🤝 תיקו</option>
-            <option value="ישראל">🇮🇱 ישראל ניצחה</option>
-          </select>
-          <button className="btn-admin-save-bet" onClick={saveFunResult} disabled={funSaving||!funResult}>{funSaving?"שומר...":"שמור"}</button>
+          <span className="admin-fun-flag">🇮🇷</span>
+          <NumStepper value={funIran} onChange={setFunIran} max={9999}/>
+          <span className="admin-fun-sep">–</span>
+          <NumStepper value={funIsrael} onChange={setFunIsrael} max={9999}/>
+          <span className="admin-fun-flag">🇮🇱</span>
+          <button className="btn-admin-save-bet" onClick={saveFunResult} disabled={funSaving}>{funSaving?"שומר...":"שמור תוצאה"}</button>
         </div>
+        <button className="btn-admin-fun-reveal" onClick={toggleFunReveal} disabled={funRevealSaving}>
+          {funRevealSaving?"...":game?.results?.funRevealed?"🔓 הסתר הימורים":"🔒 חשוף הימורים"}
+        </button>
       </div>
       <div className="admin-bet-editor">
         <div className="admin-bet-title">✏️ עריכת הימור</div>
@@ -4084,14 +4103,20 @@ const STYLES=`
   .special-row select:focus,.special-row input:focus{border-color:var(--green)}
   .special-row select:disabled,.special-row input:disabled{opacity:.45}
   .fun-bet-row{border:1.5px dashed rgba(239,68,68,.4);border-radius:12px;padding:.7rem .8rem;background:rgba(239,68,68,.04)}
-  .fun-bet-tag{font-size:.68rem;color:var(--muted);font-weight:400;background:var(--card2);border-radius:20px;padding:.1rem .5rem;margin-right:.4rem}
-  .fun-bet-btns{display:flex;gap:.5rem;direction:rtl}
-  .fun-bet-btn{flex:1;background:var(--card2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:.6rem .4rem;font-family:'Heebo',sans-serif;font-size:.85rem;cursor:pointer;transition:all .2s;font-weight:600}
-  .fun-bet-btn:hover{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.08)}
-  .fun-bet-active{border-color:#ef4444!important;background:rgba(239,68,68,.18)!important;color:#ef4444!important}
+  .fun-bet-subtitle{margin:.1rem 0 .5rem;font-size:.75rem;color:var(--muted);font-weight:400}
+  .fun-bet-scoreline{display:flex;align-items:center;justify-content:center;gap:1rem;direction:rtl}
+  .fun-bet-team-col{display:flex;flex-direction:column;align-items:center;gap:.35rem}
+  .fun-bet-flag{font-size:1.6rem;line-height:1}
+  .fun-bet-tname{font-size:.8rem;font-weight:700}
+  .fun-bet-dash{font-size:1.4rem;font-weight:800;color:var(--muted);margin-top:1.2rem}
   .fun-bet-section .sp-label{background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(239,68,68,.08));border-radius:8px;padding:.35rem .6rem;gap:.4rem;flex-wrap:wrap}
-  .admin-fun-bet-section{background:var(--card2);border-radius:12px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.6rem;border:1.5px dashed rgba(239,68,68,.35)}
-  .admin-fun-bet-row{display:flex;gap:.6rem;align-items:center}
+  .fun-bet-hidden{font-size:.82rem;color:var(--muted);text-align:center;padding:.5rem;background:var(--card2);border-radius:8px}
+  .admin-fun-bet-section{background:var(--card2);border-radius:12px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.7rem;border:1.5px dashed rgba(239,68,68,.35)}
+  .admin-fun-bet-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  .admin-fun-flag{font-size:1.3rem}
+  .admin-fun-sep{font-weight:800;font-size:1.1rem;color:var(--muted)}
+  .btn-admin-fun-reveal{background:rgba(59,130,246,.15);border:1.5px solid rgba(59,130,246,.4);color:#60a5fa;border-radius:10px;padding:.5rem 1rem;font-family:'Heebo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;width:100%}
+  .btn-admin-fun-reveal:hover{background:rgba(59,130,246,.25)}
   .special-val{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.62rem 1rem;font-size:.92rem;font-weight:700;color:var(--green)}
   .hidden-val{color:var(--muted) !important;font-style:italic;font-weight:400}
   .playoff-editor{display:flex;flex-direction:column;gap:.8rem}
