@@ -2107,18 +2107,17 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
                 <div className="cg-card-hdr">בית {g}</div>
                 <table className="st-table">
                   <thead><tr>
-                    <th className="st-stripe"/><th></th><th className="st-tc">קבוצה</th>
+                    <th></th><th className="st-tc">קבוצה</th>
                     <th>מ׳</th><th>נ׳</th><th>ת׳</th><th>ה׳</th><th>±</th><th className="st-ptc">נק׳</th>
                   </tr></thead>
                   <tbody>
                     {sorted.map((t,i)=>{
                       const s=st[t], q=qualified.includes(t);
                       const isLast=i===sorted.length-1;
-                      const lineColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":"transparent";
+                      const lineColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
                       return(
                         <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`}>
-                          <td className="st-stripe" style={{background:lineColor}}/>
-                          <td className="st-num">{i+1}</td>
+                          <td className="st-num" style={lineColor?{borderRight:`4px solid ${lineColor}`}:{}}>{i+1}</td>
                           <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
                           <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
                           <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
@@ -2228,18 +2227,17 @@ function GroupStandingsView({results, teamNames}){
             <div className="st-group-hdr">בית {g}</div>
             <table className="st-table">
               <thead><tr>
-                <th className="st-stripe"/><th></th><th className="st-tc">קבוצה</th>
+                <th></th><th className="st-tc">קבוצה</th>
                 <th>מ׳</th><th>נ׳</th><th>ת׳</th><th>ה׳</th><th>±</th><th className="st-ptc">נק׳</th>
               </tr></thead>
               <tbody>
                 {sorted.map((t,i)=>{
                   const s=st[t], q=qualified.includes(t);
                   const isLast=i===sorted.length-1;
-                  const lineColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":"transparent";
+                  const lineColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
                   return(
                     <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`}>
-                      <td className="st-stripe" style={{background:lineColor}}/>
-                      <td className="st-num">{i+1}</td>
+                      <td className="st-num" style={lineColor?{borderRight:`4px solid ${lineColor}`}:{}}>{i+1}</td>
                       <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
                       <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
                       <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
