@@ -1455,7 +1455,7 @@ function MatchLineup({lineup,match,teamNames}){
         <div className="mdl-col mdl-away"><PlayerList players={awayS}/></div>
       </div>
       {(homeSb.length||awaySb.length)?<>
-        <div className="mdl-subs-hdr">שחלופים</div>
+        <div className="mdl-subs-hdr">מחליפים</div>
         <div className="mdl-grid">
           <div className="mdl-col mdl-home"><PlayerList players={homeSb}/></div>
           <div className="mdl-col mdl-away"><PlayerList players={awaySb}/></div>
