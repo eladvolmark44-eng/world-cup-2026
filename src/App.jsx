@@ -1991,8 +1991,11 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
             const bootBet=p.bets?.goldenBoot;
             const goalsBet=p.bets?.totalGoals;
             const champFlag=champBet?(FLAG_MAP[teamNames?.[champBet]||champBet]||"🏆"):null;
+            const isLast=i===ranked.length-1&&ranked.length>1;
+            const stripeColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
             return(
-              <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer({...p,rank:i+1})}>
+              <div key={p.uid} className={`lb-row rank-${i+1}`} style={{position:'relative',borderTop:isLast?'2px dashed #ff4040':undefined}} onClick={()=>onSelectPlayer({...p,rank:i+1})}>
+                {stripeColor&&<span style={{position:'absolute',right:0,top:0,bottom:0,width:'4px',background:stripeColor,borderRadius:'0 13px 13px 0'}}/>}
                 <span className="lb-rank">{rankSymbol(ranked,i)}</span>
                 <div className="lb-name-col">
                   {p.photoURL
@@ -2020,6 +2023,11 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
             );
           })}
           {ranked.length===0&&<div className="empty-msg">עדיין אין משתתפים</div>}
+        </div>
+        <div className="st-legend">
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ffd700"}}/> מקום 1</span>
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#4a9eff"}}/> מקום 2</span>
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ff4040"}}/> מקום אחרון</span>
         </div>
       </div>
       <SpecialBetsCard participants={participants} results={results} teamNames={teamNames}/>
@@ -2092,7 +2100,6 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
         </>
       )}
       {subTab==="groups"&&(
-        <>
         <div className="cg-grid">
           {!globalLocked&&<p className="section-note" style={{gridColumn:'1/-1'}}>בחר 2 קבוצות לכל בית · 2נק׳ לאחת | 5נק׳ לשתיים</p>}
           {Object.entries(GROUPS_2026).map(([g, teams])=>{
@@ -2118,7 +2125,7 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
                       const lineColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
                       return(
                         <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`}>
-                          <td className="st-num" style={lineColor?{borderRight:`4px solid ${lineColor}`}:{}}>{i+1}</td>
+                          <td className="st-num">{i+1}</td>
                           <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
                           <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
                           <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
@@ -2181,12 +2188,6 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
               onClick={()=>onSaveBets({...me?.bets,groups:groupBets})}>💾 שמור הימורי בתים</button>
           )}
         </div>
-        <div className="st-legend">
-          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ffd700"}}/> מוק׳ ליגת האלופות</span>
-          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#4a9eff"}}/> מוק׳ קורנפלקס ליג</span>
-          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ff4040"}}/> ירידה</span>
-        </div>
-        </>
       )}
       {subTab==="knockout"&&(
         <KnockoutBracketView results={results} teamNames={teamNames}/>
@@ -2241,7 +2242,7 @@ function GroupStandingsView({results, teamNames}){
                   const lineColor=i===0?"#ffd700":i===1?"#4a9eff":isLast?"#ff4040":null;
                   return(
                     <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`}>
-                      <td className="st-num" style={lineColor?{borderRight:`4px solid ${lineColor}`}:{}}>{i+1}</td>
+                      <td className="st-num">{i+1}</td>
                       <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
                       <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
                       <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
