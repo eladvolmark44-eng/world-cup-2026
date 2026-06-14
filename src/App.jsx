@@ -2092,6 +2092,7 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
         </>
       )}
       {subTab==="groups"&&(
+        <>
         <div className="cg-grid">
           {!globalLocked&&<p className="section-note" style={{gridColumn:'1/-1'}}>בחר 2 קבוצות לכל בית · 2נק׳ לאחת | 5נק׳ לשתיים</p>}
           {Object.entries(GROUPS_2026).map(([g, teams])=>{
@@ -2180,9 +2181,12 @@ function ResultsView({participants, viewerUid, results, teamNames, me, onSaveMat
               onClick={()=>onSaveBets({...me?.bets,groups:groupBets})}>💾 שמור הימורי בתים</button>
           )}
         </div>
-      )}
-      {subTab==="standings"&&(
-        <GroupStandingsView results={results} teamNames={teamNames}/>
+        <div className="st-legend">
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ffd700"}}/> מוק׳ ליגת האלופות</span>
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#4a9eff"}}/> מוק׳ קורנפלקס ליג</span>
+          <span className="st-legend-item"><span className="st-line-ind" style={{background:"#ff4040"}}/> ירידה</span>
+        </div>
+        </>
       )}
       {subTab==="knockout"&&(
         <KnockoutBracketView results={results} teamNames={teamNames}/>
