@@ -3141,6 +3141,24 @@ async function syncMatchData(setLiveStats){
         return names.includes(gm.home)&&names.includes(gm.away);
       });
       if(!espnEv?.id){console.warn("No ESPN event for",gm.home,"vs",gm.away);continue;}
+
+      // Extract score from the already-fetched scoreboard response — no extra API call.
+      // This bypasses syncScores' leader-lock so the results table updates as fast as events.
+      {
+        const comp=espnEv.competitions?.[0];
+        const homeC=comp?.competitors?.find(c=>c.homeAway==="home");
+        const awayC=comp?.competitors?.find(c=>c.homeAway==="away");
+        const newHome=homeC?.score!=null?parseInt(homeC.score,10):null;
+        const newAway=awayC?.score!=null?parseInt(awayC.score,10):null;
+        const newLive=comp?.status?.type?.name==="STATUS_IN_PROGRESS";
+        const prev=matches[matchId]||{};
+        if(newHome!=null&&newAway!=null&&(prev.home!==newHome||prev.away!==newAway||prev.live!==newLive)){
+          redUpdates[`results.matches.${matchId}.home`]=newHome;
+          redUpdates[`results.matches.${matchId}.away`]=newAway;
+          redUpdates[`results.matches.${matchId}.live`]=newLive;
+        }
+      }
+
       let sd=null;
       try{
         const sr=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${espnEv.id}`);
