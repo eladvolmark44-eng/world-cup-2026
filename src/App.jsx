@@ -2616,9 +2616,8 @@ async function fetchMatchStats(gm){
   }catch(e){}
   const espnEv=espnEvents.find(e=>{
     const comp=e.competitions?.[0];
-    const ht=heb(comp?.competitors?.find(c=>c.homeAway==="home")?.team?.displayName||"");
-    const at=heb(comp?.competitors?.find(c=>c.homeAway==="away")?.team?.displayName||"");
-    return ht===gm.home&&at===gm.away;
+    const names=(comp?.competitors||[]).map(c=>heb(c.team?.displayName||""));
+    return names.includes(gm.home)&&names.includes(gm.away);
   });
   if(espnEv?.id){
     try{
@@ -2662,14 +2661,15 @@ async function fetchMatchDetail(gm){
     const sbj=await sb.json();
     const espnEv=(sbj.events||[]).find(e=>{
       const comp=e.competitions?.[0];
-      const ht=heb(comp?.competitors?.find(c=>c.homeAway==="home")?.team?.displayName||"");
-      const at=heb(comp?.competitors?.find(c=>c.homeAway==="away")?.team?.displayName||"");
-      return ht===gm.home&&at===gm.away;
+      const names=(comp?.competitors||[]).map(c=>heb(c.team?.displayName||""));
+      return names.includes(gm.home)&&names.includes(gm.away);
     });
     if(espnEv?.id){
       const sr=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${espnEv.id}`);
       const sd=await sr.json();
-      const homeComp=espnEv.competitions[0].competitors.find(c=>c.homeAway==="home");
+      // Find which ESPN competitor is our "home" team
+      const homeComp=espnEv.competitions[0].competitors.find(c=>heb(c.team?.displayName||"")===gm.home)
+        ||espnEv.competitions[0].competitors.find(c=>c.homeAway==="home");
       const homeTeamId=homeComp?.team?.id;
 
       // Stats
@@ -2804,9 +2804,8 @@ async function syncMatchData(setLiveStats){
       if(!gm)continue;
       const espnEv=espnEvents.find(e=>{
         const comp=e.competitions?.[0];
-        const ht=heb(comp?.competitors?.find(c=>c.homeAway==="home")?.team?.displayName||"");
-        const at=heb(comp?.competitors?.find(c=>c.homeAway==="away")?.team?.displayName||"");
-        return ht===gm.home&&at===gm.away;
+        const names=(comp?.competitors||[]).map(c=>heb(c.team?.displayName||""));
+        return names.includes(gm.home)&&names.includes(gm.away);
       });
       if(!espnEv?.id){console.warn("No ESPN event for",gm.home,"vs",gm.away);continue;}
       let sd=null;
