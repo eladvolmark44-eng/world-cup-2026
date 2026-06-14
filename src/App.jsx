@@ -448,18 +448,18 @@ function formatKickoffTime(kickoff) {
 // holds the key server-side and lets Vercel's CDN serve one cached response to
 // every user, so the shared free-tier quota (500/month) isn't burned by N browsers.
 const ODDS_PROXY_URL  = "/api/odds-proxy";
-const ODDS_TTL_NORMAL = 30 * 60 * 1000;   // 30min — no match soon
-const ODDS_TTL_CLOSE  = 10 * 60 * 1000;   // 10min — match within 3h
-const ODDS_TTL_SOON   =  2 * 60 * 1000;   //  2min — match within 1h / live
-function hasMatchWithinHour(){
+const ODDS_TTL_NORMAL = 24 * 60 * 60 * 1000;  // 24h — no match soon: keep cached odds, don't refetch
+const ODDS_TTL_CLOSE  = 15 * 60 * 1000;        // 15min — match within 2h
+const ODDS_TTL_SOON   =  5 * 60 * 1000;        //  5min — match within 30min / live
+function hasMatchWithin30Min(){
   const n=Date.now();
-  const relevant=t=>t>n-2*60*60*1000&&t<=n+60*60*1000;
+  const relevant=t=>t>n-2*60*60*1000&&t<=n+30*60*1000;
   if(GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;return relevant(new Date(m.kickoff).getTime());}))return true;
   return _koKickoffs.some(t=>relevant(t));
 }
-function hasMatchWithin3Hours(){
+function hasMatchWithin2Hours(){
   const n=Date.now();
-  const relevant=t=>t>n-2*60*60*1000&&t<=n+3*60*60*1000;
+  const relevant=t=>t>n-2*60*60*1000&&t<=n+2*60*60*1000;
   if(GROUP_MATCHES.some(m=>{if(!m.kickoff)return false;return relevant(new Date(m.kickoff).getTime());}))return true;
   return _koKickoffs.some(t=>relevant(t));
 }
@@ -574,7 +574,7 @@ function parseOddsData(fixtures){
 }
 async function fetchOdds(){
   try{
-    const ttl=hasMatchWithinHour()?ODDS_TTL_SOON:hasMatchWithin3Hours()?ODDS_TTL_CLOSE:ODDS_TTL_NORMAL;
+    const ttl=hasMatchWithin30Min()?ODDS_TTL_SOON:hasMatchWithin2Hours()?ODDS_TTL_CLOSE:ODDS_TTL_NORMAL;
     const cached=localStorage.getItem("wc2026_odds_v1");
     if(cached){const{data,ts}=JSON.parse(cached);if(Date.now()-ts<ttl)return parseOddsData(data);}
     const ctrl=new AbortController();
@@ -3120,13 +3120,22 @@ export default function App(){
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
   useEffect(()=>{
-    // Adaptive odds polling: 2min near match, 5min within 3h, 15min otherwise
+    // Odds polling: fetch once on load, then refresh only as a match nears —
+    // every 5min within 30min of kickoff, every 15min within 2h, otherwise idle
+    // (we keep the cached odds untouched and just re-check the window).
     let oddsTimer;
+    const apply=o=>{if(Object.keys(o).length){setOdds(o);setOddsTs(Date.now());}};
     function scheduleOddsPoll(){
-      const delay=hasMatchWithinHour()?2*60*1000:hasMatchWithin3Hours()?5*60*1000:15*60*1000;
-      oddsTimer=setTimeout(async()=>{const o=await fetchOdds();if(Object.keys(o).length){setOdds(o);setOddsTs(Date.now());}scheduleOddsPoll();},delay);
+      if(hasMatchWithin30Min()){
+        oddsTimer=setTimeout(async()=>{apply(await fetchOdds());scheduleOddsPoll();},5*60*1000);
+      }else if(hasMatchWithin2Hours()){
+        oddsTimer=setTimeout(async()=>{apply(await fetchOdds());scheduleOddsPoll();},15*60*1000);
+      }else{
+        // No match near — don't hit the API, just re-check the window later.
+        oddsTimer=setTimeout(scheduleOddsPoll,15*60*1000);
+      }
     }
-    const init=setTimeout(()=>fetchOdds().then(o=>{if(Object.keys(o).length){setOdds(o);setOddsTs(Date.now());}}), 3000);
+    const init=setTimeout(()=>fetchOdds().then(apply), 3000);
     scheduleOddsPoll();
     return()=>{clearTimeout(init);clearTimeout(oddsTimer);};
   },[]);
