@@ -1239,7 +1239,6 @@ function MatchStatsView({match, res, teamNames}){
 
 function MatchEvents({events,match,res}){
   if(!events.length)return<div className="mde-empty">אין אירועים זמינים</div>;
-  // Build half-time score from events or res
   const htGoalsHome=events.filter(e=>e.type==="goal"&&e.isHome&&e.time<=45).length;
   const htGoalsAway=events.filter(e=>e.type==="goal"&&!e.isHome&&e.time<=45).length;
   const htLabel=`מחצית ${htGoalsHome} - ${htGoalsAway}`;
@@ -1252,38 +1251,37 @@ function MatchEvents({events,match,res}){
         const ph=hePlayer(ev.player);
         const poh=ev.playerOut?hePlayer(ev.playerOut):"";
         const ah=ev.assist?hePlayer(ev.assist):"";
-        let badge;
+        let icon;
         if(ev.type==="goal"){
-          if(ev.cls==="ownGoal")badge=<span className="tl-badge tl-og">OG</span>;
-          else if(ev.cls==="penalty")badge=<span className="tl-badge tl-goal">P⚽</span>;
-          else badge=<span className="tl-badge tl-goal">⚽</span>;
+          if(ev.cls==="ownGoal")icon=<span className="tl-badge tl-og">OG</span>;
+          else if(ev.cls==="penalty")icon=<span className="tl-badge tl-goal">P⚽</span>;
+          else icon=<span className="tl-badge tl-goal">⚽</span>;
         }else if(ev.type==="card"){
-          badge=<span className={`tl-card tl-card-${ev.cls}`}/>;
+          icon=<span className={`tl-card tl-card-${ev.cls}`}/>;
         }else if(ev.type==="substitution"){
-          badge=<span className="tl-sub-badge"><span className="tl-in-arr">▲</span><span className="tl-out-arr">▼</span></span>;
+          icon=<span className="tl-sub-badge"><span className="tl-in-arr">▲</span><span className="tl-out-arr">▼</span></span>;
         }else if(ev.type==="missedPenalty"){
-          badge=<span className="tl-badge tl-miss">✕P</span>;
+          icon=<span className="tl-badge tl-miss">✕P</span>;
         }
-        const homeContent=ev.isHome?(
-          ev.type==="substitution"
-            ?<><span className="tl-name tl-name-in">{ph}</span>{poh&&<span className="tl-name tl-name-out">{poh}</span>}</>
-            :<><span className="tl-name">{ph}</span>{ah&&<span className="tl-assist">↳ {ah}</span>}</>
-        ):null;
-        const awayContent=!ev.isHome?(
-          ev.type==="substitution"
-            ?<><span className="tl-name tl-name-in">{ph}</span>{poh&&<span className="tl-name tl-name-out">{poh}</span>}</>
-            :<><span className="tl-name">{ph}</span>{ah&&<span className="tl-assist">↳ {ah}</span>}</>
-        ):null;
+        const makeContent=(isHome)=>{
+          if(ev.type==="substitution"){
+            const names=<div className="tl-sub-names"><span className="tl-name tl-name-in">{ph}</span>{poh&&<span className="tl-name tl-name-out">{poh}</span>}</div>;
+            return isHome
+              ?<div className="tl-ev tl-ev-home">{names}{icon}</div>
+              :<div className="tl-ev tl-ev-away">{icon}{names}</div>;
+          }
+          const nameBlock=<div className="tl-name-block"><span className="tl-name">{ph}</span>{ah&&<span className="tl-assist">↳ {ah}</span>}</div>;
+          return isHome
+            ?<div className="tl-ev tl-ev-home">{nameBlock}{icon}</div>
+            :<div className="tl-ev tl-ev-away">{icon}{nameBlock}</div>;
+        };
         return(
           <Fragment key={i}>
             {showHT&&<div className="tl-ht"><span className="tl-ht-pill">{htLabel}</span></div>}
             <div className="tl-row">
-              <div className="tl-side tl-side-home">{homeContent}</div>
-              <div className="tl-mid">
-                <div className="tl-badge-wrap">{badge}</div>
-                <span className="tl-min">{min}</span>
-              </div>
-              <div className="tl-side tl-side-away">{awayContent}</div>
+              <div className="tl-side tl-side-home">{ev.isHome?makeContent(true):null}</div>
+              <div className="tl-mid"><span className="tl-min">{min}</span></div>
+              <div className="tl-side tl-side-away">{!ev.isHome?makeContent(false):null}</div>
             </div>
           </Fragment>
         );
@@ -3581,22 +3579,27 @@ const STYLES=`
   /* ── Timeline ── */
   .mde-tl{position:relative;padding:.3rem 0}
   .mde-tl::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--border);transform:translateX(-50%)}
-  .tl-row{display:grid;grid-template-columns:1fr 3rem 1fr;align-items:center;min-height:2.6rem;position:relative;padding:.15rem 0}
-  .tl-side{display:flex;flex-direction:column;gap:.06rem;padding:0 .5rem}
-  .tl-side-home{text-align:right;align-items:flex-end}
-  .tl-side-away{text-align:left;align-items:flex-start}
-  .tl-mid{display:flex;flex-direction:column;align-items:center;gap:.08rem;z-index:1}
-  .tl-badge{display:flex;align-items:center;justify-content:center;border-radius:50%;width:1.7rem;height:1.7rem;font-size:.72rem;font-weight:700;border:2px solid var(--card)}
+  .tl-row{display:grid;grid-template-columns:1fr 2.5rem 1fr;align-items:center;min-height:2.6rem;position:relative;padding:.15rem 0}
+  .tl-side{display:flex;flex-direction:column;gap:.06rem;padding:0 .4rem}
+  .tl-side-home{align-items:flex-end}
+  .tl-side-away{align-items:flex-start}
+  .tl-mid{display:flex;align-items:center;justify-content:center;z-index:1}
+  .tl-ev{display:flex;flex-direction:row;align-items:center;gap:.3rem}
+  .tl-ev-home{justify-content:flex-end}
+  .tl-ev-away{justify-content:flex-start}
+  .tl-name-block{display:flex;flex-direction:column;gap:.04rem}
+  .tl-sub-names{display:flex;flex-direction:column;gap:.03rem}
+  .tl-badge{display:flex;align-items:center;justify-content:center;border-radius:50%;width:1.6rem;height:1.6rem;font-size:.7rem;font-weight:700;border:2px solid var(--card);flex-shrink:0}
   .tl-goal{background:var(--green);color:#000}
   .tl-og{background:#888;color:#fff}
   .tl-miss{background:rgba(255,77,77,.25);color:var(--red);font-size:.6rem}
-  .tl-card{display:inline-block;width:.75rem;height:1.1rem;border-radius:2px}
+  .tl-card{display:inline-block;width:.75rem;height:1.1rem;border-radius:2px;flex-shrink:0}
   .tl-card-yellow{background:#ffd700}
   .tl-card-red{background:var(--red)}
-  .tl-sub-badge{display:flex;flex-direction:column;align-items:center;line-height:1;background:var(--card2);border-radius:50%;width:1.7rem;height:1.7rem;justify-content:center;border:2px solid var(--border)}
+  .tl-sub-badge{display:flex;flex-direction:column;align-items:center;line-height:1;background:var(--card2);border-radius:50%;width:1.6rem;height:1.6rem;justify-content:center;border:2px solid var(--border);flex-shrink:0}
   .tl-in-arr{color:var(--green);font-size:.65rem}
   .tl-out-arr{color:var(--red);font-size:.65rem}
-  .tl-min{font-size:.6rem;font-weight:700;color:var(--muted)}
+  .tl-min{font-size:.62rem;font-weight:700;color:var(--muted);text-align:center;white-space:nowrap}
   .tl-name{font-size:.78rem;font-weight:600;color:var(--text)}
   .tl-name-in{color:var(--green);font-size:.78rem;font-weight:600}
   .tl-name-out{color:rgba(255,160,100,.8);font-size:.68rem}
