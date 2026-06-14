@@ -1253,9 +1253,9 @@ function MatchEvents({events,match,res}){
         const ah=ev.assist?hePlayer(ev.assist):"";
         let icon;
         if(ev.type==="goal"){
-          if(ev.cls==="ownGoal")icon=<span className="tl-badge tl-og">OG</span>;
-          else if(ev.cls==="penalty")icon=<span className="tl-badge tl-goal">P⚽</span>;
-          else icon=<span className="tl-badge tl-goal">⚽</span>;
+          if(ev.cls==="ownGoal")icon=<span className="tl-goal-icon tl-og-icon">⚽<sup style={{fontSize:".5em",opacity:.8}}>OG</sup></span>;
+          else if(ev.cls==="penalty")icon=<span className="tl-goal-icon tl-pen-icon">⚽<sup style={{fontSize:".5em",opacity:.8}}>P</sup></span>;
+          else icon=<span className="tl-goal-icon">⚽</span>;
         }else if(ev.type==="card"){
           icon=<span className={`tl-card tl-card-${ev.cls}`}/>;
         }else if(ev.type==="substitution"){
@@ -2687,8 +2687,7 @@ async function fetchMatchDetail(gm){
         const t=tt(ev);
         const isGoal=ev.scoringPlay===true||t==="goal"||t.includes("own goal");
         const isYellow=t.includes("yellow")&&!t.includes("second");
-        const isRed=(t.includes("red card")||t.includes("second yellow")||
-          (ev.type?.id&&(ev.type.id==="22"||ev.type.id==="83")));
+        const isRed=t==="red card"||t==="red-card"||t.includes("second yellow")||t.includes("red card");
         const isSub=t.includes("substitut");
         const isMissed=t.includes("missed")||t.includes("penalty - miss");
         if(!isGoal&&!isYellow&&!isRed&&!isSub&&!isMissed)continue;
@@ -2705,9 +2704,11 @@ async function fetchMatchDetail(gm){
         else if(isYellow){type="card";cls="yellow";}
         else if(isRed){type="card";cls="red";}
         else if(isSub){type="substitution";}
-        const player=isSub?getP("in"):getP("scor")||getP("goal")||parts[0]?.athlete?.displayName||"";
-        const assist=getP("assist");
-        const playerOut=isSub?getP("out"):"";
+        const player=isSub
+          ?(getP("in")||getP("enter")||getP("on")||parts[0]?.athlete?.displayName||"")
+          :(getP("scor")||getP("goal")||parts[0]?.athlete?.displayName||"");
+        const assist=!isSub?getP("assist"):"";
+        const playerOut=isSub?(getP("out")||getP("exit")||getP("off")||parts[1]?.athlete?.displayName||""):"";
         if(type)events.push({time:min,addedTime:addedMin,type,cls,player,assist,playerOut,isHome});
       }
       events.sort((a,b)=>a.time-b.time||(a.addedTime-b.addedTime));
@@ -3601,9 +3602,8 @@ const STYLES=`
   .tl-ev-away{justify-content:flex-start}
   .tl-name-block{display:flex;flex-direction:column;gap:.04rem}
   .tl-sub-names{display:flex;flex-direction:column;gap:.03rem}
+  .tl-goal-icon{font-size:1.25rem;line-height:1;flex-shrink:0;display:inline-flex;align-items:baseline;gap:.1rem}
   .tl-badge{display:flex;align-items:center;justify-content:center;border-radius:50%;width:1.6rem;height:1.6rem;font-size:.7rem;font-weight:700;border:2px solid var(--card);flex-shrink:0}
-  .tl-goal{background:var(--green);color:#000}
-  .tl-og{background:#888;color:#fff}
   .tl-miss{background:rgba(255,77,77,.25);color:var(--red);font-size:.6rem}
   .tl-card{display:inline-block;width:.75rem;height:1.1rem;border-radius:2px;flex-shrink:0}
   .tl-card-yellow{background:#ffd700}
