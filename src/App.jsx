@@ -2020,7 +2020,7 @@ function SpecialBetsCard({participants, results, teamNames, funIran=0, funIsrael
       </div>
 
       {/* Fun bet - Iran vs Israel missiles */}
-      <div className="sp-section fun-bet-section">
+      {!results.funHidden&&<div className="sp-section fun-bet-section">
         <div className="sp-label">
           🚀 איראן – ישראל
           {results.funResult
@@ -2028,22 +2028,27 @@ function SpecialBetsCard({participants, results, teamNames, funIran=0, funIsrael
             :<span className="sp-pending">ממתין לתוצאה</span>}
         </div>
         <p className="fun-bet-subtitle" style={{margin:".2rem 0 .6rem",fontSize:".75rem",color:"var(--muted)"}}>כמה טילים כל מדינה תירה?</p>
-        <div className="fun-bet-scoreline">
-          <div className="fun-bet-team-col">
-            <span className="fun-bet-flag">🇮🇷</span>
-            <span className="fun-bet-tname">איראן</span>
-            <NumStepper value={funIran} onChange={onFunIranChange} max={9999}/>
-          </div>
-          <span className="fun-bet-dash">–</span>
-          <div className="fun-bet-team-col">
-            <span className="fun-bet-flag">🇮🇱</span>
-            <span className="fun-bet-tname">ישראל</span>
-            <NumStepper value={funIsrael} onChange={onFunIsraelChange} max={9999}/>
-          </div>
-        </div>
-        <button className="btn-green" style={{marginTop:".6rem",width:"100%"}} onClick={onSaveFunBet} disabled={funSaving}>
-          {funSaving?"שומר...":"💾 שמור"}
-        </button>
+        {results.funLocked
+          ?<div className="fun-bet-hidden">🔒 ההימור ננעל</div>
+          :<>
+            <div className="fun-bet-scoreline">
+              <div className="fun-bet-team-col">
+                <span className="fun-bet-flag">🇮🇷</span>
+                <span className="fun-bet-tname">איראן</span>
+                <NumStepper value={funIran} onChange={onFunIranChange} max={9999}/>
+              </div>
+              <span className="fun-bet-dash">–</span>
+              <div className="fun-bet-team-col">
+                <span className="fun-bet-flag">🇮🇱</span>
+                <span className="fun-bet-tname">ישראל</span>
+                <NumStepper value={funIsrael} onChange={onFunIsraelChange} max={9999}/>
+              </div>
+            </div>
+            <button className="btn-green" style={{marginTop:".6rem",width:"100%"}} onClick={onSaveFunBet} disabled={funSaving}>
+              {funSaving?"שומר...":"💾 שמור"}
+            </button>
+          </>
+        }
         {results.funRevealed
           ?<div className="sp-chips" style={{marginTop:".6rem"}}>
             {participants.map(p=>{
@@ -2059,7 +2064,7 @@ function SpecialBetsCard({participants, results, teamNames, funIran=0, funIsrael
           </div>
           :<div className="fun-bet-hidden" style={{marginTop:".5rem"}}>🔒 הימורי האחרים יחשפו ע״י המנהל</div>
         }
-      </div>
+      </div>}
     </div>
   );
 }
@@ -2638,6 +2643,8 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [funIsrael, setFunIsrael] = useState(game?.results?.funResult?.israel ?? 0);
   const [funSaving, setFunSaving] = useState(false);
   const [funRevealSaving, setFunRevealSaving] = useState(false);
+  const [funLockSaving, setFunLockSaving] = useState(false);
+  const [funHideSaving, setFunHideSaving] = useState(false);
   const saveFunResult = async () => {
     setFunSaving(true);
     try { await updateDoc(doc(db,"mundial2026","game"),{"results.funResult": {iran: funIran, israel: funIsrael}}); showToast("✅ תוצאת הפצצה נשמרה!"); }
@@ -2650,6 +2657,20 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
     try { await updateDoc(doc(db,"mundial2026","game"),{"results.funRevealed": next}); showToast(next?"✅ הימורים נחשפו!":"✅ הימורים הוסתרו"); }
     catch(e) { showToast("❌ "+e.message); }
     setFunRevealSaving(false);
+  };
+  const toggleFunLock = async () => {
+    setFunLockSaving(true);
+    const next = !game?.results?.funLocked;
+    try { await updateDoc(doc(db,"mundial2026","game"),{"results.funLocked": next}); showToast(next?"🔒 הימור ננעל":"🔓 הימור נפתח"); }
+    catch(e) { showToast("❌ "+e.message); }
+    setFunLockSaving(false);
+  };
+  const toggleFunHide = async () => {
+    setFunHideSaving(true);
+    const next = !game?.results?.funHidden;
+    try { await updateDoc(doc(db,"mundial2026","game"),{"results.funHidden": next}); showToast(next?"👁 סקשן הוסתר":"👁 סקשן מוצג"); }
+    catch(e) { showToast("❌ "+e.message); }
+    setFunHideSaving(false);
   };
 
   const onBetMatchChange = (uid, mid) => {
@@ -2779,9 +2800,17 @@ function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
           <span className="admin-fun-flag">🇮🇱</span>
           <button className="btn-admin-save-bet" onClick={saveFunResult} disabled={funSaving}>{funSaving?"שומר...":"שמור תוצאה"}</button>
         </div>
-        <button className="btn-admin-fun-reveal" onClick={toggleFunReveal} disabled={funRevealSaving}>
-          {funRevealSaving?"...":game?.results?.funRevealed?"🔓 הסתר הימורים":"🔒 חשוף הימורים"}
-        </button>
+        <div className="admin-fun-bet-row" style={{gap:".4rem"}}>
+          <button className="btn-admin-fun-reveal" style={{flex:1}} onClick={toggleFunReveal} disabled={funRevealSaving}>
+            {funRevealSaving?"...":game?.results?.funRevealed?"🔓 הסתר":"🔒 חשוף"}
+          </button>
+          <button className="btn-admin-fun-lock" style={{flex:1}} onClick={toggleFunLock} disabled={funLockSaving}>
+            {funLockSaving?"...":game?.results?.funLocked?"🟢 פתח":"🔴 נעל"}
+          </button>
+          <button className="btn-admin-fun-hide" style={{flex:1}} onClick={toggleFunHide} disabled={funHideSaving}>
+            {funHideSaving?"...":game?.results?.funHidden?"👁 הצג":"🙈 הסתר"}
+          </button>
+        </div>
       </div>
       <div className="admin-bet-editor">
         <div className="admin-bet-title">✏️ עריכת הימור</div>
@@ -4131,8 +4160,12 @@ const STYLES=`
   .admin-fun-bet-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
   .admin-fun-flag{font-size:1.3rem}
   .admin-fun-sep{font-weight:800;font-size:1.1rem;color:var(--muted)}
-  .btn-admin-fun-reveal{background:rgba(59,130,246,.15);border:1.5px solid rgba(59,130,246,.4);color:#60a5fa;border-radius:10px;padding:.5rem 1rem;font-family:'Heebo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;width:100%}
+  .btn-admin-fun-reveal{background:rgba(59,130,246,.15);border:1.5px solid rgba(59,130,246,.4);color:#60a5fa;border-radius:10px;padding:.5rem .7rem;font-family:'Heebo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s}
   .btn-admin-fun-reveal:hover{background:rgba(59,130,246,.25)}
+  .btn-admin-fun-lock{background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.4);color:#f87171;border-radius:10px;padding:.5rem .7rem;font-family:'Heebo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s}
+  .btn-admin-fun-lock:hover{background:rgba(239,68,68,.22)}
+  .btn-admin-fun-hide{background:rgba(156,163,175,.12);border:1.5px solid rgba(156,163,175,.4);color:#9ca3af;border-radius:10px;padding:.5rem .7rem;font-family:'Heebo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s}
+  .btn-admin-fun-hide:hover{background:rgba(156,163,175,.22)}
   .special-val{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.62rem 1rem;font-size:.92rem;font-weight:700;color:var(--green)}
   .hidden-val{color:var(--muted) !important;font-style:italic;font-weight:400}
   .playoff-editor{display:flex;flex-direction:column;gap:.8rem}
