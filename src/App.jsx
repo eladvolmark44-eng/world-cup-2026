@@ -1238,7 +1238,7 @@ function Leaderboard({participants,results,onSelectPlayer}){
         <div key={p.uid} className={`lb-row rank-${i+1}`} onClick={()=>onSelectPlayer(p)}>
           <span className="lb-rank">{rankSymbol(ranked,i)}</span>
           {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
-          <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+          <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")||p.name.includes("מוגתבא")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
           <span className="lb-score">{p.score} נק׳</span>
           <span className="lb-arrow">›</span>
         </div>
@@ -2200,7 +2200,7 @@ function HomeView({me, participants, results, teamNames, odds, liveStats, onMatc
                   {p.photoURL
                     ?<img src={p.photoURL} className="lb-avatar" alt=""/>
                     :<div className="lb-avatar-ph">{p.name[0]}</div>}
-                  <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+                  <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")||p.name.includes("מוגתבא")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
                 </div>
                 <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
                   {globalLocked&&goalsBet!=null&&goalsBet!==""
@@ -2576,7 +2576,7 @@ function RankingView({participants, results, teamNames, onSelectPlayer}){
               <div className={`lb-row rank-${i+1}`} onClick={()=>setExpandedUid(isExpanded?null:p.uid)}>
                 <span className="lb-rank">{rankSymbol(ranked,i)}</span>
                 {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
-                <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+                <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&(p.name.toLowerCase().includes("amir")||p.name.includes("אמיר")||p.name.includes("מוגתבא")))&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
                 <span className="lb-score">{p.score} נק׳</span>
                 <span className="lb-expand">{isExpanded?"▲":"▼"}</span>
               </div>
@@ -4359,7 +4359,7 @@ const STYLES=`
   .st-stripe{width:4px!important;padding:0!important;min-width:0}
   .st-num{color:var(--muted);font-size:.66rem;width:16px;text-align:center}
   .st-line-ind{display:inline-block;width:4px;height:14px;border-radius:2px;flex-shrink:0;vertical-align:middle}
-  .st-relegate td{border-top:2px solid #ff4040}
+  .st-relegate td{}
   .st-legend{display:flex;gap:1rem;justify-content:center;padding:.6rem .5rem .3rem;flex-wrap:wrap}
   .st-legend-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)}
   .st-ptc{font-weight:700}
