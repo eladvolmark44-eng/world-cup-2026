@@ -318,7 +318,7 @@ export default function App(){
             ...(src.minute!=null ? {minute: src.minute} : {}),
           };
 
-          if (prev.home !== newEntry.home || prev.away !== newEntry.away || prev.live !== newEntry.live) {
+          if (prev.home !== newEntry.home || prev.away !== newEntry.away || prev.live !== newEntry.live || prev.minute !== newEntry.minute) {
             updatedMatches[m.id] = { ...prev, ...newEntry };
             matchChanged = true;
           }
