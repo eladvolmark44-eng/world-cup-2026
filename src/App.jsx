@@ -2988,16 +2988,23 @@ async function fetchMatchStats(gm){
 
 async function fetchMatchDetail(gm){
   const heb=n=>SOFA_TEAM_MAP[n]||n;
-  const ymd=new Date(gm.kickoff||Date.now()).toISOString().slice(0,10).replace(/-/g,"");
+  const dt=new Date(gm.kickoff||Date.now());
+  const ymd=dt.toISOString().slice(0,10).replace(/-/g,"");
+  const prevDt=new Date(dt.getTime()-24*60*60*1000);
+  const ymdPrev=prevDt.toISOString().slice(0,10).replace(/-/g,"");
   let stats=null,events=[],lineup=null;
   try{
-    const sb=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${ymd}`);
-    const sbj=await sb.json();
-    const espnEv=(sbj.events||[]).find(e=>{
-      const comp=e.competitions?.[0];
-      const names=(comp?.competitors||[]).map(c=>heb(c.team?.displayName||""));
-      return names.includes(gm.home)&&names.includes(gm.away);
-    });
+    let espnEv=null;
+    for(const d of [ymd,ymdPrev]){
+      const sb=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${d}`);
+      const sbj=await sb.json();
+      espnEv=(sbj.events||[]).find(e=>{
+        const comp=e.competitions?.[0];
+        const names=(comp?.competitors||[]).map(c=>heb(c.team?.displayName||""));
+        return names.includes(gm.home)&&names.includes(gm.away);
+      });
+      if(espnEv?.id) break;
+    }
     if(espnEv?.id){
       const sr=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${espnEv.id}`);
       const sd=await sr.json();
