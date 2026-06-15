@@ -63,7 +63,7 @@ function AssistantLockToggle({game, showToast}){
   return(
     <div className="admin-winner-section">
       <div className="admin-action-info">
-        <span className="admin-action-label">🐒 עוזר מנהל</span>
+        <span className="admin-action-label">🐒 עוזר מאמן</span>
         <span className="admin-action-desc">{locked?"גישה חסומה — אמיר לא יכול לערוך":"גישה פתוחה — אמיר יכול לערוך שמות ותמונות"}</span>
       </div>
       <button className="btn-admin-winner" style={{background:locked?"var(--green)":"#c0392b"}} onClick={toggle} disabled={saving}>
@@ -339,7 +339,7 @@ export function AssistantPanel({participants, showToast}){
   return(
     <div className="section">
       <div style={{textAlign:"center",fontSize:"2.5rem",marginBottom:".2rem"}}>🐒</div>
-      <h2 style={{textAlign:"center",marginBottom:".2rem"}}>עוזר מנהל</h2>
+      <h2 style={{textAlign:"center",marginBottom:".2rem"}}>עוזר מאמן</h2>
       <p className="section-note" style={{textAlign:"center"}}>לחץ על משתמש לעריכת שם ותמונה</p>
       <div className="scroll-area">
         {participants.filter(p=>!p.isBot).map(p=>(
