@@ -7,7 +7,7 @@ import { SOFA_TEAM_MAP } from "./constants/api.js";
 import { ADMIN_UID, MONKEY_BOT } from "./constants/game.js";
 import {
   getPresetBets, calcScore, rankSymbol, isTournamentOver,
-  getLastCompletedMatchDay, hePlayer
+  getLastCompletedMatchDay, hePlayer, generateAutoBet, isMatchLocked
 } from "./utils/helpers.js";
 import {
   setKoKickoffs, hasMatchWithin30Min, hasMatchWithin2Hours,
@@ -41,6 +41,7 @@ export default function App(){
   const [statsMatch,setStatsMatch]=useState(null);
   const [dailyRankAnim,setDailyRankAnim]=useState(null);
   const toastRef=useRef(null);
+  const autoFilledRef=useRef(new Set());
   const showToast=msg=>{setToast(msg);clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2800);};
 
   useEffect(()=>{
@@ -508,6 +509,30 @@ export default function App(){
     localStorage.setItem(key,"1");
     setTimeout(()=>setDailyRankAnim({date:lastDay,sym,score:ranked[myIdx].score,rank:myIdx,isTest:false}),1500);
   },[authUser?.uid,gameLoading,game?.results,participants.length]);
+
+  // Auto-fill missing bets for locked matches: admin fills everyone, each user fills themselves
+  useEffect(()=>{
+    if(!authUser||!participants.length||gameLoading)return;
+    const adminMode=authUser.uid===ADMIN_UID;
+    const toFill=adminMode?participants.filter(p=>!p.isBot):participants.filter(p=>p.uid===authUser.uid);
+    const results=game.results||{};
+    for(const p of toFill){
+      const missing=GROUP_MATCHES.filter(m=>{
+        const key=`${p.uid}:${m.id}`;
+        if(autoFilledRef.current.has(key))return false;
+        if(!isMatchLocked(m.id,results.matches?.[m.id]))return false;
+        const bet=p.bets?.matches?.[m.id];
+        return !bet||bet.home==null;
+      });
+      if(!missing.length)continue;
+      const autoBets={};
+      for(const m of missing){
+        autoBets[m.id]=generateAutoBet(p.uid,m.id);
+        autoFilledRef.current.add(`${p.uid}:${m.id}`);
+      }
+      saveParticipant({...p,bets:{...p.bets,matches:{...p.bets?.matches,...autoBets}}});
+    }
+  },[authUser?.uid,gameLoading,participants]);
 
   const handleSignIn=async()=>{
     setSigningIn(true);

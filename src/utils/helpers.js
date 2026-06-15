@@ -157,6 +157,20 @@ export function getDefaultMatchDate(){
   return past.length?past[past.length-1]:ALL_MATCH_DATES[0];
 }
 
+function _seededRand(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (Math.imul(h, 0x01000193) >>> 0); }
+  return h / 0xffffffff;
+}
+export function generateAutoBet(uid, matchId) {
+  const dist = [0,0,0,1,1,1,1,2,2,2,3,3];
+  return {
+    home: dist[Math.floor(_seededRand(uid + matchId + "h") * dist.length)],
+    away: dist[Math.floor(_seededRand(uid + matchId + "a") * dist.length)],
+    auto: true,
+  };
+}
+
 export function resizeImageToDataURL(file,size=120){
   return new Promise((resolve,reject)=>{
     const img=new Image();

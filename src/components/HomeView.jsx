@@ -383,12 +383,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                 <div className="rev-bets-row">
                   {participants.map(p=>{
                     const bet=p.bets?.matches?.[m.id];
-                    if(!bet||bet.home==null)return(
-                      <div key={p.uid} className="rev-bet-chip wrong">
-                        <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">❌</span>
-                      </div>
-                    );
+                    if(!bet||bet.home==null)return null;
                     const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
                     const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
                     const pts=hasReal?(exact?3:correct?1:0):null;
@@ -396,6 +391,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
                         <span className="chip-score">{bet.away}:{bet.home}</span>
+                        {bet.auto&&<span title="אוטומטי">🎲</span>}
                         {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
                         {exact&&<span>🎯</span>}
                         {!exact&&correct&&<span>✓</span>}
