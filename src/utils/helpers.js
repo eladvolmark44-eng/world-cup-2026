@@ -171,7 +171,7 @@ export function generateAutoBet(uid, matchId) {
   };
 }
 
-export function resizeImageToDataURL(file,size=120){
+export function resizeImageToDataURL(file,size=400){
   return new Promise((resolve,reject)=>{
     const img=new Image();
     const url=URL.createObjectURL(file);
@@ -182,7 +182,7 @@ export function resizeImageToDataURL(file,size=120){
       canvas.width=size;canvas.height=size;
       canvas.getContext("2d").drawImage(img,sx,sy,s,s,0,0,size,size);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg",0.75));
+      resolve(canvas.toDataURL("image/jpeg",0.92));
     };
     img.onerror=reject;
     img.src=url;
