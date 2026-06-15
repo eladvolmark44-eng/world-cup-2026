@@ -284,6 +284,68 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
   );
 }
 
+export function AssistantPanel({participants, showToast}){
+  const [selectedUid,setSelectedUid]=useState(null);
+  const [name,setName]=useState("");
+  const [photoData,setPhotoData]=useState(null);
+  const [preview,setPreview]=useState(null);
+  const [saving,setSaving]=useState(false);
+
+  const select=p=>{setSelectedUid(p.uid);setName(p.name||"");setPhotoData(null);setPreview(p.photoURL||null);};
+
+  async function handleFileChange(e){
+    const f=e.target.files[0];if(!f)return;
+    try{const d=await resizeImageToDataURL(f);setPhotoData(d);setPreview(d);}catch{}
+  }
+
+  async function handleSave(){
+    if(!selectedUid)return;setSaving(true);
+    const cur=participants.find(p=>p.uid===selectedUid);
+    try{
+      await updateDoc(doc(db,"mundial2026","game","participants",selectedUid),{
+        name:name.trim()||cur?.name||"",
+        photoURL:photoData||(cur?.photoURL||null),
+      });
+      showToast("✅ פרופיל עודכן");setSelectedUid(null);
+    }catch(e){showToast("❌ "+e.message);}
+    setSaving(false);
+  }
+
+  return(
+    <div className="section">
+      <div style={{textAlign:"center",fontSize:"2.5rem",marginBottom:".2rem"}}>🐒</div>
+      <h2 style={{textAlign:"center",marginBottom:".2rem"}}>עוזר מנהל</h2>
+      <p className="section-note" style={{textAlign:"center"}}>לחץ על משתמש לעריכת שם ותמונה</p>
+      <div className="scroll-area">
+        {participants.filter(p=>!p.isBot).map(p=>(
+          <div key={p.uid} className="lb-row" style={{cursor:"pointer"}} onClick={()=>select(p)}>
+            {p.photoURL?<img src={p.photoURL} className="lb-avatar" alt=""/>:<div className="lb-avatar-ph">{(p.name||"?")[0]}</div>}
+            <span className="lb-name">{p.name}</span>
+            <span style={{marginRight:"auto",color:"var(--muted)"}}>✏️</span>
+          </div>
+        ))}
+      </div>
+      {selectedUid&&(
+        <div className="admin-overlay" onClick={()=>setSelectedUid(null)}>
+          <div className="admin-confirm profile-modal" onClick={e=>e.stopPropagation()}>
+            <div className="admin-confirm-title">עריכת {participants.find(p=>p.uid===selectedUid)?.name}</div>
+            <div className="profile-avatar-wrap">
+              {preview?<img src={preview} className="profile-avatar-lg" alt=""/>:<div className="profile-avatar-placeholder">👤</div>}
+              <label className="btn-upload">שנה תמונה<input type="file" accept="image/*" onChange={handleFileChange} style={{display:"none"}}/></label>
+            </div>
+            <div className="profile-label">שם תצוגה</div>
+            <input className="profile-input" value={name} onChange={e=>setName(e.target.value)} maxLength={30}/>
+            <div className="admin-confirm-btns">
+              <button className="btn-confirm-admin" style={{background:"var(--green)",color:"#000"}} onClick={handleSave} disabled={saving}>{saving?"שומר...":"שמור"}</button>
+              <button className="btn-cancel-admin" onClick={()=>setSelectedUid(null)}>ביטול</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProfileEditModal({authUser,currentParticipant,onClose,showToast}){
   const [name,setName]=useState(currentParticipant?.name||authUser.displayName||"");
   const [photoData,setPhotoData]=useState(null);

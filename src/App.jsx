@@ -4,7 +4,7 @@ import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from
 import { db, auth, loadGame, saveGame, saveParticipant } from "./firebase.js";
 import { GROUP_MATCHES, GROUPS_2026 } from "./constants/tournament.js";
 import { SOFA_TEAM_MAP } from "./constants/api.js";
-import { ADMIN_UID, MONKEY_BOT } from "./constants/game.js";
+import { ADMIN_UID, MONKEY_BOT, ASSISTANT_UID } from "./constants/game.js";
 import {
   getPresetBets, calcScore, rankSymbol, isTournamentOver,
   getLastCompletedMatchDay, hePlayer, generateAutoBet, isMatchLocked
@@ -18,7 +18,7 @@ import HomeView, { WinnerAnnouncement, DailyRankAnimation } from "./components/H
 import { PlayerBetsView } from "./components/BetForm.jsx";
 import MatchDetailView from "./components/MatchViews.jsx";
 import ResultsView from "./components/ResultsView.jsx";
-import AdminPanel, { ProfileEditModal } from "./components/AdminPanel.jsx";
+import AdminPanel, { ProfileEditModal, AssistantPanel } from "./components/AdminPanel.jsx";
 
 const AF_KEY = import.meta.env?.VITE_AF_KEY || "";
 
@@ -569,6 +569,7 @@ export default function App(){
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
   const isAdmin=authUser?.uid===ADMIN_UID;
+  const isAssistant=authUser?.uid===ASSISTANT_UID;
   const tournamentOver=isTournamentOver();
   const appRanked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},game.results||{},participants)})).sort((a,b)=>b.score-a.score);
   const appLeader=appRanked[0]||null;
@@ -624,7 +625,7 @@ export default function App(){
         </div>
         <div className="main-content">
         <div className="main-tabs">
-          {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"],...(isAdmin?[["admin","⚙️","מנהל"]]:[])].map(([k,icon,label])=>(
+          {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"],...(isAdmin?[["admin","⚙️","מנהל"]]:[]),...((isAdmin||isAssistant)?[["assistant","🐒","עוזר"]]:[])].map(([k,icon,label])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>
               {icon==="score"
                 ? <span className="tab-icon tab-score">3:2</span>
@@ -695,6 +696,9 @@ export default function App(){
           )}
           {tab==="admin"&&isAdmin&&(
             <AdminPanel participants={participants} game={game} showToast={showToast} onTriggerWinner={()=>setShowWinner(true)}/>
+          )}
+          {tab==="assistant"&&(isAdmin||isAssistant)&&(
+            <AssistantPanel participants={participants} showToast={showToast}/>
           )}
         </div>
         </div>{/* /main-content */}

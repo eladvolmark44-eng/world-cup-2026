@@ -1,5 +1,6 @@
 export const ADMIN_UID = "8tDgIRJQDFZyiTvaR0pP8nXShgH2";
 export const YELLOW_CARD_UID = "18QvfShudxTTsPfUJPpLhEQNp3h1";
+export const ASSISTANT_UID = "18QvfShudxTTsPfUJPpLhEQNp3h1";
 
 export const MONKEY_BOT_UID = "monkey-bot-amir";
 export const MONKEY_BOT_PHOTO = "/monkey.jpg";
