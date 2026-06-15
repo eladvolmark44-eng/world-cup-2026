@@ -1,4 +1,4 @@
-import { PLAYER_NAME_HE, findPlayerNameHe } from "../playerNamesHe.js";
+import { PLAYER_NAME_HE, findPlayerNameHe } from "../constants/playerNamesHe.js";
 import { GROUPS_2026, GROUP_MATCHES, GROUP_LAST_MATCH, GROUP_STAGE_END_TS, TOURNAMENT_END, FLAG_MAP, KO_POINTS, ALL_MATCH_DATES } from "../constants/tournament.js";
 import { STRIKER_FLAGS, STRIKER_API_NAMES, PLAYER_HEB } from "../constants/players.js";
 import { PRESET_BETS_BY_NAME } from "../constants/game.js";
