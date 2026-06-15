@@ -86,7 +86,12 @@ export function RevealedBetsView({participants, viewerUid, results, teamNames}){
                     <div className="rev-bets-row">
                       {participants.map(p=>{
                         const bet=p.bets?.matches?.[m.id];
-                        if(!bet||bet.home==null)return null;
+                        if(!bet||bet.home==null)return(
+                          <div key={p.uid} className="rev-bet-chip wrong">
+                            <span className="chip-name">{p.name.split(" ")[0]}</span>
+                            <span className="chip-score">❌</span>
+                          </div>
+                        );
                         const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
                         const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
                         const pts = hasReal ? (exact ? 4 : correct ? 1 : 0) : null;
@@ -188,7 +193,12 @@ export default function ResultsView({participants, viewerUid, results, teamNames
                 <div className="rev-bets-row">
                   {participants.map(p=>{
                     const bet=p.bets?.matches?.[m.id];
-                    if(!bet||bet.home==null)return null;
+                    if(!bet||bet.home==null)return(
+                      <div key={p.uid} className="rev-bet-chip wrong">
+                        <span className="chip-name">{p.name.split(" ")[0]}</span>
+                        <span className="chip-score">❌</span>
+                      </div>
+                    );
                     const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
                     const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
                     const pts=hasReal?(exact?3:correct?1:0):null;
