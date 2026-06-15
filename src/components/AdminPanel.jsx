@@ -315,6 +315,7 @@ export function AssistantPanel({participants, showToast}){
   const [photoData,setPhotoData]=useState(null);
   const [preview,setPreview]=useState(null);
   const [saving,setSaving]=useState(false);
+  const [fullscreenPhoto,setFullscreenPhoto]=useState(null);
 
   const select=p=>{setSelectedUid(p.uid);setName(p.name||"");setPhotoData(null);setPreview(p.photoURL||null);};
 
@@ -359,12 +360,23 @@ export function AssistantPanel({participants, showToast}){
           </div>
         ))}
       </div>
+      {fullscreenPhoto&&(
+        <div onClick={()=>setFullscreenPhoto(null)} style={{
+          position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          zIndex:9999,cursor:"zoom-out",
+        }}>
+          <img src={fullscreenPhoto} alt="" style={{maxWidth:"95vw",maxHeight:"95vh",borderRadius:12,objectFit:"contain"}}/>
+        </div>
+      )}
       {selectedUid&&(
         <div className="admin-overlay" onClick={()=>setSelectedUid(null)}>
           <div className="admin-confirm profile-modal" onClick={e=>e.stopPropagation()}>
             <div className="admin-confirm-title">עריכת {participants.find(p=>p.uid===selectedUid)?.name}</div>
             <div className="profile-avatar-wrap">
-              {preview?<img src={preview} className="profile-avatar-lg" alt=""/>:<div className="profile-avatar-placeholder">👤</div>}
+              {preview
+                ?<img src={preview} className="profile-avatar-lg" alt="" style={{cursor:"zoom-in"}} onClick={e=>{e.stopPropagation();setFullscreenPhoto(preview);}}/>
+                :<div className="profile-avatar-placeholder">👤</div>}
               <label className="btn-upload">שנה תמונה<input type="file" accept="image/*" onChange={handleFileChange} style={{display:"none"}}/></label>
             </div>
             <div className="profile-label">שם תצוגה</div>
