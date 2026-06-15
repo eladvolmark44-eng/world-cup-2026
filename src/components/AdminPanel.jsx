@@ -338,7 +338,9 @@ export function AssistantPanel({participants, showToast}){
 
   return(
     <div className="section">
-      <div style={{textAlign:"center",fontSize:"2.5rem",marginBottom:".2rem"}}>🐒</div>
+      <div style={{textAlign:"center",marginBottom:".2rem"}}>
+        <img src="/amir.png" alt="עוזר מאמן" style={{height:90,objectFit:"contain"}}/>
+      </div>
       <h2 style={{textAlign:"center",marginBottom:".2rem"}}>עוזר מאמן</h2>
       <p className="section-note" style={{textAlign:"center"}}>לחץ על משתמש לעריכת שם ותמונה</p>
       <div className="scroll-area">

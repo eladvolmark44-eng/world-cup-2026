@@ -625,12 +625,14 @@ export default function App(){
         </div>
         <div className="main-content">
         <div className="main-tabs">
-          {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"],...(isAdmin?[["admin","⚙️","מנהל"]]:[]),...((isAdmin||isAssistant)?[["assistant","🐒","מאמן"]]:[])].map(([k,icon,label])=>(
+          {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"],...(isAdmin?[["admin","⚙️","מנהל"]]:[]),...((isAdmin||isAssistant)?[["assistant","amir","מאמן"]]:[])].map(([k,icon,label])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>
               {icon==="score"
                 ? <span className="tab-icon tab-score">3:2</span>
                 : icon==="ref"
                 ? <span className="tab-icon"><img src="/referee.png" className="tab-ref-img" alt="referee"/></span>
+                : icon==="amir"
+                ? <span className="tab-icon"><img src="/amir.png" className="tab-ref-img" alt="מאמן"/></span>
                 : <span className="tab-icon">{icon}</span>
               }
               <span className="tab-label">{label}</span>
