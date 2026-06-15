@@ -49,6 +49,30 @@ function ApiHealthPanel(){
   );
 }
 
+function AssistantLockToggle({game, showToast}){
+  const [saving,setSaving]=useState(false);
+  const locked=!!game?.assistantLocked;
+  const toggle=async()=>{
+    setSaving(true);
+    try{
+      await updateDoc(doc(db,"mundial2026","game"),{assistantLocked:!locked});
+      showToast(locked?"🐒 גישת עוזר נפתחה":"🔒 גישת עוזר ננעלה");
+    }catch(e){showToast("❌ "+e.message);}
+    setSaving(false);
+  };
+  return(
+    <div className="admin-winner-section">
+      <div className="admin-action-info">
+        <span className="admin-action-label">🐒 עוזר מנהל</span>
+        <span className="admin-action-desc">{locked?"גישה חסומה — אמיר לא יכול לערוך":"גישה פתוחה — אמיר יכול לערוך שמות ותמונות"}</span>
+      </div>
+      <button className="btn-admin-winner" style={{background:locked?"var(--green)":"#c0392b"}} onClick={toggle} disabled={saving}>
+        {saving?"...":locked?"פתח":"נעל"}
+      </button>
+    </div>
+  );
+}
+
 export default function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [confirmAction, setConfirmAction] = useState(null);
   const [running, setRunning] = useState(false);
@@ -207,6 +231,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
         </div>
         <button className="btn-admin-winner" onClick={onTriggerWinner}>הפעל</button>
       </div>
+      <AssistantLockToggle game={game} showToast={showToast}/>
       <div className="admin-fun-bet-section">
         <div className="admin-action-info">
           <span className="admin-action-label">🚀 איראן – ישראל · שיגורים</span>

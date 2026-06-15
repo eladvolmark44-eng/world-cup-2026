@@ -569,7 +569,7 @@ export default function App(){
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
   const isAdmin=authUser?.uid===ADMIN_UID;
-  const isAssistant=authUser?.uid===ASSISTANT_UID;
+  const isAssistant=authUser?.uid===ASSISTANT_UID&&!game.assistantLocked;
   const tournamentOver=isTournamentOver();
   const appRanked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},game.results||{},participants)})).sort((a,b)=>b.score-a.score);
   const appLeader=appRanked[0]||null;
