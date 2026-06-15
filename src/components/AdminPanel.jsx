@@ -318,10 +318,17 @@ export function AssistantPanel({participants, showToast}){
       <p className="section-note" style={{textAlign:"center"}}>לחץ על משתמש לעריכת שם ותמונה</p>
       <div className="scroll-area">
         {participants.filter(p=>!p.isBot).map(p=>(
-          <div key={p.uid} className="lb-row" style={{cursor:"pointer"}} onClick={()=>select(p)}>
-            {p.photoURL?<img src={p.photoURL} className="lb-avatar" alt=""/>:<div className="lb-avatar-ph">{(p.name||"?")[0]}</div>}
-            <span className="lb-name">{p.name}</span>
-            <span style={{marginRight:"auto",color:"var(--muted)"}}>✏️</span>
+          <div key={p.uid} onClick={()=>select(p)} style={{
+            display:"flex",alignItems:"center",gap:".75rem",
+            padding:".6rem .8rem",borderRadius:"10px",
+            background:"var(--card2,#1e2a3a)",cursor:"pointer",
+            marginBottom:".4rem",
+          }}>
+            {p.photoURL
+              ?<img src={p.photoURL} style={{width:40,height:40,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
+              :<div style={{width:40,height:40,borderRadius:"50%",background:"var(--accent,#4a9eff)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontWeight:"bold",color:"#fff"}}>{(p.name||"?")[0]}</div>}
+            <span style={{flex:1,fontWeight:500}}>{p.name}</span>
+            <span style={{color:"var(--muted,#888)"}}>✏️</span>
           </div>
         ))}
       </div>
