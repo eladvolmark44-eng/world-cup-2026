@@ -324,6 +324,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
   const [funIran,setFunIran]=useState(existingFunBet?.iran??0);
   const [funIsrael,setFunIsrael]=useState(existingFunBet?.israel??0);
   const [funSaving,setFunSaving]=useState(false);
+  const [zoomedPhoto,setZoomedPhoto]=useState(null);
   useEffect(()=>{
     setChampion(myBets.champion||"");
     setGoldenBoot(myBets.goldenBoot||"");
@@ -438,7 +439,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                 <span className="lb-rank">{rankSymbol(ranked,i)}</span>
                 <div className="lb-name-col">
                   {p.photoURL
-                    ?<img src={p.photoURL} className="lb-avatar" alt=""/>
+                    ?<img src={p.photoURL} className="lb-avatar" alt="" style={{cursor:"zoom-in"}} onClick={e=>{e.stopPropagation();setZoomedPhoto(p.photoURL);}}/>
                     :<div className="lb-avatar-ph">{p.name[0]}</div>}
                   <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&p.uid===YELLOW_CARD_UID)&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
                 </div>
@@ -473,6 +474,15 @@ export default function HomeView({me, participants, results, teamNames, odds, li
         funIran={funIran} funIsrael={funIsrael}
         onFunIranChange={setFunIran} onFunIsraelChange={setFunIsrael}
         onSaveFunBet={handleSaveFunBet} funSaving={funSaving}/>
+      {zoomedPhoto&&(
+        <div onClick={()=>setZoomedPhoto(null)} style={{
+          position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          zIndex:9999,cursor:"zoom-out",
+        }}>
+          <img src={zoomedPhoto} alt="" style={{width:"min(85vw,85vh)",height:"min(85vw,85vh)",borderRadius:"50%",objectFit:"cover",boxShadow:"0 0 40px rgba(0,0,0,.8)"}}/>
+        </div>
+      )}
     </div>
   );
 }
