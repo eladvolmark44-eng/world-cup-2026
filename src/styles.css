@@ -54,12 +54,12 @@
   .match-stats-page{display:flex;flex-direction:column;gap:.8rem;max-width:680px;margin:0 auto}
   .stats-loading,.stats-empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:.9rem}
   .scorers-list{background:var(--card2);border-radius:10px;overflow:hidden;margin:.4rem 0}
-  .scorers-row{display:grid;grid-template-columns:1.4rem auto 1fr auto;align-items:center;gap:.4rem;padding:.35rem .7rem;font-size:.8rem}
+  .scorers-row{display:flex;align-items:center;gap:.4rem;padding:.35rem .7rem;font-size:.8rem}
   .scorers-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.04)}
-  .scorers-rank{color:var(--muted);font-size:.72rem;font-weight:700;text-align:center}
-  .scorers-flag{font-size:.85rem}
-  .scorers-name{font-weight:600}
-  .scorers-goals{font-weight:700;color:var(--green);text-align:left}
+  .scorers-rank{color:var(--muted);font-size:.72rem;font-weight:700;text-align:center;width:1.4rem;flex:none}
+  .scorers-flag{font-size:.85rem;flex:none}
+  .scorers-name{font-weight:600;flex:none}
+  .scorers-goals{font-weight:700;color:var(--green);flex:none}
   .mdt-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card2);position:sticky;top:0;z-index:1}
   .mdt-tab{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:.78rem;font-weight:600;padding:.55rem .3rem;cursor:pointer;font-family:'Heebo',sans-serif;transition:color .15s,border-color .15s;white-space:nowrap}
   .mdt-tab.mdt-active{color:var(--green);border-bottom-color:var(--green)}
