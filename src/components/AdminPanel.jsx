@@ -6,6 +6,37 @@ import { API_SOURCES } from "../constants/api.js";
 import { probeApiSource } from "../utils/api.js";
 import { timeAgo, tsToLocal, resizeImageToDataURL } from "../utils/helpers.js";
 import { NumStepper } from "./common.jsx";
+import { KnockoutBracketView, buildMockKnockoutPreview } from "./StandingsViews.jsx";
+
+function KoPreviewSection(){
+  const [mock, setMock] = useState(null);
+  const open = () => setMock(buildMockKnockoutPreview());
+  return (
+    <>
+      <div className="admin-winner-section">
+        <div className="admin-action-info">
+          <span className="admin-action-label">🏆 דוגמת שלב הנוקאאוט</span>
+          <span className="admin-action-desc">תצוגה מקדימה עם נבחרות אקראיות — רק אתה רואה את זה, לא נשמר ולא נשלח לאף אחד</span>
+        </div>
+        <button className="btn-admin-winner" onClick={open}>הצג דוגמה</button>
+      </div>
+      {mock && (
+        <div onClick={()=>setMock(null)} style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.88)", zIndex:9999,
+          display:"flex", flexDirection:"column", alignItems:"center", padding:"1.5rem 1rem", overflow:"auto",
+        }}>
+          <div onClick={e=>e.stopPropagation()} style={{width:"100%", maxWidth:"100%"}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1rem"}}>
+              <span style={{color:"#fff", fontWeight:600}}>🔒 דוגמה פרטית — רק אתה רואה את זה</span>
+              <button className="btn-admin-act" onClick={()=>setMock(null)}>✕ סגור</button>
+            </div>
+            <KnockoutBracketView results={mock} teamNames={{}}/>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 function ApiHealthPanel(){
   const [results,setResults]=useState({});
@@ -232,6 +263,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
         <button className="btn-admin-winner" onClick={onTriggerWinner}>הפעל</button>
       </div>
       <AssistantLockToggle game={game} showToast={showToast}/>
+      <KoPreviewSection/>
       <div className="admin-fun-bet-section">
         <div className="admin-action-info">
           <span className="admin-action-label">🚀 איראן – ישראל · שיגורים</span>

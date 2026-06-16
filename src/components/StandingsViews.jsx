@@ -1,7 +1,29 @@
 import { useState } from "react";
-import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS } from "../constants/tournament.js";
+import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS } from "../constants/tournament.js";
 import { withFlag, computeGroupStandings, getDefaultMatchDate } from "../utils/helpers.js";
 import { DateNav, MatchRow } from "./common.jsx";
+
+// Builds fake bracket data for a private "what would this look like" preview.
+// Never written to Firestore — exists only in the caller's local state.
+export function buildMockKnockoutPreview(){
+  const teams=[...REAL_TEAMS].sort(()=>Math.random()-0.5);
+  let p=0;
+  const next=()=>teams[p++ % teams.length];
+  const mk=(stage,n)=>Array.from({length:n}).map((_,i)=>({
+    id:`mock_${stage}_${i}`, apiId:`mock_${stage}_${i}`, stage, home:next(), away:next(),
+  }));
+  const knockoutMatches=[
+    ...mk("32 האחרונות",16), ...mk("שמינית גמר",8), ...mk("רבע גמר",4),
+    ...mk("חצי גמר",2), ...mk("גמר",1), ...mk("מקום שלישי",1),
+  ];
+  const koResults={};
+  knockoutMatches.forEach((m,i)=>{
+    let home=Math.floor(Math.random()*4), away=Math.floor(Math.random()*4);
+    if(home===away) home+=1;
+    koResults[m.apiId]={home, away, live:i===1};
+  });
+  return {knockoutMatches, koResults};
+}
 
 export function ScheduleView({results,teamNames,odds}){
   const [selDate,setSelDate]=useState(getDefaultMatchDate);
