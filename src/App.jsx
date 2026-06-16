@@ -20,7 +20,11 @@ import MatchDetailView from "./components/MatchViews.jsx";
 import ResultsView from "./components/ResultsView.jsx";
 import AdminPanel, { ProfileEditModal, AssistantPanel } from "./components/AdminPanel.jsx";
 
-const AF_KEY = import.meta.env?.VITE_AF_KEY || "";
+const AF_KEYS = [
+  import.meta.env?.VITE_AF_KEY,
+  import.meta.env?.VITE_AF_KEY_2,
+  import.meta.env?.VITE_AF_KEY_3,
+].filter(Boolean);
 
 export default function App(){
   const [authUser,setAuthUser]=useState(null);
@@ -221,24 +225,36 @@ export default function App(){
               for(const [k,v] of Object.entries(p)) if(!merged[k]) merged[k]=v;
             }
           }catch(e){}
-          // 4. API-Football — rate-limited to once per hour to preserve 100/day quota
+          // 4. API-Football — rate-limited to once per hour; rotate keys when quota exhausted
           const lastAF = syncData.lastApiFootballSync ? new Date(syncData.lastApiFootballSync).getTime() : 0;
-          if (Date.now() - lastAF > 60 * 60 * 1000) {
-            try{
-              const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":AF_KEY}});
-              const d=await r.json();
-              for(const f of(d.response||[])){
-                const{fixture:fi,teams,goals}=f;
-                const s=fi.status.short;
-                const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
-                if((fin||live)&&goals.home!=null&&goals.away!=null){
-                  const minute=live ? (fi.status.elapsed??null) : null;
-                  const k1=`${heb(teams.home.name)}_${heb(teams.away.name)}`;
-                  if(!merged[k1]) addBothKeys(merged,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+          if (Date.now() - lastAF > 60 * 60 * 1000 && AF_KEYS.length) {
+            const exhausted = syncData.exhaustedAfKeys?.[iso] || [];
+            const activeKey = AF_KEYS.find(k => !exhausted.includes(k));
+            if (activeKey) {
+              try{
+                const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":activeKey}});
+                const d=await r.json();
+                // Detect quota exhaustion
+                const errs=d?.errors;
+                const isQuotaErr=errs&&(Array.isArray(errs)?errs.length:Object.keys(errs).length);
+                if(isQuotaErr){
+                  // Mark this key as exhausted for today, try next key on next cycle
+                  await setDoc(doc(db,"mundial2026","sync"),{exhaustedAfKeys:{...syncData.exhaustedAfKeys,[iso]:[...exhausted,activeKey]}},{merge:true});
+                } else {
+                  for(const f of(d.response||[])){
+                    const{fixture:fi,teams,goals}=f;
+                    const s=fi.status.short;
+                    const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
+                    if((fin||live)&&goals.home!=null&&goals.away!=null){
+                      const minute=live ? (fi.status.elapsed??null) : null;
+                      const k1=`${heb(teams.home.name)}_${heb(teams.away.name)}`;
+                      if(!merged[k1]) addBothKeys(merged,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+                    }
+                  }
+                  await setDoc(doc(db,"mundial2026","sync"),{lastApiFootballSync:new Date().toISOString()},{merge:true});
                 }
-              }
-              await setDoc(doc(db,"mundial2026","sync"),{lastApiFootballSync:new Date().toISOString()},{merge:true});
-            }catch(e){}
+              }catch(e){}
+            }
           }
           return merged;
         };
