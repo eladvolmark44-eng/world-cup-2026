@@ -7,6 +7,44 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 export let _koKickoffs=[];
 export function setKoKickoffs(val){ _koKickoffs=val; }
 
+// ── Player club lookup (for lineup club logos) ──────────────────────────────
+// World Cup lineups only carry national-team rosters, so a player's club has
+// to be fetched separately, per player, from ESPN's athlete profile. Cached
+// in localStorage so it's only paid for once per player, ever.
+const CLUB_CACHE_KEY="wc2026_club_cache_v1";
+let clubCache={};
+try{ clubCache=JSON.parse(localStorage.getItem(CLUB_CACHE_KEY)||"{}"); }catch(e){}
+const clubPending={};
+function persistClubCache(){
+  try{ localStorage.setItem(CLUB_CACHE_KEY,JSON.stringify(clubCache)); }catch(e){}
+}
+export function fetchPlayerClub(athleteId){
+  if(!athleteId) return Promise.resolve(null);
+  if(clubCache[athleteId]!==undefined) return Promise.resolve(clubCache[athleteId]);
+  if(clubPending[athleteId]) return clubPending[athleteId];
+  const p=(async()=>{
+    try{
+      const r=await fetch(`https://site.api.espn.com/apis/common/v3/sports/soccer/athletes/${athleteId}`);
+      const d=await r.json();
+      const team=d?.athlete?.team||d?.team||null;
+      const name=team?.displayName||team?.name||null;
+      const logo=team?.logos?.[0]?.href||team?.logo||null;
+      const result=(name||logo)?{name,logo}:null;
+      clubCache[athleteId]=result;
+      persistClubCache();
+      return result;
+    }catch(e){
+      clubCache[athleteId]=null;
+      persistClubCache();
+      return null;
+    }finally{
+      delete clubPending[athleteId];
+    }
+  })();
+  clubPending[athleteId]=p;
+  return p;
+}
+
 export function hasMatchWithin30Min(){
   const n=Date.now();
   const relevant=t=>t>n-2*60*60*1000&&t<=n+30*60*1000;
@@ -232,6 +270,7 @@ export async function fetchMatchDetail(gm){
               jersey:ath.jersey||a.jersey||"",
               position:ath.position?.abbreviation||a.position||"M",
               starter:a.starter!=null?!!a.starter:!a.substitute,
+              id:ath.id||a.id||"",
             };
           });
           return{formation:td?.formation||"",starters:ps.filter(p=>p.starter),subs:ps.filter(p=>!p.starter)};
