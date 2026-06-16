@@ -618,7 +618,7 @@ export default function App(){
           <span className="header-title">📊 פרטי משחק</span>
         </div>
         <div className="main-body">
-          <MatchDetailView match={statsMatch.match} res={statsMatch.res} teamNames={teamNames}/>
+          <MatchDetailView match={statsMatch.match} res={statsMatch.res} teamNames={teamNames} me={me}/>
         </div>
       </div>
     </div>

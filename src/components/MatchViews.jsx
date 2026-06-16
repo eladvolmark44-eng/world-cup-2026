@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { fetchMatchStats, fetchMatchDetail } from "../utils/api.js";
-import { hePlayer, withFlag } from "../utils/helpers.js";
-import { MatchRow } from "./common.jsx";
+import { hePlayer, withFlag, isChatLocked } from "../utils/helpers.js";
+import { MatchRow, MatchChat } from "./common.jsx";
 
 const STATS_SECTIONS=[
   {title:"כללי",rows:[
@@ -187,7 +187,7 @@ export function MatchLineup({lineup,match,teamNames}){
   );
 }
 
-export default function MatchDetailView({match,res,teamNames}){
+export default function MatchDetailView({match,res,teamNames,me}){
   const [tab,setTab]=useState("events");
   const [detail,setDetail]=useState(null);
   const [loading,setLoading]=useState(true);
@@ -210,6 +210,7 @@ export default function MatchDetailView({match,res,teamNames}){
         <button className={`mdt-tab${tab==="events"?" mdt-active":""}`} onClick={()=>setTab("events")}>⚽ אירועים</button>
         <button className={`mdt-tab${tab==="stats"?" mdt-active":""}`} onClick={()=>setTab("stats")}>📊 סטטיסטיקה</button>
         <button className={`mdt-tab${tab==="lineup"?" mdt-active":""}`} onClick={()=>setTab("lineup")}>👕 הרכב</button>
+        <button className={`mdt-tab${tab==="chat"?" mdt-active":""}`} onClick={()=>setTab("chat")}>💬 צ׳אט</button>
       </div>
       {loading?(
         <div className="stats-loading">טוען...</div>
@@ -218,6 +219,7 @@ export default function MatchDetailView({match,res,teamNames}){
           {tab==="events"&&<MatchEvents events={detail?.events||[]} match={match} res={res}/>}
           {tab==="stats"&&(displayStats?<StatsPanel stats={displayStats}/>:<div className="mde-empty">סטטיסטיקה לא זמינה</div>)}
           {tab==="lineup"&&<MatchLineup lineup={detail?.lineup} match={match} teamNames={teamNames}/>}
+          {tab==="chat"&&<MatchChat matchId={match.id} locked={isChatLocked(match.id,res)} me={me}/>}
         </div>
       )}
     </div>
