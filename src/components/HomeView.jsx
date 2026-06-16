@@ -218,8 +218,8 @@ function SpecialBetsCard({participants, results, teamNames, funIran=0, funIsrael
             {results.topScorers.map((s,i)=>(
               <div key={i} className="scorers-row">
                 <span className="scorers-rank">{i+1}</span>
-                <span className="scorers-name">{FLAG_MAP[s.team]||""} {s.name}</span>
-                <span className="scorers-team">{s.team}</span>
+                <span className="scorers-flag">{FLAG_MAP[s.team]||""}</span>
+                <span className="scorers-name">{s.name}</span>
                 <span className="scorers-goals">{s.goals}⚽</span>
               </div>
             ))}
