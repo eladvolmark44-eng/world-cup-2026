@@ -59,7 +59,7 @@
   .scorers-rank{color:var(--muted);font-size:.72rem;font-weight:700;text-align:center;width:1.4rem;flex:none}
   .scorers-flag{font-size:.85rem;flex:none}
   .scorers-name{font-weight:600;flex:none}
-  .scorers-goals{font-weight:700;color:var(--green);flex:none}
+  .scorers-goals{font-weight:700;color:var(--green);flex:none;margin-right:1.6rem}
   .mdt-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card2);position:sticky;top:0;z-index:1}
   .mdt-tab{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:.78rem;font-weight:600;padding:.55rem .3rem;cursor:pointer;font-family:'Heebo',sans-serif;transition:color .15s,border-color .15s;white-space:nowrap}
   .mdt-tab.mdt-active{color:var(--green);border-bottom-color:var(--green)}
