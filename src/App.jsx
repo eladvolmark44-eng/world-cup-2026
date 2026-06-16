@@ -443,7 +443,8 @@ export default function App(){
                 if (d.scorers?.length) {
                   const top = d.scorers[0];
                   const hebName = hePlayer(top.player?.name||"")||top.player?.name||"";
-                  topScorerUpdate = { name: hebName, goals: top.goals ?? 0 };
+                  const hebTeam = SOFA_TEAM_MAP[top.team?.name||""]||top.team?.name||"";
+                  topScorerUpdate = { name: hebName, goals: top.goals ?? 0, team: hebTeam };
                   // Store full top-10 list for the scorer leaderboard
                   const topScorers = d.scorers.slice(0,10).map(s=>({name:hePlayer(s.player?.name||"")||s.player?.name||"",goals:s.goals??0,team:SOFA_TEAM_MAP[s.team?.name||""]||s.team?.name||""}));
                   await updateDoc(doc(db,"mundial2026","game"),{"results.topScorers":topScorers});

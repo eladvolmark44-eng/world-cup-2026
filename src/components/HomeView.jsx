@@ -210,7 +210,7 @@ function SpecialBetsCard({participants, results, teamNames, funIran=0, funIsrael
       <div className="sp-section">
         <div className="sp-label" style={{cursor:"pointer"}} onClick={()=>setShowScorers(s=>!s)}>
           👟 מלך שערים
-          {topScorer&&<span className="sp-live-val">{withStrikerFlag(hePlayer(topScorer.name))} ({topScorer.goals}⚽) ›</span>}
+          {topScorer&&<span className="sp-live-val">{topScorer.team&&FLAG_MAP[topScorer.team]?`${FLAG_MAP[topScorer.team]} ${hePlayer(topScorer.name)}`:withStrikerFlag(hePlayer(topScorer.name))} ({topScorer.goals}⚽) ›</span>}
           {!topScorer&&<span className="sp-pending">ממתין לנתונים</span>}
         </div>
         {showScorers&&results.topScorers?.length?(

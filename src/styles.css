@@ -105,6 +105,7 @@
   .mdl-away{direction:ltr}
   .mdl-player{display:flex;align-items:center;gap:.3rem;padding:.22rem .35rem;border-radius:5px;background:rgba(255,255,255,.03)}
   .mdl-jersey{font-size:.67rem;color:var(--muted);min-width:1.4rem;text-align:center;flex-shrink:0}
+  .mdl-flag{font-size:.78rem;flex-shrink:0}
   .mdl-name{font-size:.77rem;font-weight:500}
   .mdl-subs-hdr{font-size:.7rem;color:var(--muted);font-weight:700;text-align:center;padding:.4rem 0 .25rem;border-top:1px solid var(--border);margin-top:.1rem}
   .stats-demo-note{text-align:center;font-size:.72rem;color:var(--muted);padding:.3rem 0 .1rem;border-top:1px solid var(--border);margin-top:.4rem}

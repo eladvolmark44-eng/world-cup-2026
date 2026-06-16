@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { fetchMatchStats, fetchMatchDetail } from "../utils/api.js";
 import { hePlayer, withFlag, isChatLocked } from "../utils/helpers.js";
+import { FLAG_MAP } from "../constants/tournament.js";
 import { MatchRow, MatchChat } from "./common.jsx";
 
 const STATS_SECTIONS=[
@@ -156,12 +157,16 @@ export function MatchLineup({lineup,match,teamNames}){
   if(!lineup)return<div className="mde-empty">הרכב לא זמין עדיין</div>;
   const POS_ORDER={"G":0,"GK":0,"D":1,"DF":1,"M":2,"MF":2,"F":3,"FW":3};
   const sortPs=ps=>[...ps].sort((a,b)=>(POS_ORDER[a.position]??2)-(POS_ORDER[b.position]??2));
-  const PlayerList=({players})=>players.map((p,i)=>(
-    <div key={i} className="mdl-player">
-      <span className="mdl-jersey">{p.jersey}</span>
-      <span className="mdl-name">{hePlayer(p.name)}</span>
-    </div>
-  ));
+  const PlayerList=({players,team})=>{
+    const flag=FLAG_MAP[teamNames?.[team]||team]||"";
+    return players.map((p,i)=>(
+      <div key={i} className="mdl-player">
+        <span className="mdl-jersey">{p.jersey}</span>
+        <span className="mdl-flag">{flag}</span>
+        <span className="mdl-name">{hePlayer(p.name)}</span>
+      </div>
+    ));
+  };
   const homeS=sortPs(lineup.home?.starters||[]);const awayS=sortPs(lineup.away?.starters||[]);
   const homeSb=lineup.home?.subs||[];const awaySb=lineup.away?.subs||[];
   return(
@@ -173,14 +178,14 @@ export function MatchLineup({lineup,match,teamNames}){
       </div>
       {(lineup.home?.formation||lineup.away?.formation)?<div className="mdl-formations"><span>{lineup.home?.formation}</span><span>{lineup.away?.formation}</span></div>:null}
       <div className="mdl-grid">
-        <div className="mdl-col mdl-home"><PlayerList players={homeS}/></div>
-        <div className="mdl-col mdl-away"><PlayerList players={awayS}/></div>
+        <div className="mdl-col mdl-home"><PlayerList players={homeS} team={match.home}/></div>
+        <div className="mdl-col mdl-away"><PlayerList players={awayS} team={match.away}/></div>
       </div>
       {(homeSb.length||awaySb.length)?<>
         <div className="mdl-subs-hdr">מחליפים</div>
         <div className="mdl-grid">
-          <div className="mdl-col mdl-home"><PlayerList players={homeSb}/></div>
-          <div className="mdl-col mdl-away"><PlayerList players={awaySb}/></div>
+          <div className="mdl-col mdl-home"><PlayerList players={homeSb} team={match.home}/></div>
+          <div className="mdl-col mdl-away"><PlayerList players={awaySb} team={match.away}/></div>
         </div>
       </>:null}
     </div>
