@@ -2,27 +2,45 @@ import { GROUP_MATCHES, GROUPS_2026 } from "../constants/tournament.js";
 import { ODDS_PROXY_URL, ODDS_TTL_NORMAL, ODDS_TTL_CLOSE, ODDS_TTL_SOON, ODDS_TEAM_MAP, SOFA_TEAM_MAP, API_SOURCES, PROBE_TIMEOUT_MS } from "../constants/api.js";
 import { hePlayer } from "./helpers.js";
 import { db, saveGame } from "../firebase.js";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from "firebase/firestore";
 
 export let _koKickoffs=[];
 export function setKoKickoffs(val){ _koKickoffs=val; }
 
 // ── Player club lookup (for lineup club logos) ──────────────────────────────
 // World Cup lineups only carry national-team rosters, so a player's club has
-// to be fetched separately, per player, from ESPN's athlete profile. Cached
-// in localStorage so it's only paid for once per player, ever.
+// to be fetched separately, per player, from ESPN's athlete profile. A
+// player's club practically never changes mid-tournament, so the first
+// lookup ever (by anyone) is written to Firestore and shared by everyone —
+// every later viewer reads it straight from there instead of hitting ESPN
+// again. localStorage just mirrors that for instant access within a session.
 const CLUB_CACHE_KEY="wc2026_club_cache_v1";
 let clubCache={};
 try{ clubCache=JSON.parse(localStorage.getItem(CLUB_CACHE_KEY)||"{}"); }catch(e){}
 const clubPending={};
+let clubsSeeded=null;
 function persistClubCache(){
   try{ localStorage.setItem(CLUB_CACHE_KEY,JSON.stringify(clubCache)); }catch(e){}
+}
+function seedClubsFromFirestore(){
+  if(!clubsSeeded){
+    clubsSeeded=(async()=>{
+      try{
+        const snap=await getDocs(collection(db,"mundial2026","game","playerClubs"));
+        snap.forEach(d=>{ if(clubCache[d.id]===undefined) clubCache[d.id]=d.data(); });
+        persistClubCache();
+      }catch(e){}
+    })();
+  }
+  return clubsSeeded;
 }
 export function fetchPlayerClub(athleteId){
   if(!athleteId) return Promise.resolve(null);
   if(clubCache[athleteId]!==undefined) return Promise.resolve(clubCache[athleteId]);
   if(clubPending[athleteId]) return clubPending[athleteId];
   const p=(async()=>{
+    await seedClubsFromFirestore();
+    if(clubCache[athleteId]!==undefined) return clubCache[athleteId];
     try{
       const r=await fetch(`https://site.api.espn.com/apis/common/v3/sports/soccer/athletes/${athleteId}`);
       const d=await r.json();
@@ -32,6 +50,7 @@ export function fetchPlayerClub(athleteId){
       const result=(name||logo)?{name,logo}:null;
       clubCache[athleteId]=result;
       persistClubCache();
+      if(result){ try{ await setDoc(doc(db,"mundial2026","game","playerClubs",String(athleteId)),result); }catch(e){} }
       return result;
     }catch(e){
       clubCache[athleteId]=null;
