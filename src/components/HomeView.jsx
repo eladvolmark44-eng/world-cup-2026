@@ -1,12 +1,72 @@
 import { useState, useEffect, useRef } from "react";
+import { collection, addDoc, query, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase.js";
 import { GROUP_MATCHES, GROUPS_2026, FLAG_MAP } from "../constants/tournament.js";
 import {
   isGlobalLocked, isTournamentOver, withFlag, withStrikerFlag, hePlayer,
-  calcScore, rankSymbol, getDir
+  calcScore, rankSymbol, getDir, isChatLocked
 } from "../utils/helpers.js";
 import { YELLOW_CARD_UID } from "../constants/game.js";
 import { NumStepper, MatchRow } from "./common.jsx";
 import { ALL_MATCH_DATES } from "../constants/tournament.js";
+
+// ─── MATCH CHAT ───────────────────────────────────────────────────────────────
+function MatchChat({matchId, locked, me}){
+  const [messages,setMessages]=useState([]);
+  const [text,setText]=useState("");
+  const [sending,setSending]=useState(false);
+  const listRef=useRef(null);
+
+  useEffect(()=>{
+    const q=query(collection(db,"mundial2026","game","matchChats",matchId,"messages"),orderBy("ts","asc"));
+    return onSnapshot(q,snap=>setMessages(snap.docs.map(d=>({id:d.id,...d.data()}))));
+  },[matchId]);
+
+  useEffect(()=>{
+    if(listRef.current) listRef.current.scrollTop=listRef.current.scrollHeight;
+  },[messages.length]);
+
+  const send=async()=>{
+    const t=text.trim();
+    if(!t||sending||!me?.uid)return;
+    setSending(true);
+    try{
+      await addDoc(collection(db,"mundial2026","game","matchChats",matchId,"messages"),{
+        uid:me.uid, name:me.name||"", photoURL:me.photoURL||null, text:t, ts:Date.now(),
+      });
+      setText("");
+    }catch(e){/* ignore */}
+    setSending(false);
+  };
+
+  return(
+    <div className="match-chat">
+      <div className="match-chat-hdr">💬 צ׳אט המשחק{locked&&<span className="match-chat-locked-tag">🔒 נעול</span>}</div>
+      <div className="match-chat-list" ref={listRef}>
+        {messages.map(m=>(
+          <div key={m.id} className="match-chat-msg">
+            {m.photoURL
+              ?<img src={m.photoURL} className="match-chat-avatar" alt=""/>
+              :<div className="match-chat-avatar-ph">{(m.name||"?")[0]}</div>}
+            <div className="match-chat-body">
+              <span className="match-chat-name">{m.name}</span>
+              <span className="match-chat-text">{m.text}</span>
+            </div>
+          </div>
+        ))}
+        {!messages.length&&<div className="match-chat-empty">אין הודעות עדיין — היו הראשונים להגיב!</div>}
+      </div>
+      {!locked&&(
+        <div className="match-chat-input-row">
+          <input className="match-chat-input" value={text} placeholder="כתבו הודעה..."
+            onChange={e=>setText(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter")send();}}/>
+          <button className="match-chat-send" onClick={send} disabled={sending||!text.trim()}>➤</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── WINNER ANNOUNCEMENT ──────────────────────────────────────────────────────
 const CONFETTI_COLORS = ["#FFD700","#FF6B6B","#4ECDC4","#00D87F","#FF8E53","#C084FC","#60A5FA","#F472B6"];
@@ -400,6 +460,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                     );
                   })}
                 </div>
+                <MatchChat matchId={m.id} locked={isChatLocked(m.id,real)} me={me}/>
               </div>
             );
           })}
@@ -408,6 +469,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
         <div className="home-card">
           <div className="home-card-title">⏰ המשחק הבא</div>
           <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds} onClick={()=>onMatchClick(nextMatch,results.matches?.[nextMatch.id])}/>
+          <MatchChat matchId={nextMatch.id} locked={isChatLocked(nextMatch.id,results.matches?.[nextMatch.id])} me={me}/>
         </div>
       )}
       <div className="home-card">

@@ -336,6 +336,7 @@ export default function App(){
           };
 
           if (prev.home !== newEntry.home || prev.away !== newEntry.away || prev.live !== newEntry.live || prev.minute !== newEntry.minute) {
+            if (prev.live && !newEntry.live) newEntry.endedAt = Date.now();
             updatedMatches[m.id] = { ...prev, ...newEntry };
             matchChanged = true;
           }

@@ -31,6 +31,12 @@ export function groupLabel(g){ return g==="יזיזות"?"⚽ יזיזות":`ב�
 export function now() { return Date.now(); }
 
 // matchRes = results.matches[matchId] — lock when match actually started, not by schedule
+// Match chat: open from the moment a match is shown, locked 5min after it actually ended
+export function isChatLocked(matchId, matchRes) {
+  if (!matchRes || matchRes.home == null || matchRes.live) return false;
+  if (matchRes.endedAt) return now() >= matchRes.endedAt + 5 * 60 * 1000;
+  return true; // finished with no recorded end time (legacy) — treat as already locked
+}
 export function isMatchLocked(matchId, matchRes) {
   if (matchRes?.live === true || matchRes?.home != null) return true;
   // Safety fallback: 20min after scheduled kickoff in case sync is delayed

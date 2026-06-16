@@ -364,6 +364,22 @@
   /* ── Results tab ── */
   .rev-bet-chip.locked-chip{opacity:.35}
   .results-match-block{margin-bottom:.85rem}
+  /* ── Match chat ── */
+  .match-chat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.6rem .7rem;margin-top:.6rem}
+  .match-chat-hdr{font-weight:700;font-size:.8rem;color:var(--text);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem}
+  .match-chat-locked-tag{font-size:.68rem;color:var(--muted);font-weight:600}
+  .match-chat-list{display:flex;flex-direction:column;gap:.4rem;max-height:180px;overflow-y:auto;margin-bottom:.5rem}
+  .match-chat-msg{display:flex;align-items:flex-start;gap:.45rem}
+  .match-chat-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0}
+  .match-chat-avatar-ph{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0}
+  .match-chat-body{display:flex;flex-direction:column;gap:.05rem;min-width:0}
+  .match-chat-name{font-size:.72rem;font-weight:700;color:var(--accent)}
+  .match-chat-text{font-size:.82rem;color:var(--text);word-break:break-word}
+  .match-chat-empty{font-size:.78rem;color:var(--muted);text-align:center;padding:.4rem 0}
+  .match-chat-input-row{display:flex;gap:.4rem}
+  .match-chat-input{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.45rem .8rem;color:var(--text);font-size:.82rem;font-family:'Heebo',sans-serif}
+  .match-chat-send{background:var(--accent);color:#fff;border:none;border-radius:50%;width:34px;height:34px;font-size:1rem;cursor:pointer;flex-shrink:0}
+  .match-chat-send:disabled{opacity:.4;cursor:default}
   /* ── Ranking breakdown ── */
   .lb-expand{color:var(--muted);font-size:.72rem;min-width:1.2rem;text-align:center}
   .ranking-breakdown{background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:.65rem .9rem;display:flex;flex-direction:column;gap:.45rem;margin-bottom:.45rem}
