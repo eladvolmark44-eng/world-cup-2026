@@ -74,7 +74,6 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
         {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · {groupLabel(match.group)}
         {locked ? <span className="lock-badge-sm"> 🔒</span> : <span className="open-badge-sm"> ✏️</span>}
       </div>
-      {venue&&<div className="sched-venue">🏟️ {venue}</div>}
       {matchOdds && (
         <div className="match-odds">
           <span className="odds-cell"><span className="odds-label">בית</span><span className="odds-val">{matchOdds.home}</span></span>
@@ -101,6 +100,7 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
           </button>
         )}
       </div>
+      {venue&&<div className="sched-venue">🏟️ {venue}</div>}
     </div>
   );
 }
