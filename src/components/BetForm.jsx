@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GROUPS_2026, GROUP_MATCHES, REAL_TEAMS } from "../constants/tournament.js";
+import { GROUPS_2026, GROUP_MATCHES, REAL_TEAMS, MATCH_VENUE } from "../constants/tournament.js";
 import { STRIKERS, STRIKER_FLAGS } from "../constants/players.js";
 import {
   isMatchLocked, isGlobalLocked, getDir, withFlag, withStrikerFlag,
@@ -67,12 +67,14 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
   };
 
   const dir = h!=null && a!=null ? getDir(+h,+a) : null;
+  const venue = MATCH_VENUE[match.id] || match.venue || null;
   return(
     <div className={`match-row ${locked?"locked-row":""} ${saved?"saved-row":""}`}>
       <div className="match-meta">
         {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · {groupLabel(match.group)}
         {locked ? <span className="lock-badge-sm"> 🔒</span> : <span className="open-badge-sm"> ✏️</span>}
       </div>
+      {venue&&<div className="sched-venue">🏟️ {venue}</div>}
       {matchOdds && (
         <div className="match-odds">
           <span className="odds-cell"><span className="odds-label">בית</span><span className="odds-val">{matchOdds.home}</span></span>
