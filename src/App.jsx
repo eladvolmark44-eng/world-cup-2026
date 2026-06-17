@@ -432,7 +432,12 @@ export default function App(){
           } catch(e) {}
 
           // ── TOP SCORER + TOTAL GOALS (WC only, not friendlies) ─────────────
+          // topScorer (header) and topScorers (full list) must come from the same
+          // fetch and be written in the same updateDoc call below — otherwise two
+          // browsers racing the hourly refresh can interleave their writes and leave
+          // the header and the list disagreeing with each other.
           let topScorerUpdate = null;
+          let topScorersListUpdate = null;
           if (wcStarted) {
             // Fetch top scorer from football-data.org, max once/hour
             const lastTS = syncData.lastTopScorerSync ? new Date(syncData.lastTopScorerSync).getTime() : 0;
@@ -445,9 +450,7 @@ export default function App(){
                   const hebName = hePlayer(top.player?.name||"")||top.player?.name||"";
                   const hebTeam = SOFA_TEAM_MAP[top.team?.name||""]||top.team?.name||"";
                   topScorerUpdate = { name: hebName, goals: top.goals ?? 0, team: hebTeam };
-                  // Store full top-10 list for the scorer leaderboard
-                  const topScorers = d.scorers.slice(0,10).map(s=>({name:hePlayer(s.player?.name||"")||s.player?.name||"",goals:s.goals??0,team:SOFA_TEAM_MAP[s.team?.name||""]||s.team?.name||""}));
-                  await updateDoc(doc(db,"mundial2026","game"),{"results.topScorers":topScorers});
+                  topScorersListUpdate = d.scorers.slice(0,10).map(s=>({name:hePlayer(s.player?.name||"")||s.player?.name||"",goals:s.goals??0,team:SOFA_TEAM_MAP[s.team?.name||""]||s.team?.name||""}));
                   await setDoc(doc(db,"mundial2026","sync"),{lastTopScorerSync:new Date().toISOString()},{merge:true});
                 }
               } catch(e) {}
@@ -471,7 +474,7 @@ export default function App(){
           );
 
           const updates = {};
-          if (matchChanged || groupsChanged || koMatchesArr.length > 0 || topScorerChanged || goalsChanged) {
+          if (matchChanged || groupsChanged || koMatchesArr.length > 0 || topScorerChanged || topScorersListUpdate || goalsChanged) {
             updates.results = {
               ...cur.results,
               matches: updatedMatches,
@@ -479,6 +482,7 @@ export default function App(){
               knockoutMatches: koMatchesArr,
               ...(groupsChanged ? {groups: updatedGroups} : {}),
               ...(topScorerChanged ? {topScorer: topScorerUpdate} : {}),
+              ...(topScorersListUpdate ? {topScorers: topScorersListUpdate} : {}),
               ...(goalsChanged ? {actualTotalGoals: wcGoals} : {}),
             };
           }
