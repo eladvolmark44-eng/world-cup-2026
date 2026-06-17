@@ -417,10 +417,12 @@ export default function App(){
                   const isFinished = state === "post";
                   const isLive = state === "in";
                   const dateStr = ev.date ? new Date(ev.date).toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit"}) : "";
+                  const venueObj = comp?.venue;
+                  const venue = venueObj?.fullName ? `${venueObj.fullName}${venueObj.address?.city ? ', '+venueObj.address.city : ''}` : null;
                   const koMatch = {
                     id: `ko_${ev.id}`, apiId: ev.id, stage, date: dateStr,
                     home: heb(hC.team?.displayName||""), away: heb(aC.team?.displayName||""),
-                    kickoff: ev.date||null,
+                    kickoff: ev.date||null, venue,
                   };
                   if ((isFinished||isLive) && hC.score != null) {
                     koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive};
