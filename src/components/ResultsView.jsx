@@ -95,6 +95,7 @@ export function RevealedBetsView({participants, viewerUid, results, teamNames}){
                             <span className="chip-name">{p.name.split(" ")[0]}</span>
                             <span className="chip-score">{bet.away}:{bet.home}</span>
                             {bet.auto&&<span title="אוטומטי">🎲</span>}
+                            {bet.adminEdited&&<span className="var-badge" title="שונה ע״י מנהל">📺VAR</span>}
                             {pts!==null&&<span className="chip-pts">{pts} נק׳</span>}
                             {exact&&<span>🎯</span>}
                             {!exact&&correct&&<span>✓</span>}
@@ -198,6 +199,7 @@ export default function ResultsView({participants, viewerUid, results, teamNames
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
                         <span className="chip-score">{bet.away}:{bet.home}</span>
                         {bet.auto&&<span title="אוטומטי">🎲</span>}
+                        {bet.adminEdited&&<span className="var-badge" title="שונה ע״י מנהל">📺VAR</span>}
                         {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
                         {exact&&<span>🎯</span>}
                         {!exact&&correct&&<span>✓</span>}

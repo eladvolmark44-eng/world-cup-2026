@@ -218,7 +218,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
     if(!p)return;
     setBetSaving(true);
     try{
-      await saveParticipant({...p,bets:{...(p.bets||{}),matches:{...(p.bets?.matches||{}),[betMatchId]:{home:betHome,away:betAway}}}});
+      await saveParticipant({...p,bets:{...(p.bets||{}),matches:{...(p.bets?.matches||{}),[betMatchId]:{home:betHome,away:betAway,adminEdited:true}}}});
       showToast("✅ הימור עודכן");
     }catch(e){showToast("❌ "+e.message);}
     setBetSaving(false);
