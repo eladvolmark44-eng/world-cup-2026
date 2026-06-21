@@ -4,7 +4,7 @@ import { db, saveParticipant, saveGame } from "../firebase.js";
 import { GROUP_MATCHES } from "../constants/tournament.js";
 import { API_SOURCES } from "../constants/api.js";
 import { probeApiSource } from "../utils/api.js";
-import { timeAgo, tsToLocal, resizeImageToDataURL } from "../utils/helpers.js";
+import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts } from "../utils/helpers.js";
 import { NumStepper } from "./common.jsx";
 import { KnockoutBracketView, buildMockKnockoutPreview } from "./StandingsViews.jsx";
 
@@ -76,6 +76,54 @@ function ApiHealthPanel(){
         })}
       </div>
       <p className="section-note">🟢 תקין · 🟡 מגיב אך ריק/מכסה גבוהה · 🔴 שגיאה או טוקן שנגמר · 🔑 דורש טוקן. בדיקות <code>/api/*</code> עובדות רק בפרודקשן (Vercel), לא ב-dev מקומי.</p>
+    </div>
+  );
+}
+
+function CardsSection({participants, game, showToast}){
+  const [uid, setUid] = useState("");
+  const [red, setRed] = useState(0);
+  const [yellow, setYellow] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  const onUidChange = (newUid) => {
+    setUid(newUid);
+    const p = participants.find(p=>p.uid===newUid);
+    if(p){
+      const c = getCardCounts(p, game?.results||{});
+      setRed(c.red);
+      setYellow(c.yellow);
+    }
+  };
+
+  const save = async () => {
+    if(!uid) return;
+    setSaving(true);
+    try{
+      await updateDoc(doc(db,"mundial2026","game"),{[`results.cards.${uid}`]: {red, yellow}});
+      showToast("✅ כרטיסים עודכנו");
+    }catch(e){showToast("❌ "+e.message);}
+    setSaving(false);
+  };
+
+  return(
+    <div className="admin-bet-editor">
+      <div className="admin-bet-title">🟥🟨 כרטיסים בטבלת הדירוג</div>
+      <div className="admin-bet-selects">
+        <select className="admin-bet-sel" value={uid} onChange={e=>onUidChange(e.target.value)}>
+          <option value="">— בחר שחקן —</option>
+          {participants.filter(p=>!p.isBot).map(p=><option key={p.uid} value={p.uid}>{p.name}</option>)}
+        </select>
+      </div>
+      {uid&&(
+        <div className="admin-bet-row">
+          <span className="redcard" style={{display:"inline-block"}}/>
+          <NumStepper value={red} onChange={setRed} max={20}/>
+          <span className="yellowcard" style={{display:"inline-block"}}/>
+          <NumStepper value={yellow} onChange={setYellow} max={20}/>
+          <button className="btn-admin-save-bet" onClick={save} disabled={saving}>{saving?"שומר...":"שמור"}</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -289,6 +337,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
           </button>
         </div>
       </div>
+      <CardsSection participants={participants} game={game} showToast={showToast}/>
       <div className="admin-bet-editor">
         <div className="admin-bet-title">✏️ עריכת הימור</div>
         <div className="admin-bet-selects">

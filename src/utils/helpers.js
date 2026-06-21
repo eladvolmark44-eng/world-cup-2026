@@ -1,7 +1,7 @@
 import { PLAYER_NAME_HE, findPlayerNameHe } from "../constants/playerNamesHe.js";
 import { GROUPS_2026, GROUP_MATCHES, GROUP_LAST_MATCH, GROUP_STAGE_END_TS, TOURNAMENT_END, FLAG_MAP, KO_POINTS, ALL_MATCH_DATES } from "../constants/tournament.js";
 import { STRIKER_FLAGS, STRIKER_API_NAMES, PLAYER_HEB } from "../constants/players.js";
-import { PRESET_BETS_BY_NAME } from "../constants/game.js";
+import { PRESET_BETS_BY_NAME, YELLOW_CARD_UID } from "../constants/game.js";
 
 export function withFlag(name) {
   if (!name) return name;
@@ -114,6 +114,17 @@ export function rankSymbol(ranked, i){
   if(score===minScore) return "🗑️";           // last place (possibly shared)
   const rankPos=ranked.findIndex(p=>p.score===score); // first index with this score
   return MEDALS[rankPos]||(rankPos+1);
+}
+
+// Per-participant red/yellow card counts, admin-managed via results.cards[uid].
+// Falls back to the original hardcoded assignments (דורון→red, YELLOW_CARD_UID→yellow)
+// for any participant with no explicit entry yet, so nothing regresses.
+export function getCardCounts(p, results){
+  const stored=results?.cards?.[p.uid];
+  if(stored) return {red:stored.red||0, yellow:stored.yellow||0};
+  const red=(p.name||"").includes("דורון")||(p.name||"").toLowerCase().includes("doron") ? 1 : 0;
+  const yellow=(!p.isBot && p.uid===YELLOW_CARD_UID) ? 1 : 0;
+  return {red, yellow};
 }
 
 export function getPresetBets(displayName){

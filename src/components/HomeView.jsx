@@ -2,9 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { GROUP_MATCHES, GROUPS_2026, FLAG_MAP } from "../constants/tournament.js";
 import {
   isGlobalLocked, isTournamentOver, withFlag, withStrikerFlag, hePlayer,
-  calcScore, rankSymbol, getDir, isChatLocked
+  calcScore, rankSymbol, getDir, isChatLocked, getCardCounts
 } from "../utils/helpers.js";
-import { YELLOW_CARD_UID } from "../constants/game.js";
 import { NumStepper, MatchRow, MatchChat } from "./common.jsx";
 import { ALL_MATCH_DATES } from "../constants/tournament.js";
 
@@ -443,7 +442,12 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                   {p.photoURL
                     ?<img src={p.photoURL} className="lb-avatar" alt="" style={{cursor:"zoom-in"}} onClick={e=>{e.stopPropagation();setZoomedPhoto(p.photoURL);}}/>
                     :<div className="lb-avatar-ph">{p.name[0]}</div>}
-                  <span className="lb-name">{p.name}{(p.name.includes("דורון")||p.name.toLowerCase().includes("doron"))&&<span className="redcard" style={{marginRight:"5px",display:"inline-block"}}/>}{(!p.isBot&&p.uid===YELLOW_CARD_UID)&&<span className="yellowcard" style={{marginRight:"5px",display:"inline-block"}}/>}</span>
+                  {(()=>{const {red,yellow}=getCardCounts(p,results);return(
+                  <span className="lb-name">{p.name}
+                    {Array.from({length:Math.min(red,5)}).map((_,idx)=><span key={"r"+idx} className="redcard" style={{marginRight:"3px",display:"inline-block"}}/>)}
+                    {Array.from({length:Math.min(yellow,5)}).map((_,idx)=><span key={"y"+idx} className="yellowcard" style={{marginRight:"3px",display:"inline-block"}}/>)}
+                  </span>
+                  );})()}
                 </div>
                 <div className={`lb-circle ${!globalLocked||goalsBet==null||goalsBet===""?"lb-circle-locked":""}`}>
                   {globalLocked&&goalsBet!=null&&goalsBet!==""
