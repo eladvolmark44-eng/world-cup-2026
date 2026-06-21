@@ -42,7 +42,7 @@ export function MatchChat({matchId, locked, me}){
               ?<img src={m.photoURL} className="match-chat-avatar" alt=""/>
               :<div className="match-chat-avatar-ph">{(m.name||"?")[0]}</div>}
             <div className="match-chat-body">
-              <span className="match-chat-name">{m.name}</span>
+              <span className="match-chat-name">{m.name}{m.ts&&<span className="match-chat-time">{new Date(m.ts).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</span>}</span>
               <span className="match-chat-text">{m.text}</span>
             </div>
           </div>

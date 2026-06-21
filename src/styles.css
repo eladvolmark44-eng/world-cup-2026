@@ -377,6 +377,7 @@
   .match-chat-avatar-ph{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0}
   .match-chat-body{display:flex;flex-direction:column;gap:.05rem;min-width:0}
   .match-chat-name{font-size:.72rem;font-weight:700;color:var(--accent)}
+  .match-chat-time{font-size:.62rem;font-weight:400;color:var(--muted);margin-right:.4rem}
   .match-chat-text{font-size:.82rem;color:var(--text);word-break:break-word}
   .match-chat-empty{font-size:.78rem;color:var(--muted);text-align:center;padding:.4rem 0}
   .match-chat-input-row{display:flex;gap:.4rem}
