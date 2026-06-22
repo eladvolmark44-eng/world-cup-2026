@@ -128,6 +128,55 @@ function CardsSection({participants, game, showToast}){
   );
 }
 
+// Lets admin tag an existing user bet with the 🎲 (auto-bet) icon without touching
+// its score or visibility — reveal timing is still governed by isMatchLocked elsewhere,
+// untouched by this flag, so a tagged bet stays hidden until the match locks normally.
+function AutoBetTagger({participants, showToast}){
+  const [uid, setUid] = useState("");
+  const [matchId, setMatchId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const p = uid ? participants.find(p=>p.uid===uid) : null;
+  const bet = p && matchId ? p.bets?.matches?.[matchId] : null;
+  const hasBet = bet && bet.home!=null;
+
+  const toggle = async () => {
+    if(!p||!matchId||!hasBet)return;
+    setSaving(true);
+    try{
+      await saveParticipant({...p,bets:{...(p.bets||{}),matches:{...(p.bets?.matches||{}),[matchId]:{...bet,auto:!bet.auto}}}});
+      showToast(bet.auto?"✅ הוסר הסימון":"🎲 ההימור סומן כאקראי");
+    }catch(e){showToast("❌ "+e.message);}
+    setSaving(false);
+  };
+
+  return(
+    <div className="admin-bet-editor">
+      <div className="admin-bet-title">🎲 סימון הימור כ״אקראי״</div>
+      <div className="admin-bet-selects">
+        <select className="admin-bet-sel" value={uid} onChange={e=>setUid(e.target.value)}>
+          <option value="">— בחר משתמש —</option>
+          {participants.filter(p=>!p.isBot).map(p=><option key={p.uid} value={p.uid}>{p.name}</option>)}
+        </select>
+        <select className="admin-bet-sel" value={matchId} onChange={e=>setMatchId(e.target.value)}>
+          <option value="">— בחר משחק —</option>
+          {GROUP_MATCHES.map(m=><option key={m.id} value={m.id}>{m.home} – {m.away} ({m.date})</option>)}
+        </select>
+      </div>
+      {uid&&matchId&&(
+        <div className="admin-bet-row">
+          {hasBet
+            ? <span className="admin-bet-team">הימור: {bet.home}–{bet.away}{bet.auto?" (מסומן 🎲)":""}</span>
+            : <span className="admin-bet-team">אין הימור למשתמש זה על המשחק הזה</span>}
+          <button className="btn-admin-save-bet" onClick={toggle} disabled={saving||!hasBet}>
+            {saving?"שומר...":bet?.auto?"🎲 הסר סימון":"🎲 סמן כאקראי"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AssistantLockToggle({game, showToast}){
   const [saving,setSaving]=useState(false);
   const locked=!!game?.assistantLocked;
@@ -338,6 +387,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
         </div>
       </div>
       <CardsSection participants={participants} game={game} showToast={showToast}/>
+      <AutoBetTagger participants={participants} showToast={showToast}/>
       <div className="admin-bet-editor">
         <div className="admin-bet-title">✏️ עריכת הימור</div>
         <div className="admin-bet-selects">
