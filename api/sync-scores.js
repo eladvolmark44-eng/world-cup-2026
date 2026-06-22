@@ -2,6 +2,7 @@
 // Called by Vercel Cron every 3 minutes during tournament
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { fillMissingBets } from "./auto-bets.js";
 
 // Match ID mapping: our internal IDs → API-Football fixture IDs
 // We fetch from API and match by teams + date
@@ -307,10 +308,8 @@ export default async function handler(req, res) {
     }
 
     // Save to Firebase
-    await db.doc("mundial2026/game").set(
-      { results: { ...currentResults, matches: updatedMatches } },
-      { merge: true }
-    );
+    const newResults = { ...currentResults, matches: updatedMatches };
+    await db.doc("mundial2026/game").set({ results: newResults }, { merge: true });
 
     // Also store sync metadata
     await db.doc("mundial2026/sync").set({
@@ -321,11 +320,17 @@ export default async function handler(req, res) {
       apiCallsRemaining: data.errors?.length === 0 ? "ok" : data.errors,
     });
 
+    // Piggyback on this endpoint's existing trigger to fill any bets for matches
+    // that just locked — avoids needing a separate cron job for /api/auto-bets.
+    const { filledParticipants, filledBets } = await fillMissingBets(db, newResults);
+
     return res.status(200).json({
       success: true,
       updatedMatches: updatedCount,
       totalFinished: finishedCount,
       totalGoals,
+      filledParticipants,
+      filledBets,
     });
 
   } catch (error) {

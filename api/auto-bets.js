@@ -1,6 +1,8 @@
 // Vercel Serverless Function — fills missing bets with a random pick once a match locks.
-// Mirrors the client-side auto-fill effect in App.jsx, but runs server-side via cron
-// so it doesn't depend on the admin or the user having the app open at lock time.
+// Mirrors the client-side auto-fill effect in App.jsx, but runs server-side so it doesn't
+// depend on the admin or the user having the app open at lock time. Exported as a plain
+// function too, since sync-scores.js calls this right after it updates results — that
+// endpoint already has a working external trigger, no separate cron job needed for this.
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { GROUP_MATCHES } from "../src/constants/tournament.js";
@@ -13,6 +15,43 @@ function initFirebase() {
   return getFirestore();
 }
 
+export async function fillMissingBets(db, results) {
+  const partSnap = await db.collection("mundial2026/game/participants").get();
+
+  const writes = [];
+  let filledBets = 0;
+  let filledParticipants = 0;
+
+  for (const docSnap of partSnap.docs) {
+    const p = docSnap.data();
+    if (p.isBot) continue;
+
+    const matchBets = p.bets?.matches || {};
+    const autoBets = {};
+    for (const m of GROUP_MATCHES) {
+      if (!isMatchLocked(m.id, results.matches?.[m.id])) continue;
+      const bet = matchBets[m.id];
+      if (bet && bet.home != null) continue;
+      autoBets[m.id] = generateAutoBet(p.uid, m.id);
+    }
+
+    const count = Object.keys(autoBets).length;
+    if (!count) continue;
+
+    filledBets += count;
+    filledParticipants++;
+    writes.push(
+      db.doc(`mundial2026/game/participants/${docSnap.id}`).set(
+        { bets: { ...(p.bets || {}), matches: { ...matchBets, ...autoBets } } },
+        { merge: true }
+      )
+    );
+  }
+
+  await Promise.all(writes);
+  return { filledParticipants, filledBets };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -20,43 +59,10 @@ export default async function handler(req, res) {
 
   try {
     const db = initFirebase();
-
     const gameSnap = await db.doc("mundial2026/game").get();
     const results = gameSnap.exists ? (gameSnap.data().results || {}) : {};
 
-    const partSnap = await db.collection("mundial2026/game/participants").get();
-
-    const writes = [];
-    let filledBets = 0;
-    let filledParticipants = 0;
-
-    for (const docSnap of partSnap.docs) {
-      const p = docSnap.data();
-      if (p.isBot) continue;
-
-      const matchBets = p.bets?.matches || {};
-      const autoBets = {};
-      for (const m of GROUP_MATCHES) {
-        if (!isMatchLocked(m.id, results.matches?.[m.id])) continue;
-        const bet = matchBets[m.id];
-        if (bet && bet.home != null) continue;
-        autoBets[m.id] = generateAutoBet(p.uid, m.id);
-      }
-
-      const count = Object.keys(autoBets).length;
-      if (!count) continue;
-
-      filledBets += count;
-      filledParticipants++;
-      writes.push(
-        db.doc(`mundial2026/game/participants/${docSnap.id}`).set(
-          { bets: { ...(p.bets || {}), matches: { ...matchBets, ...autoBets } } },
-          { merge: true }
-        )
-      );
-    }
-
-    await Promise.all(writes);
+    const { filledParticipants, filledBets } = await fillMissingBets(db, results);
 
     return res.status(200).json({ success: true, filledParticipants, filledBets });
   } catch (error) {
