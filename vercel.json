@@ -1,7 +1,4 @@
 {
-  "crons": [
-    { "path": "/api/auto-bets", "schedule": "*/5 * * * *" }
-  ],
   "headers": [
     {
       "source": "/index.html",
