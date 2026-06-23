@@ -294,12 +294,15 @@ export default async function handler(req, res) {
     for (const m of GROUP_MATCHES) {
       const key = `${m.home}_${m.away}`;
       if (matches[key]) {
+        // API-Football's `elapsed` is often null even mid-match; don't let that wipe out
+        // a minute the faster ESPN-based client poll (syncMatchData) already wrote.
+        const prevMinute = currentResults.matches?.[m.id]?.minute ?? null;
         updatedMatches[m.id] = {
           home: matches[key].home,
           away: matches[key].away,
           status: matches[key].status,
           live: matches[key].live || false,
-          minute: matches[key].minute ?? null,
+          minute: matches[key].minute ?? prevMinute,
           homeRedCards: matches[key].homeRedCards ?? 0,
           awayRedCards: matches[key].awayRedCards ?? 0,
         };

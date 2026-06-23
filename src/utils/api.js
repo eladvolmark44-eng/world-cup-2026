@@ -393,7 +393,8 @@ export async function syncMatchData(setLiveStats){
           // the live minute fresh from ESPN's clock too — otherwise a match can sit at
           // "live" with score updates but no minute, since only the slower cron sets it.
           const clockMatch=(comp?.status?.displayClock||"").match(/(\d+)(\+\d+)?/);
-          const newMinute=clockMatch?(clockMatch[1]+(clockMatch[2]||"")):null;
+          const newMinute=clockMatch?(clockMatch[1]+(clockMatch[2]||"")):
+            (typeof comp?.status?.clock==="number"?String(Math.floor(comp.status.clock/60)):null);
           if(newMinute&&newMinute!==String(prev.minute??"")){
             redUpdates[`results.matches.${matchId}.minute`]=newMinute;
           }
