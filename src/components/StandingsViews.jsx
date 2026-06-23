@@ -205,19 +205,31 @@ function ProjCard({match, results, teamNames, isFinal}){
   );
 }
 
-// side="r" → connector opens rightward (left-half columns pointing toward center)
-// side="l" → connector opens leftward (right-half columns pointing toward center)
+// Card height in rem — all cards share this fixed height.
+// Slot heights double each round so alignment is exact by geometry:
+//   R32 slot=H, R16 slot=2H, QF slot=4H, SF slot=8H → all columns total 8H.
+// The bracket connector ::before runs top:25%→bottom:25% of the pair (=2 slots),
+// which always hits card centers regardless of which round it is.
+const CARD_H=3.8;
+
+// side="r" → connector opens rightward (left half, toward center)
+// side="l" → connector opens leftward (right half, toward center)
 function ProjRound({ids, byId, results, teamNames, label, side}){
+  const slotH=CARD_H*(8/ids.length); // H for R32, 2H for R16, 4H for QF
   const pairs=[];
   for(let i=0;i<ids.length;i+=2) pairs.push([byId[ids[i]],byId[ids[i+1]]]);
   return(
     <div className="bk2-col">
       <div className="bk2-col-lbl">{label}</div>
-      <div className="bk2-col-pairs">
+      <div className="bk2-col-body">
         {pairs.map((pair,pi)=>(
-          <div className={`bk2-pair bk2-connect-${side}`} key={pi}>
-            <ProjCard match={pair[0]} results={results} teamNames={teamNames}/>
-            <ProjCard match={pair[1]} results={results} teamNames={teamNames}/>
+          <div className={`bk2-pair bk2-connect-${side}`} key={pi} style={{height:`${slotH*2}rem`}}>
+            <div className="bk2-slot" style={{height:`${slotH}rem`}}>
+              <ProjCard match={pair[0]} results={results} teamNames={teamNames}/>
+            </div>
+            <div className="bk2-slot" style={{height:`${slotH}rem`}}>
+              <ProjCard match={pair[1]} results={results} teamNames={teamNames}/>
+            </div>
           </div>
         ))}
       </div>
@@ -225,14 +237,16 @@ function ProjRound({ids, byId, results, teamNames, label, side}){
   );
 }
 
-// Left half feeds M89/90/93/94 → M97/98 → M101 (SF-left) → Final
+// Left half: R32→R16→QF→SF(M101)→Final
 const R32_L=["M74","M77","M73","M75","M83","M84","M81","M82"];
 const R16_L=["M89","M90","M93","M94"];
 const QF_L=["M97","M98"];
-// Right half feeds M91/92/95/96 → M99/100 → M102 (SF-right) → Final
+// Right half: R32→R16→QF→SF(M102)→Final
 const R32_R=["M76","M78","M79","M80","M86","M88","M85","M87"];
 const R16_R=["M91","M92","M95","M96"];
 const QF_R=["M99","M100"];
+
+const TOTAL_H=CARD_H*8; // rem — all bracket columns share this exact height
 
 function BracketProjection({results, teamNames}){
   const byId={};
@@ -246,22 +260,24 @@ function BracketProjection({results, teamNames}){
         <ProjRound ids={QF_L}  byId={byId} results={results} teamNames={teamNames} label="רבע גמר" side="r"/>
         <div className="bk2-col bk2-sf-col">
           <div className="bk2-col-lbl">חצי גמר</div>
-          <div className="bk2-col-pairs">
-            <div className="bk2-pair bk2-sf-r">
+          <div className="bk2-col-body">
+            <div className="bk2-slot bk2-sf-r" style={{height:`${TOTAL_H}rem`}}>
               <ProjCard match={byId.M101} results={results} teamNames={teamNames}/>
             </div>
           </div>
         </div>
         <div className="bk2-col bk2-final-col">
           <div className="bk2-col-lbl">🏆 גמר</div>
-          <ProjCard match={byId.M104} results={results} teamNames={teamNames} isFinal/>
-          <div className="bk2-third-lbl">🥉 מקום 3 · {byId.M103?.date}</div>
-          <ProjCard match={byId.M103} results={results} teamNames={teamNames}/>
+          <div className="bk2-col-body bk2-final-body" style={{height:`${TOTAL_H}rem`}}>
+            <ProjCard match={byId.M104} results={results} teamNames={teamNames} isFinal/>
+            <div className="bk2-third-lbl">🥉 מקום 3 · {byId.M103?.date}</div>
+            <ProjCard match={byId.M103} results={results} teamNames={teamNames}/>
+          </div>
         </div>
         <div className="bk2-col bk2-sf-col">
           <div className="bk2-col-lbl">חצי גמר</div>
-          <div className="bk2-col-pairs">
-            <div className="bk2-pair bk2-sf-l">
+          <div className="bk2-col-body">
+            <div className="bk2-slot bk2-sf-l" style={{height:`${TOTAL_H}rem`}}>
               <ProjCard match={byId.M102} results={results} teamNames={teamNames}/>
             </div>
           </div>
