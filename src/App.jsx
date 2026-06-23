@@ -425,7 +425,9 @@ export default function App(){
                     kickoff: ev.date||null, venue,
                   };
                   if ((isFinished||isLive) && hC.score != null) {
-                    koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive};
+                    const clockMatch = isLive ? (comp.status?.displayClock||"").match(/(\d+)(\+\d+)?/) : null;
+                    const minute = clockMatch ? (clockMatch[1]+(clockMatch[2]||"")) : null;
+                    koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive, minute};
                   }
                   koMatchesArr.push(koMatch);
                 }

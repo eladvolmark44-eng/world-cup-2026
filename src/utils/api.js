@@ -389,6 +389,14 @@ export async function syncMatchData(setLiveStats){
             redUpdates[`results.matches.${matchId}.away`]=newAway;
             redUpdates[`results.matches.${matchId}.live`]=true;
           }
+          // This poll runs every 15s (far more often than the score-sync cron), so keep
+          // the live minute fresh from ESPN's clock too — otherwise a match can sit at
+          // "live" with score updates but no minute, since only the slower cron sets it.
+          const clockMatch=(comp?.status?.displayClock||"").match(/(\d+)(\+\d+)?/);
+          const newMinute=clockMatch?(clockMatch[1]+(clockMatch[2]||"")):null;
+          if(newMinute&&newMinute!==String(prev.minute??"")){
+            redUpdates[`results.matches.${matchId}.minute`]=newMinute;
+          }
         }
       }
 
