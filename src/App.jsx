@@ -331,6 +331,19 @@ export default function App(){
 
         const redUpdates = {};
 
+        // Hard safety ceiling: force-close any match still flagged live long after it could
+        // realistically still be playing, regardless of whether a fresh source even mentions
+        // it this cycle — otherwise a match that drops off every provider's feed while
+        // wrongly flagged live (seen with Algeria–Jordan) stays stuck that way forever.
+        const MAX_LIVE_MS = 3 * 60 * 60 * 1000;
+        for (const m of GROUP_MATCHES) {
+          const prev = updatedMatches[m.id];
+          if (prev?.live === true && m.kickoff && Date.now() - new Date(m.kickoff).getTime() > MAX_LIVE_MS) {
+            updatedMatches[m.id] = { ...prev, live: false, endedAt: prev.endedAt ?? Date.now() };
+            matchChanged = true;
+          }
+        }
+
         for (const m of GROUP_MATCHES) {
           const key = `${m.home}_${m.away}`;
           const src = byKey[key] || fdFallback[key];

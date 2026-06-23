@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { GROUP_MATCHES, GROUPS_2026, FLAG_MAP } from "../constants/tournament.js";
 import {
   isGlobalLocked, isTournamentOver, withFlag, withStrikerFlag, hePlayer,
-  calcScore, rankSymbol, getDir, isChatLocked, getCardCounts
+  calcScore, rankSymbol, getDir, isChatLocked, getCardCounts, isStillLive
 } from "../utils/helpers.js";
 import { NumStepper, MatchRow, MatchChat } from "./common.jsx";
 import { ALL_MATCH_DATES } from "../constants/tournament.js";
@@ -344,9 +344,9 @@ export default function HomeView({me, participants, results, teamNames, odds, li
     setFunSaving(false);
   };
   const nowTs=Date.now();
-  const liveMatches=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
+  const liveMatches=GROUP_MATCHES.filter(m=>isStillLive(m.id, results.matches?.[m.id]));
   const lastDoneMatch=GROUP_MATCHES
-    .filter(m=>results.matches?.[m.id]?.home!=null&&!results.matches?.[m.id]?.live)
+    .filter(m=>results.matches?.[m.id]?.home!=null&&!isStillLive(m.id, results.matches?.[m.id]))
     .sort((a,b)=>new Date(b.kickoff).getTime()-new Date(a.kickoff).getTime())[0]||null;
   const nextMatch=liveMatches.length===0&&GROUP_MATCHES
     .filter(m=>{

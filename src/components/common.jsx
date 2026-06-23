@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { collection, addDoc, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase.js";
 import { GROUP_MATCHES, ALL_MATCH_DATES, MATCH_VENUE } from "../constants/tournament.js";
-import { withFlag, isMatchLocked, formatKickoffTime, groupLabel } from "../utils/helpers.js";
+import { withFlag, isMatchLocked, formatKickoffTime, groupLabel, isStillLive } from "../utils/helpers.js";
 
 export function MatchChat({matchId, locked, me}){
   const [messages,setMessages]=useState([]);
@@ -140,7 +140,7 @@ function useLiveTick(active){
 
 export function MatchRow({m, res, teamNames, odds, onClick}){
   const hasRes = res?.home!=null && res?.away!=null;
-  const isLive = res?.live===true;
+  const isLive = isStillLive(m.id, res);
   useLiveTick(isLive);
   const isDone = hasRes && !isLive;
   const locked = isMatchLocked(m.id, res);
@@ -176,7 +176,7 @@ export function MatchRow({m, res, teamNames, odds, onClick}){
 
 // ─── LIVE BAR ─────────────────────────────────────────────────────────────────
 export function LiveBar({results, teamNames}){
-  const live=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
+  const live=GROUP_MATCHES.filter(m=>isStillLive(m.id, results.matches?.[m.id]));
   useLiveTick(live.length>0);
   if(!live.length)return null;
   return(

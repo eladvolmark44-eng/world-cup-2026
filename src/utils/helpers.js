@@ -44,6 +44,19 @@ export function isMatchLocked(matchId, matchRes) {
   return m?.kickoff ? now() >= new Date(m.kickoff).getTime() + 20*60*1000 : true;
 }
 export function isGlobalLocked() { return now() >= new Date("2026-06-11T22:00:00+03:00").getTime(); }
+
+// Hard safety ceiling: a group-stage match (90 min, no extra time) can never realistically
+// still be live more than 3h after kickoff. The live-data sync has repeatedly been fooled by
+// flaky third-party APIs into leaving (or flipping back) a finished match's live flag to true —
+// this overrides that regardless of what's stored, so the UI never gets stuck showing "live".
+const MAX_LIVE_MS = 3 * 60 * 60 * 1000;
+export function isStillLive(matchId, matchRes) {
+  if (matchRes?.live !== true) return false;
+  const m = GROUP_MATCHES.find(g => g.id === matchId);
+  if (!m?.kickoff) return true;
+  return now() < new Date(m.kickoff).getTime() + MAX_LIVE_MS;
+}
+
 export function isGroupRevealed(group) { return now() >= new Date(GROUP_LAST_MATCH[group]).getTime(); }
 export function isGroupStageOver() { return now() >= GROUP_STAGE_END_TS; }
 export function isTournamentOver() { return now() >= new Date(TOURNAMENT_END).getTime(); }
