@@ -169,6 +169,8 @@ function BkCol({matches, koResults, teamNames, label}){
 // current results.groups (set once a group's matches are all finished — see App.jsx syncScores).
 // "3RD" slots are intentionally never auto-resolved: which exact team fills them depends on
 // FIFA's official 495-scenario combination table (Annex C), which isn't reproduced here.
+// WM/LM slots (round of 16 onward) get no text label at all — the bracket connector lines show
+// where they come from instead, so there's no "winner of match 74" clutter.
 function resolveSlot(slot, results){
   if(slot.t==="W"||slot.t==="RU"){
     const pair=results.groups?.[slot.g];
@@ -176,76 +178,74 @@ function resolveSlot(slot, results){
     return {label:`${slot.t==="W"?"מנצחת":"סגנית"} בית ${slot.g}`};
   }
   if(slot.t==="3RD") return {label:`שלישית ${slot.g.join("/")}`};
-  return {label:`${slot.t==="WM"?"מנצחת/ת":"מפסידת/ת"} משחק ${slot.m.replace("M","")}`};
+  return {label:"?"};
 }
 
-function ProjTeam({slot, results, teamNames}){
+function ProjRow({slot, results, teamNames}){
   const r=resolveSlot(slot, results);
   return(
-    <div className={`bk-tm${r.team?'':' bk-ph-team'}`}>
-      <span className="bk-tn">{r.team?withFlag(teamNames?.[r.team]||r.team):r.label}</span>
+    <div className="bk2-row">
+      <span className={`bk2-tn${r.team?'':' bk2-ph'}`}>{r.team?withFlag(teamNames?.[r.team]||r.team):r.label}</span>
     </div>
   );
 }
 
-function ProjMatch({match, results, teamNames}){
+function ProjCard({match, results, teamNames}){
   return(
-    <div className="bk-match">
-      <ProjTeam slot={match.slots[0]} results={results} teamNames={teamNames}/>
-      <div className="bk-div"/>
-      <ProjTeam slot={match.slots[1]} results={results} teamNames={teamNames}/>
+    <div className="bk2-card">
+      <ProjRow slot={match.slots[0]} results={results} teamNames={teamNames}/>
+      <ProjRow slot={match.slots[1]} results={results} teamNames={teamNames}/>
     </div>
   );
 }
 
-function ProjCol({matches, results, teamNames, label}){
+// Renders a round as a column of connected pairs: each pair of matches that feed the same
+// next-round match is grouped with a bracket connector pointing to where they converge.
+function ProjRound({ids, byId, results, teamNames, label, connect}){
+  const pairs=[];
+  for(let i=0;i<ids.length;i+=2) pairs.push([byId[ids[i]], byId[ids[i+1]]]);
   return(
-    <div className="bk-col">
-      <div className="bk-col-lbl">{label}</div>
-      <div className="bk-col-body">
-        {matches.map(m=>(
-          <div key={m.id} className="bk-slot">
-            <ProjMatch match={m} results={results} teamNames={teamNames}/>
-          </div>
-        ))}
-      </div>
+    <div className="bk2-col">
+      <div className="bk2-col-lbl">{label}</div>
+      {pairs.map((pair,i)=>(
+        <div className={`bk2-pair${connect?' bk2-connect':''}`} key={i}>
+          <ProjCard match={pair[0]} results={results} teamNames={teamNames}/>
+          <ProjCard match={pair[1]} results={results} teamNames={teamNames}/>
+        </div>
+      ))}
     </div>
   );
 }
+
+// Match ids reordered (from FIFA's official numeric order) so that every two matches feeding the
+// same next-round match sit next to each other — this is what lets the connector lines line up.
+const R32_ORDER=["M74","M77","M73","M75","M83","M84","M81","M82","M76","M78","M79","M80","M86","M88","M85","M87"];
+const R16_ORDER=["M89","M90","M93","M94","M91","M92","M95","M96"];
+const QF_ORDER=["M97","M98","M99","M100"];
+const SF_ORDER=["M101","M102"];
 
 // Projected bracket shown before ESPN starts reporting real knockout fixtures: fills in each
-// slot's source (group winner/runner-up/third-place, or "winner of match X") and swaps in real
-// team names as soon as a group's standings are final, so the bracket picture fills in gradually
-// as the group stage progresses.
+// slot's source (group winner/runner-up/third-place) and swaps in real team names as soon as a
+// group's standings are final, so the bracket picture fills in gradually as the group stage
+// progresses. Round-of-16-onward matches show no text — their connector lines point back to the
+// two matches that feed them.
 function BracketProjection({results, teamNames}){
-  const by={};
-  for(const m of KO_BRACKET)(by[m.stage]||(by[m.stage]=[])).push(m);
-  const r32=by["32 האחרונות"]||[], r16=by["שמינית גמר"]||[];
-  const qf=by["רבע גמר"]||[], sf=by["חצי גמר"]||[];
-  const fin=(by["גמר"]||[])[0], trd=(by["מקום שלישי"]||[])[0];
-  const L=a=>a.slice(0,Math.ceil(a.length/2));
-  const R=a=>a.slice(Math.ceil(a.length/2));
+  const byId={};
+  for(const m of KO_BRACKET) byId[m.id]=m;
   return(
-    <div className="bk-outer">
-      <p className="section-note">📋 תרשים צפי לפי מצב הבתים הנוכחי — מתמלא אוטומטית ככל שבתים מסתיימים. "שלישית X/Y/Z" — אחת מהקבוצות תתפוס את המקום, ייקבע רשמית רק בתום שלב הבתים.</p>
-      <div className="bk-scroll">
-        {r32.length>0&&<ProjCol matches={L(r32)} results={results} teamNames={teamNames} label="32 אחרונות"/>}
-        {r16.length>0&&<ProjCol matches={L(r16)} results={results} teamNames={teamNames} label="שמינית"/>}
-        {qf.length>0&&<ProjCol matches={L(qf)} results={results} teamNames={teamNames} label="רבע גמר"/>}
-        {sf.length>0&&<ProjCol matches={L(sf)} results={results} teamNames={teamNames} label="חצי גמר"/>}
-        <div className="bk-final-col">
-          <div className="bk-trophy">🏆</div>
-          <div className="bk-col-lbl">גמר</div>
-          {fin&&<ProjMatch match={fin} results={results} teamNames={teamNames}/>}
-          {trd&&<>
-            <div className="bk-col-lbl" style={{marginTop:'.8rem'}}>מקום 3</div>
-            <ProjMatch match={trd} results={results} teamNames={teamNames}/>
-          </>}
+    <div className="bk2-outer">
+      <p className="section-note">📋 תרשים צפי לפי מצב הבתים הנוכחי — מתמלא אוטומטית ככל שבתים מסתיימים. "שלישית X/Y/Z" — אחת מהקבוצות תתפוס את המקום, ייקבע רשמית רק בתום שלב הבתים. החיצים מראים אילו שני משחקים מעלים את המנצחת לסיבוב הבא.</p>
+      <div className="bk2-scroll">
+        <ProjRound ids={R32_ORDER} byId={byId} results={results} teamNames={teamNames} label="32 אחרונות" connect/>
+        <ProjRound ids={R16_ORDER} byId={byId} results={results} teamNames={teamNames} label="שמינית גמר" connect/>
+        <ProjRound ids={QF_ORDER} byId={byId} results={results} teamNames={teamNames} label="רבע גמר" connect/>
+        <ProjRound ids={SF_ORDER} byId={byId} results={results} teamNames={teamNames} label="חצי גמר" connect/>
+        <div className="bk2-col bk2-final-col">
+          <div className="bk2-col-lbl">🏆 גמר</div>
+          <ProjCard match={byId.M104} results={results} teamNames={teamNames}/>
+          <div className="bk2-col-lbl" style={{marginTop:'1rem'}}>מקום שלישי</div>
+          <ProjCard match={byId.M103} results={results} teamNames={teamNames}/>
         </div>
-        {sf.length>0&&<ProjCol matches={R(sf)} results={results} teamNames={teamNames} label="חצי גמר"/>}
-        {qf.length>0&&<ProjCol matches={R(qf)} results={results} teamNames={teamNames} label="רבע גמר"/>}
-        {r16.length>0&&<ProjCol matches={R(r16)} results={results} teamNames={teamNames} label="שמינית"/>}
-        {r32.length>0&&<ProjCol matches={R(r32)} results={results} teamNames={teamNames} label="32 אחרונות"/>}
       </div>
     </div>
   );
