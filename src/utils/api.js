@@ -384,9 +384,13 @@ export async function syncMatchData(setLiveStats){
           const newHome=homeC?.score!=null?parseInt(homeC.score,10):null;
           const newAway=awayC?.score!=null?parseInt(awayC.score,10):null;
           const prev=matches[matchId]||{};
+          // Once another sync path has already confirmed this match finished, don't let
+          // this poll flip it back to live just because ESPN's status hasn't caught up yet
+          // (this function never writes live:false itself, so it can only do harm here).
+          const alreadyFinished=prev.live===false&&prev.home!=null;
           // A real match's goal tally never decreases — guard against a glitchy/stale read.
           const isRegression=prev.home!=null&&prev.away!=null&&newHome!=null&&newAway!=null&&(newHome+newAway)<(prev.home+prev.away);
-          if(!isRegression&&newHome!=null&&newAway!=null&&(prev.home!==newHome||prev.away!==newAway||prev.live!==true)){
+          if(!alreadyFinished&&!isRegression&&newHome!=null&&newAway!=null&&(prev.home!==newHome||prev.away!==newAway||prev.live!==true)){
             redUpdates[`results.matches.${matchId}.home`]=newHome;
             redUpdates[`results.matches.${matchId}.away`]=newAway;
             redUpdates[`results.matches.${matchId}.live`]=true;
@@ -397,7 +401,7 @@ export async function syncMatchData(setLiveStats){
           const clockMatch=(comp?.status?.displayClock||"").match(/(\d+)(\+\d+)?/);
           const newMinute=clockMatch?(clockMatch[1]+(clockMatch[2]||"")):
             (typeof comp?.status?.clock==="number"?String(Math.floor(comp.status.clock/60)):null);
-          if(newMinute&&newMinute!==String(prev.minute??"")){
+          if(!alreadyFinished&&newMinute&&newMinute!==String(prev.minute??"")){
             redUpdates[`results.matches.${matchId}.minute`]=newMinute;
           }
         }

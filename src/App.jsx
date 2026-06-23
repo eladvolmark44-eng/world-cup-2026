@@ -343,6 +343,11 @@ export default function App(){
           if (prev.home != null && prev.away != null && (src.home + src.away) < (prev.home + prev.away)) {
             continue;
           }
+          // Once a match is confirmed finished, don't let a fallback source that's still
+          // reporting it live (stale data, or simply hasn't caught up to the FT status) flip it back.
+          if (prev.live === false && prev.home != null && src.live) {
+            continue;
+          }
 
           const newEntry = {
             home: src.home,

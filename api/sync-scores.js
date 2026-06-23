@@ -300,6 +300,11 @@ export default async function handler(req, res) {
         if (prev?.home != null && prev?.away != null && (matches[key].home + matches[key].away) < (prev.home + prev.away)) {
           continue;
         }
+        // Once a match is confirmed finished, don't let API-Football flip it back to live
+        // (e.g. it's still reporting an in-progress status the other sources already closed out).
+        if (prev?.live === false && prev?.home != null && matches[key].live) {
+          continue;
+        }
         // API-Football's `elapsed` is often null even mid-match; don't let that wipe out
         // a minute the faster ESPN-based client poll (syncMatchData) already wrote.
         const prevMinute = prev?.minute ?? null;
