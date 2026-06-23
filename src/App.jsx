@@ -337,6 +337,13 @@ export default function App(){
           if (!src) continue;
 
           const prev = updatedMatches[m.id] || {};
+          // Guard against a stale/flaky fallback source (TheSportsDB in particular often
+          // returns placeholder 0-0 for a match it hasn't actually updated yet) overwriting
+          // a score we already confirmed — a real match's goal tally never decreases.
+          if (prev.home != null && prev.away != null && (src.home + src.away) < (prev.home + prev.away)) {
+            continue;
+          }
+
           const newEntry = {
             home: src.home,
             away: src.away,

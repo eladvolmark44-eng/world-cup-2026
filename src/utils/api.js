@@ -384,7 +384,9 @@ export async function syncMatchData(setLiveStats){
           const newHome=homeC?.score!=null?parseInt(homeC.score,10):null;
           const newAway=awayC?.score!=null?parseInt(awayC.score,10):null;
           const prev=matches[matchId]||{};
-          if(newHome!=null&&newAway!=null&&(prev.home!==newHome||prev.away!==newAway||prev.live!==true)){
+          // A real match's goal tally never decreases — guard against a glitchy/stale read.
+          const isRegression=prev.home!=null&&prev.away!=null&&newHome!=null&&newAway!=null&&(newHome+newAway)<(prev.home+prev.away);
+          if(!isRegression&&newHome!=null&&newAway!=null&&(prev.home!==newHome||prev.away!==newAway||prev.live!==true)){
             redUpdates[`results.matches.${matchId}.home`]=newHome;
             redUpdates[`results.matches.${matchId}.away`]=newAway;
             redUpdates[`results.matches.${matchId}.live`]=true;
