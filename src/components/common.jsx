@@ -115,9 +115,33 @@ export function DateNav({selectedDate,onChange}){
   );
 }
 
+// External score APIs (ESPN/SofaScore/TheSportsDB/API-Football) have repeatedly failed to
+// supply a usable live clock for this fixture set, even after fixing their parsing bugs —
+// so once a match is live, fall back to a minute estimated from kickoff time rather than
+// leaving the badge stuck on a bare "חי" indefinitely. Real data (res.minute) wins when present.
+function estimateMinute(m, res){
+  if(res?.minute) return `${res.minute}'`;
+  if(!m?.kickoff) return null;
+  const elapsed = Math.floor((Date.now() - new Date(m.kickoff).getTime()) / 60000);
+  if(elapsed < 0) return null;
+  return elapsed >= 90 ? "90+'" : `${Math.max(elapsed,1)}'`;
+}
+
+// Re-renders periodically so the kickoff-based minute estimate keeps ticking forward
+// even when no new Firestore snapshot arrives.
+function useLiveTick(active){
+  const [,setTick]=useState(0);
+  useEffect(()=>{
+    if(!active)return;
+    const id=setInterval(()=>setTick(t=>t+1), 30000);
+    return ()=>clearInterval(id);
+  },[active]);
+}
+
 export function MatchRow({m, res, teamNames, odds, onClick}){
   const hasRes = res?.home!=null && res?.away!=null;
   const isLive = res?.live===true;
+  useLiveTick(isLive);
   const isDone = hasRes && !isLive;
   const locked = isMatchLocked(m.id, res);
   const homeName = teamNames?.[m.home]||m.home||"?";
@@ -128,7 +152,7 @@ export function MatchRow({m, res, teamNames, odds, onClick}){
     <div className={`sched-row ${isLive?"sched-live":""} ${!locked&&!hasRes&&m.kickoff?"sched-open":""} ${onClick?"sched-clickable":""}`} onClick={onClick}>
       <div className="sched-date">
         {m.date&&`${m.date}${m.kickoff?` ${formatKickoffTime(m.kickoff)}`:""} · `}{m.group?groupLabel(m.group):m.stage||""}
-        {isLive&&<span className="live-badge"> 🔴 {res?.minute ? `${res.minute}'` : 'חי'}</span>}
+        {isLive&&<span className="live-badge"> 🔴 {estimateMinute(m,res) || 'חי'}</span>}
         {isDone&&<span className="done-badge"> ✓ הסתיים</span>}
         {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
       </div>
@@ -153,15 +177,17 @@ export function MatchRow({m, res, teamNames, odds, onClick}){
 // ─── LIVE BAR ─────────────────────────────────────────────────────────────────
 export function LiveBar({results, teamNames}){
   const live=GROUP_MATCHES.filter(m=>results.matches?.[m.id]?.live===true);
+  useLiveTick(live.length>0);
   if(!live.length)return null;
   return(
     <div className="live-now-bar">
       {live.map(m=>{
         const res=results.matches[m.id];
+        const minLabel=estimateMinute(m,res);
         return(
           <span key={m.id} className="live-now-item">
             🔴 {withFlag(teamNames?.[m.home]||m.home)} <b><span dir="ltr">{res.away}:{res.home}</span></b> {withFlag(teamNames?.[m.away]||m.away)}
-            {res.minute?<span className="live-min"> {res.minute}'</span>:null}
+            {minLabel?<span className="live-min"> {minLabel}</span>:null}
           </span>
         );
       })}

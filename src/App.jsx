@@ -184,7 +184,8 @@ export default function App(){
             if(!fin&&!live)continue;
             const hg=parseInt(ev.intHomeScore,10),ag=parseInt(ev.intAwayScore,10);
             if(isNaN(hg)||isNaN(ag))continue;
-            const minute=live ? (parseInt(ev.intProgress,10)||null) : null;
+            const ip=parseInt(ev.intProgress,10);
+            const minute=live ? (isNaN(ip)?null:ip) : null;
             addBothKeys(res,heb(ev.strHomeTeam),heb(ev.strAwayTeam),hg,ag,fin?"FT":"LIVE",live,minute);
           }
           return res;
