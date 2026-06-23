@@ -134,6 +134,14 @@ export default function App(){
           res[`${a}_${h}`]={home:ag,away:hg,status,live,minute:minute??null};
         };
 
+        // ESPN's displayClock isn't always a plain "45'" string (can be "HT", missing, etc.),
+        // and parseInt(...)||null previously turned a real minute of 0 into null since 0 is falsy.
+        const espnMinute = status => {
+          const m = status?.displayClock!=null ? String(status.displayClock).match(/(\d+)(\+\d+)?/) : null;
+          if (m) return m[1]+(m[2]||"");
+          return typeof status?.clock==="number" ? String(Math.floor(status.clock/60)) : null;
+        };
+
         const parseESPN = evs => {
           const res={};
           for(const ev of(evs||[])){
@@ -146,7 +154,7 @@ export default function App(){
             if(!hC||!aC)continue;
             const hg=parseInt(hC.score,10),ag=parseInt(aC.score,10);
             if(isNaN(hg)||isNaN(ag))continue;
-            const minute=live ? (parseInt(comp.status?.displayClock,10)||null) : null;
+            const minute=live ? espnMinute(comp.status) : null;
             addBothKeys(res,heb(hC.team.displayName),heb(aC.team.displayName),hg,ag,fin?"FT":"LIVE",live,minute);
           }
           return res;
