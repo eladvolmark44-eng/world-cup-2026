@@ -533,6 +533,7 @@
   .bk-div{height:1px;background:var(--border)}
   .bk-ph{border:1px dashed var(--border);border-radius:7px;text-align:center;padding:.28rem;font-size:.72rem;width:100%;box-sizing:border-box;color:var(--muted);background:rgba(255,255,255,.02)}
   .bk-ph-final{width:120px}
+  .bk-tm.bk-ph-team .bk-tn{color:var(--muted);font-style:italic;font-size:.6rem}
   /* ── Special Bets Card ── */
   .sp-section{display:flex;flex-direction:column;gap:.3rem;padding:.55rem 0;border-bottom:1px solid var(--border)}
   .sp-section:last-child{border-bottom:none;padding-bottom:0}

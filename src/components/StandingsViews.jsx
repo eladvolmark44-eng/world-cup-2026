@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS } from "../constants/tournament.js";
+import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS, KO_BRACKET } from "../constants/tournament.js";
 import { withFlag, computeGroupStandings, getDefaultMatchDate } from "../utils/helpers.js";
 import { DateNav, MatchRow } from "./common.jsx";
 
@@ -165,9 +165,95 @@ function BkCol({matches, koResults, teamNames, label}){
   );
 }
 
+// Resolves a bracket slot ({t:"W"|"RU", g} / {t:"3RD", g:[...]} / {t:"WM"|"LM", m}) against
+// current results.groups (set once a group's matches are all finished — see App.jsx syncScores).
+// "3RD" slots are intentionally never auto-resolved: which exact team fills them depends on
+// FIFA's official 495-scenario combination table (Annex C), which isn't reproduced here.
+function resolveSlot(slot, results){
+  if(slot.t==="W"||slot.t==="RU"){
+    const pair=results.groups?.[slot.g];
+    if(pair) return {team: slot.t==="W"?pair[0]:pair[1]};
+    return {label:`${slot.t==="W"?"מנצחת":"סגנית"} בית ${slot.g}`};
+  }
+  if(slot.t==="3RD") return {label:`שלישית ${slot.g.join("/")}`};
+  return {label:`${slot.t==="WM"?"מנצחת/ת":"מפסידת/ת"} משחק ${slot.m.replace("M","")}`};
+}
+
+function ProjTeam({slot, results, teamNames}){
+  const r=resolveSlot(slot, results);
+  return(
+    <div className={`bk-tm${r.team?'':' bk-ph-team'}`}>
+      <span className="bk-tn">{r.team?withFlag(teamNames?.[r.team]||r.team):r.label}</span>
+    </div>
+  );
+}
+
+function ProjMatch({match, results, teamNames}){
+  return(
+    <div className="bk-match">
+      <ProjTeam slot={match.slots[0]} results={results} teamNames={teamNames}/>
+      <div className="bk-div"/>
+      <ProjTeam slot={match.slots[1]} results={results} teamNames={teamNames}/>
+    </div>
+  );
+}
+
+function ProjCol({matches, results, teamNames, label}){
+  return(
+    <div className="bk-col">
+      <div className="bk-col-lbl">{label}</div>
+      <div className="bk-col-body">
+        {matches.map(m=>(
+          <div key={m.id} className="bk-slot">
+            <ProjMatch match={m} results={results} teamNames={teamNames}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Projected bracket shown before ESPN starts reporting real knockout fixtures: fills in each
+// slot's source (group winner/runner-up/third-place, or "winner of match X") and swaps in real
+// team names as soon as a group's standings are final, so the bracket picture fills in gradually
+// as the group stage progresses.
+function BracketProjection({results, teamNames}){
+  const by={};
+  for(const m of KO_BRACKET)(by[m.stage]||(by[m.stage]=[])).push(m);
+  const r32=by["32 האחרונות"]||[], r16=by["שמינית גמר"]||[];
+  const qf=by["רבע גמר"]||[], sf=by["חצי גמר"]||[];
+  const fin=(by["גמר"]||[])[0], trd=(by["מקום שלישי"]||[])[0];
+  const L=a=>a.slice(0,Math.ceil(a.length/2));
+  const R=a=>a.slice(Math.ceil(a.length/2));
+  return(
+    <div className="bk-outer">
+      <p className="section-note">📋 תרשים צפי לפי מצב הבתים הנוכחי — מתמלא אוטומטית ככל שבתים מסתיימים. "שלישית X/Y/Z" — אחת מהקבוצות תתפוס את המקום, ייקבע רשמית רק בתום שלב הבתים.</p>
+      <div className="bk-scroll">
+        {r32.length>0&&<ProjCol matches={L(r32)} results={results} teamNames={teamNames} label="32 אחרונות"/>}
+        {r16.length>0&&<ProjCol matches={L(r16)} results={results} teamNames={teamNames} label="שמינית"/>}
+        {qf.length>0&&<ProjCol matches={L(qf)} results={results} teamNames={teamNames} label="רבע גמר"/>}
+        {sf.length>0&&<ProjCol matches={L(sf)} results={results} teamNames={teamNames} label="חצי גמר"/>}
+        <div className="bk-final-col">
+          <div className="bk-trophy">🏆</div>
+          <div className="bk-col-lbl">גמר</div>
+          {fin&&<ProjMatch match={fin} results={results} teamNames={teamNames}/>}
+          {trd&&<>
+            <div className="bk-col-lbl" style={{marginTop:'.8rem'}}>מקום 3</div>
+            <ProjMatch match={trd} results={results} teamNames={teamNames}/>
+          </>}
+        </div>
+        {sf.length>0&&<ProjCol matches={R(sf)} results={results} teamNames={teamNames} label="חצי גמר"/>}
+        {qf.length>0&&<ProjCol matches={R(qf)} results={results} teamNames={teamNames} label="רבע גמר"/>}
+        {r16.length>0&&<ProjCol matches={R(r16)} results={results} teamNames={teamNames} label="שמינית"/>}
+        {r32.length>0&&<ProjCol matches={R(r32)} results={results} teamNames={teamNames} label="32 אחרונות"/>}
+      </div>
+    </div>
+  );
+}
+
 export function KnockoutBracketView({results, teamNames}){
   const kms=results.knockoutMatches||[], kr=results.koResults||{};
-  if(!kms.length) return <div className="empty-msg">🏆 שלב הנוקאאוט יתחיל לאחר סיום שלב הבתים</div>;
+  if(!kms.length) return <BracketProjection results={results} teamNames={teamNames}/>;
   const by={};
   for(const m of kms)(by[m.stage]||(by[m.stage]=[])).push(m);
   const r32=by["32 האחרונות"]||[], r16=by["שמינית גמר"]||[];
