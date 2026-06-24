@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { GROUP_MATCHES, GROUPS_2026, FLAG_MAP } from "../constants/tournament.js";
 import {
   isGlobalLocked, isTournamentOver, withFlag, withStrikerFlag, hePlayer,
-  calcScore, rankSymbol, getDir, isChatLocked, getCardCounts, isStillLive
+  calcScore, calcScoreBreakdown, rankSymbol, getDir, isChatLocked, getCardCounts, isStillLive
 } from "../utils/helpers.js";
 import { NumStepper, MatchRow, MatchChat } from "./common.jsx";
 import { ALL_MATCH_DATES } from "../constants/tournament.js";
@@ -465,7 +465,10 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                     ?<span className="lb-boot-chip">{bootBet}</span>
                     :<span className="lb-circle-icon">👟</span>}
                 </div>
-                <span className="lb-score">{p.score>0?`${p.score} נק׳`:"—"}</span>
+                <span className="lb-score">
+                  {p.score>0?`${p.score} נק׳`:"—"}
+                  {p.score>0&&(()=>{const bd=calcScoreBreakdown(p.bets||{},results);return(<span className="lb-score-detail">{bd.groups>0?`🏠${bd.groups}`:"🏠0"} · {bd.matches>0?`⚽${bd.matches}`:"⚽0"}</span>);})()}
+                </span>
               </div>
             );
           })}

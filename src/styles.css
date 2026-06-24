@@ -222,7 +222,8 @@
   .lb-circle-num{font-size:.68rem;font-weight:900;color:var(--green)}
   .lb-boot-cell{display:flex;align-items:center;justify-content:center}
   .lb-boot-chip{display:inline-flex;align-items:center;justify-content:center;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.15rem .35rem;font-size:.52rem;font-weight:600;text-align:center;line-height:1.2;word-break:break-word;max-width:100%;color:var(--text)}
-  .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center}
+  .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center;display:flex;flex-direction:column;align-items:center;gap:.05rem}
+  .lb-score-detail{font-size:.55rem;font-weight:500;color:var(--muted);letter-spacing:.02em}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .pbv-profile-card{display:flex;flex-direction:column;align-items:center;gap:.55rem;background:var(--card2);border-radius:16px;padding:1.4rem 1rem 1.1rem;margin-bottom:.8rem}

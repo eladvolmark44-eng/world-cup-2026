@@ -116,6 +116,25 @@ export function calcScore(bets={},results={},allP=[]){
   return t;
 }
 
+export function calcScoreBreakdown(bets={},results={}){
+  let groups=0,matches=0;
+  Object.keys(GROUPS_2026).forEach(g=>{
+    const correct=results.groups?.[g];
+    if(!correct?.length) return;
+    const picks=bets.groups?.[g]||[];
+    const hits=(picks[0]===correct[0]?1:0)+(picks[1]===correct[1]?1:0);
+    if(hits===1)groups+=2;if(hits===2)groups+=5;
+  });
+  GROUP_MATCHES.forEach(m=>{
+    const bet=bets.matches?.[m.id],real=results.matches?.[m.id];
+    if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
+    if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
+      matches+=1;if(+bet.home===+real.home&&+bet.away===+real.away)matches+=2;
+    }
+  });
+  return {groups,matches};
+}
+
 // Returns the display symbol for a player at position i in a sorted ranked array.
 // Ties share the same symbol; last-place tie(s) get 🗑️ (unless everyone is tied).
 export function rankSymbol(ranked, i){
