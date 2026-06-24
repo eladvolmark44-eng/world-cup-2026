@@ -257,7 +257,7 @@ export default function ResultsView({participants, viewerUid, results, teamNames
                         {participants.map(p=>{
                           const picks=p.bets?.groups?.[g]||[];
                           if(!picks.length)return null;
-                          const hits=picks.filter(t=>qualified.includes(t)).length;
+                          const hits=(picks[0]===qualified[0]?1:0)+(picks[1]===qualified[1]?1:0);
                           const pts=hits===2?5:hits===1?2:0;
                           return(
                             <div key={p.uid} className={`rev-bet-chip ${hits===2?"exact":hits===1?"correct":qualified.length?"wrong":""}`}>
