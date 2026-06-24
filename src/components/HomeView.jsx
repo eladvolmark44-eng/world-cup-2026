@@ -466,8 +466,8 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                     :<span className="lb-circle-icon">👟</span>}
                 </div>
                 <span className="lb-score">
-                  {p.score>0?`${p.score} נק׳`:"—"}
-                  {p.score>0&&(()=>{const bd=calcScoreBreakdown(p.bets||{},results);return(<span className="lb-score-detail">{bd.groups>0?`🏠${bd.groups}`:"🏠0"} · {bd.matches>0?`⚽${bd.matches}`:"⚽0"}</span>);})()}
+                  {p.score>0&&(()=>{const bd=calcScoreBreakdown(p.bets||{},results);return(<span className="lb-score-detail">🏠{bd.groups}·⚽{bd.matches}</span>);})()}
+                  <span>{p.score>0?`${p.score} נק׳`:"—"}</span>
                 </span>
               </div>
             );
