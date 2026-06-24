@@ -192,8 +192,9 @@ function ProjCard({match, results, teamNames, isFinal}){
     const icon=match.stage==="גמר"?"🏆":match.stage==="מקום שלישי"?"🥉":"⚽";
     return(
       <div className={`bk2-card bk2-card-tbd${isFinal?" bk2-card-final":""}`}>
-        <span className="bk2-tbd-icon">{icon}</span>
-        <span className="bk2-tbd-date">{match.date}</span>
+        <span className="bk2-tbd-top">{icon} {match.id}</span>
+        <div className="bk2-tbd-div"/>
+        <span className="bk2-tbd-bot">{match.date} · {match.venue.split(',')[0]}</span>
       </div>
     );
   }
