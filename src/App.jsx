@@ -392,8 +392,10 @@ export default function App(){
         for (const [g, teams] of Object.entries(GROUPS_2026)) {
           if (g === "יזיזות") continue;
           const gMatches = GROUP_MATCHES.filter(m => m.group === g);
-          const allDone = gMatches.every(m => updatedMatches[m.id]?.home != null && !updatedMatches[m.id]?.live);
-          if (!allDone) continue;
+          // Compute live standings once all 3 group matches have scores (even mid-game),
+          // because the last round always kicks off simultaneously.
+          const allHaveScores = gMatches.every(m => updatedMatches[m.id]?.home != null);
+          if (!allHaveScores) continue;
 
           const st = {};
           for (const t of teams) st[t] = {pts:0,gd:0,gf:0};
