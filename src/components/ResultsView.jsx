@@ -125,7 +125,7 @@ export function RevealedBetsView({participants, viewerUid, results, teamNames}){
                       {participants.map(p=>{
                         const picks=p.bets?.groups?.[g]||[];
                         if(!picks.length)return null;
-                        const hits=picks.filter(t=>correct.includes(t)).length;
+                        const hits=(picks[0]===correct[0]?1:0)+(picks[1]===correct[1]?1:0);
                         const pts=hits===2?5:hits===1?2:0;
                         return(
                           <div key={p.uid} className={`rev-bet-chip ${hits===2?"exact":hits===1?"correct":correct.length?"wrong":""}`}>
@@ -214,7 +214,7 @@ export default function ResultsView({participants, viewerUid, results, teamNames
       )}
       {subTab==="groups"&&(
         <div className="cg-grid">
-          {!globalLocked&&<p className="section-note" style={{gridColumn:'1/-1'}}>בחר 2 קבוצות לכל בית · 2נק׳ לאחת | 5נק׳ לשתיים</p>}
+          {!globalLocked&&<p className="section-note" style={{gridColumn:'1/-1'}}>בחר 2 קבוצות לכל בית · 2נק׳ למיקום מדויק | 5נק׳ לשני המיקומים המדויקים</p>}
           {Object.entries(GROUPS_2026).map(([g, teams])=>{
             const st = computeGroupStandings(g, results.matches);
             const sorted = teams.slice().sort((a,b)=>{

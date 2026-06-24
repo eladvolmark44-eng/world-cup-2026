@@ -148,7 +148,7 @@ export function PlayerBetsView({player,viewerUid,results,teamNames}){
                     {teams.map(t=>{
                       const idx=picks.indexOf(t);
                       const correct=results.groups?.[g]||[];
-                      const hit=correct.includes(t)&&picks.includes(t);
+                      const hit=(idx===0&&correct[0]===t)||(idx===1&&correct[1]===t);
                       return(
                         <div key={t} className={`team-btn readonly ${idx>=0?"sel":""} ${hit?"correct":""}`}>
                           {idx===0&&<span className="badge">1</span>}
@@ -277,7 +277,7 @@ export default function BetForm({user, onSave, onSaveMatch, onSaveKoMatch, koMat
       </div>
       {tab==="groups"&&(
         <div className="scroll-area">
-          {!globalLocked&&<p className="section-note">בחר 2 קבוצות לכל בית · 2נק׳ לאחת | 5נק׳ לשתיים</p>}
+          {!globalLocked&&<p className="section-note">בחר 2 קבוצות לכל בית · 2נק׳ למיקום מדויק | 5נק׳ לשני המיקומים המדויקים</p>}
           {Object.entries(GROUPS_2026).map(([g,teams])=>(
             <GroupPicker key={g} groupId={g} teams={teams} picks={bets.groups?.[g]}
               onChange={p=>setGroupPick(g,p)} locked={globalLocked} teamNames={teamNames}/>

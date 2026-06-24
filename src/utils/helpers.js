@@ -79,7 +79,7 @@ export function calcScore(bets={},results={},allP=[]){
     const correct=results.groups?.[g];
     if(!correct?.length) return;
     const picks=bets.groups?.[g]||[];
-    const hits=picks.filter(x=>correct.includes(x)).length;
+    const hits=(picks[0]===correct[0]?1:0)+(picks[1]===correct[1]?1:0);
     if(hits===1)t+=2;if(hits===2)t+=5;
   });
   // Match scores — always, based on whatever results exist
