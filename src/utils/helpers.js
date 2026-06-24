@@ -74,14 +74,14 @@ export function canSeeSpecialBet(viewerUid, ownerUid) {
 export function getDir(h,a){if(+h>+a)return"home";if(+a>+h)return"away";return"draw";}
 export function calcScore(bets={},results={},allP=[]){
   let t=0;
-  // Group picks — only after group stage is fully over
-  if(isGroupStageOver()){
-    Object.keys(GROUPS_2026).forEach(g=>{
-      const picks=bets.groups?.[g]||[],correct=results.groups?.[g]||[];
-      const hits=picks.filter(x=>correct.includes(x)).length;
-      if(hits===1)t+=2;if(hits===2)t+=5;
-    });
-  }
+  // Group picks — award per group as each group's results become known
+  Object.keys(GROUPS_2026).forEach(g=>{
+    const correct=results.groups?.[g];
+    if(!correct?.length) return;
+    const picks=bets.groups?.[g]||[];
+    const hits=picks.filter(x=>correct.includes(x)).length;
+    if(hits===1)t+=2;if(hits===2)t+=5;
+  });
   // Match scores — always, based on whatever results exist
   GROUP_MATCHES.forEach(m=>{
     const bet=bets.matches?.[m.id],real=results.matches?.[m.id];
