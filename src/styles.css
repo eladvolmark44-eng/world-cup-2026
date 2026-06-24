@@ -542,8 +542,9 @@
   .bk2-col-lbl{text-align:center;font-size:.62rem;color:var(--accent,#4a9eff);font-weight:700;white-space:nowrap;letter-spacing:.03em;height:1rem;line-height:1rem;margin-bottom:.35rem;direction:rtl}
   /* col-body holds the bracket content; height is set inline via JS (=8×CARD_H) */
   .bk2-col-body{display:flex;flex-direction:column}
-  /* slot: a vertical space that holds one card centered; height set inline */
-  .bk2-slot{display:flex;align-items:center;justify-content:center}
+  /* slot: a vertical space that holds one card centered; height set inline.
+     width:100% ensures the card inside fills the full column width. */
+  .bk2-slot{display:flex;align-items:center;justify-content:center;width:100%}
   /* pair: exactly 2 slots tall; height set inline */
   .bk2-pair{position:relative;display:flex;flex-direction:column}
   /* connector bracket: runs from card-center in slot-0 to card-center in slot-1.
@@ -556,7 +557,7 @@
   .bk2-sf-r{position:relative}.bk2-sf-r::after{content:'›';position:absolute;left:calc(100% + 5px);top:50%;transform:translateY(-50%);font-size:1.05rem;color:var(--accent,#4a9eff);opacity:.7;pointer-events:none}
   .bk2-sf-l{position:relative}.bk2-sf-l::after{content:'‹';position:absolute;right:calc(100% + 5px);top:50%;transform:translateY(-50%);font-size:1.05rem;color:var(--accent,#4a9eff);opacity:.7;pointer-events:none}
   /* Cards — fixed height shared by all rounds */
-  .bk2-card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;direction:rtl;height:4.8rem;box-sizing:border-box;display:flex;flex-direction:column}
+  .bk2-card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;direction:rtl;height:4.8rem;width:100%;box-sizing:border-box;display:flex;flex-direction:column}
   .bk2-card-tbd{align-items:center;justify-content:center;gap:.2rem;opacity:.55}
   .bk2-card-final{border-color:rgba(255,206,0,.45)!important;opacity:.9;background:linear-gradient(135deg,var(--card),rgba(255,206,0,.07))}
   .bk2-tbd-icon{font-size:.85rem;line-height:1}
