@@ -556,7 +556,7 @@
   .bk2-sf-r{position:relative}.bk2-sf-r::after{content:'›';position:absolute;left:calc(100% + 5px);top:50%;transform:translateY(-50%);font-size:1.05rem;color:var(--accent,#4a9eff);opacity:.7;pointer-events:none}
   .bk2-sf-l{position:relative}.bk2-sf-l::after{content:'‹';position:absolute;right:calc(100% + 5px);top:50%;transform:translateY(-50%);font-size:1.05rem;color:var(--accent,#4a9eff);opacity:.7;pointer-events:none}
   /* Cards — fixed height shared by all rounds */
-  .bk2-card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;direction:rtl;height:3.8rem;box-sizing:border-box;display:flex;flex-direction:column}
+  .bk2-card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;direction:rtl;height:4.8rem;box-sizing:border-box;display:flex;flex-direction:column}
   .bk2-card-tbd{align-items:center;justify-content:center;gap:.2rem;opacity:.55}
   .bk2-card-final{border-color:rgba(255,206,0,.45)!important;opacity:.9;background:linear-gradient(135deg,var(--card),rgba(255,206,0,.07))}
   .bk2-tbd-icon{font-size:.85rem;line-height:1}

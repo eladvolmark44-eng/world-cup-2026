@@ -205,17 +205,16 @@ function ProjCard({match, results, teamNames, isFinal}){
   );
 }
 
-// Card height in rem — all cards share this fixed height.
-// Slot heights double each round so alignment is exact by geometry:
-//   R32 slot=H, R16 slot=2H, QF slot=4H, SF slot=8H → all columns total 8H.
-// The bracket connector ::before runs top:25%→bottom:25% of the pair (=2 slots),
-// which always hits card centers regardless of which round it is.
-const CARD_H=3.8;
+// CARD_H: card height in rem. SLOT_BASE: slot height = card + inter-card gap.
+// Slot heights: R32=SLOT_BASE, R16=2×, QF=4×, SF=8×. All columns total 8×SLOT_BASE.
+// Connector top:25%/bottom:25% always hits card centers: (SLOT_BASE/2)/(2×SLOT_BASE)=25%.
+const CARD_H=4.8;
+const SLOT_BASE=5.6; // CARD_H + 0.8rem gap between cards
 
 // side="r" → connector opens rightward (left half, toward center)
 // side="l" → connector opens leftward (right half, toward center)
 function ProjRound({ids, byId, results, teamNames, label, side}){
-  const slotH=CARD_H*(8/ids.length); // H for R32, 2H for R16, 4H for QF
+  const slotH=SLOT_BASE*(8/ids.length); // SLOT_BASE for R32, 2× for R16, 4× for QF
   const pairs=[];
   for(let i=0;i<ids.length;i+=2) pairs.push([byId[ids[i]],byId[ids[i+1]]]);
   return(
@@ -246,14 +245,14 @@ const R32_R=["M76","M78","M79","M80","M86","M88","M85","M87"];
 const R16_R=["M91","M92","M95","M96"];
 const QF_R=["M99","M100"];
 
-const TOTAL_H=CARD_H*8; // rem — all bracket columns share this exact height
+const TOTAL_H=SLOT_BASE*8; // rem — all bracket columns share this exact height
 
 function BracketProjection({results, teamNames}){
   const byId={};
   for(const m of KO_BRACKET) byId[m.id]=m;
   return(
     <div className="bk2-outer">
-      <p className="section-note">📋 תרשים צפי — מתמלא ככל שבתים מסתיימים. חצים מראים מאיפה מגיע כל מנצח.</p>
+      <p className="section-note">📋 תרשים הנוקאאוט הצפוי לפי תוצאות הבתים — מתעדכן אוטומטית עם סיום כל בית.</p>
       <div className="bk2-scroll">
         <ProjRound ids={R32_L} byId={byId} results={results} teamNames={teamNames} label="32 אחרונות" side="r"/>
         <ProjRound ids={R16_L} byId={byId} results={results} teamNames={teamNames} label="שמינית גמר" side="r"/>
