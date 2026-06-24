@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS, KO_BRACKET } from "../constants/tournament.js";
+import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS, KO_BRACKET, FLAG_MAP } from "../constants/tournament.js";
 import { withFlag, computeGroupStandings, getDefaultMatchDate } from "../utils/helpers.js";
 import { DateNav, MatchRow } from "./common.jsx";
 
@@ -175,10 +175,15 @@ function resolveSlot(slot, results){
   return null;
 }
 
-function ProjRow({slot, results, teamNames}){
+function ProjRow({slot, results, teamNames, showCandidateFlags}){
   const r=resolveSlot(slot, results);
+  const unresolved=!r?.team&&(slot.t==="W"||slot.t==="RU");
+  const candidateFlags= showCandidateFlags&&unresolved&&slot.g&&GROUPS_2026[slot.g]
+    ? GROUPS_2026[slot.g].map(t=>{const n=teamNames?.[t]||t; return FLAG_MAP[n]||'';}).filter(Boolean).join('')
+    : null;
   return(
     <div className="bk2-row">
+      {candidateFlags&&<span className="bk2-flags">{candidateFlags}</span>}
       <span className={`bk2-tn${r?.team?'':' bk2-ph'}`}>
         {r?.team?withFlag(teamNames?.[r.team]||r.team):(r?.label||'·')}
       </span>
@@ -186,7 +191,7 @@ function ProjRow({slot, results, teamNames}){
   );
 }
 
-function ProjCard({match, results, teamNames, isFinal}){
+function ProjCard({match, results, teamNames, isFinal, showFlags}){
   const isWM=match.slots.every(s=>s.t==="WM"||s.t==="LM");
   if(isWM){
     const icon=match.stage==="גמר"?"🏆":match.stage==="מקום שלישי"?"🥉":"⚽";
@@ -200,8 +205,8 @@ function ProjCard({match, results, teamNames, isFinal}){
   }
   return(
     <div className="bk2-card">
-      <ProjRow slot={match.slots[0]} results={results} teamNames={teamNames}/>
-      <ProjRow slot={match.slots[1]} results={results} teamNames={teamNames}/>
+      <ProjRow slot={match.slots[0]} results={results} teamNames={teamNames} showCandidateFlags={showFlags}/>
+      <ProjRow slot={match.slots[1]} results={results} teamNames={teamNames} showCandidateFlags={showFlags}/>
     </div>
   );
 }
@@ -214,7 +219,7 @@ const SLOT_BASE=5.6; // CARD_H + 0.8rem gap between cards
 
 // side="r" → connector opens rightward (left half, toward center)
 // side="l" → connector opens leftward (right half, toward center)
-function ProjRound({ids, byId, results, teamNames, label, side}){
+function ProjRound({ids, byId, results, teamNames, label, side, showFlags}){
   const slotH=SLOT_BASE*(8/ids.length); // SLOT_BASE for R32, 2× for R16, 4× for QF
   const pairs=[];
   for(let i=0;i<ids.length;i+=2) pairs.push([byId[ids[i]],byId[ids[i+1]]]);
@@ -225,10 +230,10 @@ function ProjRound({ids, byId, results, teamNames, label, side}){
         {pairs.map((pair,pi)=>(
           <div className={`bk2-pair bk2-connect-${side}`} key={pi} style={{height:`${slotH*2}rem`}}>
             <div className="bk2-slot" style={{height:`${slotH}rem`}}>
-              <ProjCard match={pair[0]} results={results} teamNames={teamNames}/>
+              <ProjCard match={pair[0]} results={results} teamNames={teamNames} showFlags={showFlags}/>
             </div>
             <div className="bk2-slot" style={{height:`${slotH}rem`}}>
-              <ProjCard match={pair[1]} results={results} teamNames={teamNames}/>
+              <ProjCard match={pair[1]} results={results} teamNames={teamNames} showFlags={showFlags}/>
             </div>
           </div>
         ))}
@@ -255,7 +260,7 @@ function BracketProjection({results, teamNames}){
     <div className="bk2-outer">
       <p className="section-note">📋 תרשים הנוקאאוט הצפוי לפי תוצאות הבתים — מתעדכן אוטומטית עם סיום כל בית.</p>
       <div className="bk2-scroll">
-        <ProjRound ids={R32_L} byId={byId} results={results} teamNames={teamNames} label="32 אחרונות" side="r"/>
+        <ProjRound ids={R32_L} byId={byId} results={results} teamNames={teamNames} label="32 אחרונות" side="r" showFlags/>
         <ProjRound ids={R16_L} byId={byId} results={results} teamNames={teamNames} label="שמינית גמר" side="r"/>
         <ProjRound ids={QF_L}  byId={byId} results={results} teamNames={teamNames} label="רבע גמר" side="r"/>
         <div className="bk2-col bk2-sf-col">
@@ -284,7 +289,7 @@ function BracketProjection({results, teamNames}){
         </div>
         <ProjRound ids={QF_R}  byId={byId} results={results} teamNames={teamNames} label="רבע גמר" side="l"/>
         <ProjRound ids={R16_R} byId={byId} results={results} teamNames={teamNames} label="שמינית גמר" side="l"/>
-        <ProjRound ids={R32_R} byId={byId} results={results} teamNames={teamNames} label="32 אחרונות" side="l"/>
+        <ProjRound ids={R32_R} byId={byId} results={results} teamNames={teamNames} label="32 אחרונות" side="l" showFlags/>
       </div>
     </div>
   );

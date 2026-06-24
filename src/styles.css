@@ -567,6 +567,7 @@
   .bk2-row+.bk2-row{border-top:1px solid var(--border)}
   .bk2-tn{flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bk2-tn.bk2-ph{color:var(--muted);font-style:italic;font-size:.62rem}
+  .bk2-flags{flex-shrink:0;font-size:.75rem;letter-spacing:.05em;margin-left:.25rem;line-height:1}
   /* SF column */
   .bk2-sf-col{width:116px}
   /* Final column */
