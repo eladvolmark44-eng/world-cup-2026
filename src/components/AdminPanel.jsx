@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db, saveParticipant, saveGame } from "../firebase.js";
-import { GROUP_MATCHES } from "../constants/tournament.js";
+import { GROUP_MATCHES, GROUPS_2026 } from "../constants/tournament.js";
 import { API_SOURCES } from "../constants/api.js";
 import { probeApiSource } from "../utils/api.js";
-import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts } from "../utils/helpers.js";
+import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts, withFlag } from "../utils/helpers.js";
 import { NumStepper } from "./common.jsx";
 import { KnockoutBracketView, buildMockKnockoutPreview } from "./StandingsViews.jsx";
 
@@ -201,6 +201,87 @@ function AssistantLockToggle({game, showToast}){
   );
 }
 
+function GroupBetsEditor({participants, showToast}){
+  const [uid, setUid] = useState("");
+  const [group, setGroup] = useState("");
+  const [picks, setPicks] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  const teams = group ? GROUPS_2026[group] || [] : [];
+  const p = participants.find(x => x.uid === uid);
+
+  const selectUid = id => {
+    setUid(id);
+    setGroup("");
+    setPicks([]);
+  };
+  const selectGroup = g => {
+    setGroup(g);
+    const existing = participants.find(x => x.uid === uid)?.bets?.groups?.[g] || [];
+    setPicks(existing.slice(0, 2));
+  };
+  const toggleTeam = t => {
+    if(picks[0] === t) { setPicks(picks.slice(1)); return; }
+    if(picks[1] === t) { setPicks([picks[0]]); return; }
+    if(picks.length < 2) setPicks([...picks, t]);
+  };
+
+  const save = async () => {
+    if(!uid || !group || picks.length !== 2) return;
+    setSaving(true);
+    try {
+      await updateDoc(doc(db,"mundial2026","game","participants",uid),{
+        [`bets.groups.${group}`]: picks,
+      });
+      showToast(`✅ הימור בית ${group} עודכן ל-${p?.name}`);
+    } catch(e) { showToast("❌ "+e.message); }
+    setSaving(false);
+  };
+
+  return(
+    <div className="admin-bet-editor">
+      <div className="admin-bet-title">🏠 עריכת הימורי בתים</div>
+      <div className="admin-bet-selects">
+        <select className="admin-bet-sel" value={uid} onChange={e=>selectUid(e.target.value)}>
+          <option value="">— בחר שחקן —</option>
+          {participants.filter(x=>!x.isBot).map(x=><option key={x.uid} value={x.uid}>{x.name}</option>)}
+        </select>
+        <select className="admin-bet-sel" value={group} onChange={e=>selectGroup(e.target.value)} disabled={!uid}>
+          <option value="">— בחר בית —</option>
+          {Object.keys(GROUPS_2026).map(g=><option key={g} value={g}>בית {g}</option>)}
+        </select>
+      </div>
+      {uid && group && (
+        <>
+          <div style={{fontSize:".65rem",color:"var(--muted)",marginBottom:".3rem",textAlign:"right",direction:"rtl"}}>
+            {picks[0]?`1: ${withFlag(picks[0])}`:"1: —"} · {picks[1]?`2: ${withFlag(picks[1])}`:"2: —"}
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:".35rem",justifyContent:"flex-end"}}>
+            {teams.map(t=>{
+              const pos = picks.indexOf(t);
+              return(
+                <button key={t}
+                  className={`btn-admin-act${pos>=0?" btn-admin-save-bet":""}`}
+                  style={{fontSize:".7rem",padding:".25rem .5rem",position:"relative"}}
+                  onClick={()=>toggleTeam(t)}>
+                  {pos === 0 && <span style={{fontSize:".55rem",marginLeft:".2rem",opacity:.8}}>①</span>}
+                  {pos === 1 && <span style={{fontSize:".55rem",marginLeft:".2rem",opacity:.8}}>②</span>}
+                  {withFlag(t)}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{marginTop:".5rem",textAlign:"left"}}>
+            <button className="btn-admin-save-bet" onClick={save} disabled={saving||picks.length!==2}>
+              {saving?"שומר...":"שמור"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [confirmAction, setConfirmAction] = useState(null);
   const [running, setRunning] = useState(false);
@@ -388,8 +469,9 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
       </div>
       <CardsSection participants={participants} game={game} showToast={showToast}/>
       <AutoBetTagger participants={participants} showToast={showToast}/>
+      <GroupBetsEditor participants={participants} showToast={showToast}/>
       <div className="admin-bet-editor">
-        <div className="admin-bet-title">✏️ עריכת הימור</div>
+        <div className="admin-bet-title">✏️ עריכת הימור משחק</div>
         <div className="admin-bet-selects">
           <select className="admin-bet-sel" value={betUid} onChange={e=>onBetUidChange(e.target.value)}>
             <option value="">— בחר שחקן —</option>
