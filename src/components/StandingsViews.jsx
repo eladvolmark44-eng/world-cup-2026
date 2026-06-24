@@ -179,11 +179,18 @@ function ProjRow({slot, results, teamNames, showCandidateFlags}){
   const r=resolveSlot(slot, results);
   const unresolved=!r?.team&&(slot.t==="W"||slot.t==="RU");
   const candidateFlags= showCandidateFlags&&unresolved&&slot.g&&GROUPS_2026[slot.g]
-    ? GROUPS_2026[slot.g].map(t=>{const n=teamNames?.[t]||t; return FLAG_MAP[n]||'';}).filter(Boolean).join('')
+    ? GROUPS_2026[slot.g].map(t=>FLAG_MAP[teamNames?.[t]||t]||'').filter(Boolean).join(' ')
     : null;
+  if(candidateFlags){
+    return(
+      <div className="bk2-row bk2-row-flags">
+        <span className="bk2-row-lbl">{r?.label||'·'}</span>
+        <span className="bk2-row-emojis">{candidateFlags}</span>
+      </div>
+    );
+  }
   return(
     <div className="bk2-row">
-      {candidateFlags&&<span className="bk2-flags">{candidateFlags}</span>}
       <span className={`bk2-tn${r?.team?'':' bk2-ph'}`}>
         {r?.team?withFlag(teamNames?.[r.team]||r.team):(r?.label||'·')}
       </span>
