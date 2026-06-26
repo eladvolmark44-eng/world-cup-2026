@@ -319,6 +319,10 @@
   .btn-save-match.dirty{border-color:var(--green);color:var(--green);background:rgba(0,216,127,.1)}
   .btn-save-match.done{border-color:var(--green);color:var(--green);background:rgba(0,216,127,.2)}
   .btn-save-match:disabled{opacity:.3;cursor:default}
+  .btn-monkey{background:transparent;border:1.5px solid var(--border);border-radius:8px;padding:.3rem .45rem;font-size:.9rem;cursor:pointer;margin-right:.3rem;flex-shrink:0;line-height:1;transition:all .2s}
+  .btn-monkey-active{border-color:#f4a93a;background:rgba(244,169,58,.12)}
+  .monkey-score{font-size:1.3rem;display:flex;align-items:center;justify-content:center;min-width:60px}
+  .monkey-row{border-color:rgba(244,169,58,.35)!important}
   .saved-row{border-color:rgba(0,216,127,.4) !important}
   .sync-badge{font-size:.72rem;color:var(--green);background:rgba(0,216,127,.1);border:1px solid rgba(0,216,127,.3);border-radius:20px;padding:.2rem .7rem}
 

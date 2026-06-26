@@ -7,7 +7,7 @@ import { SOFA_TEAM_MAP } from "./constants/api.js";
 import { ADMIN_UID, MONKEY_BOT, ASSISTANT_UID } from "./constants/game.js";
 import {
   getPresetBets, calcScore, rankSymbol, isTournamentOver,
-  getLastCompletedMatchDay, hePlayer
+  getLastCompletedMatchDay, hePlayer, isMatchLocked
 } from "./utils/helpers.js";
 import {
   setKoKickoffs, hasMatchWithin30Min, hasMatchWithin2Hours,
@@ -613,6 +613,22 @@ export default function App(){
     const updatedBets={...cur.bets,koMatches:{...cur.bets?.koMatches,[matchId]:matchBet}};
     await saveParticipant({...cur,uid:authUser.uid,bets:updatedBets});
   };
+
+  // Auto-resolve monkey bets: when a match locks and bet is {monkey:true}, generate random scores
+  useEffect(()=>{
+    if(!authUser) return;
+    const me=participants.find(p=>p.uid===authUser.uid);
+    if(!me?.bets?.matches) return;
+    const rnd=()=>Math.floor(Math.random()*Math.random()*5);
+    const toResolve=GROUP_MATCHES.filter(m=>{
+      const b=me.bets.matches[m.id];
+      return b?.monkey===true && b?.home==null && isMatchLocked(m.id, game.results?.matches?.[m.id]);
+    });
+    if(!toResolve.length) return;
+    const updatedMatches={...me.bets.matches};
+    toResolve.forEach(m=>{ updatedMatches[m.id]={home:rnd(),away:rnd(),monkey:true}; });
+    saveParticipant({...me,uid:authUser.uid,bets:{...me.bets,matches:updatedMatches}});
+  },[authUser?.uid, game.results?.matches]);
 
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;
