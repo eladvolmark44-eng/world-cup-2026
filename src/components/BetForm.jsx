@@ -45,19 +45,18 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
 
 export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
   const locked = isMatchLocked(match.id, res);
-  const monkey = savedBet?.monkey === true;
   const matchOdds = !locked && odds?.[`${match.home}_${match.away}`];
-  const [h, setH] = useState(monkey ? null : savedBet?.home ?? null);
-  const [a, setA] = useState(monkey ? null : savedBet?.away ?? null);
+  const [h, setH] = useState(savedBet?.home ?? null);
+  const [a, setA] = useState(savedBet?.away ?? null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(()=>{
-    if(savedBet?.monkey){ setH(null); setA(null); }
-    else { setH(savedBet?.home ?? null); setA(savedBet?.away ?? null); }
-  },[savedBet?.home, savedBet?.away, savedBet?.monkey]);
+    setH(savedBet?.home ?? null);
+    setA(savedBet?.away ?? null);
+  },[savedBet?.home, savedBet?.away]);
 
-  const dirty = !locked && !monkey && h !== null && a !== null &&
+  const dirty = !locked && h !== null && a !== null &&
     (h !== savedBet?.home || a !== savedBet?.away);
 
   const handleSave = async () => {
@@ -68,13 +67,14 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
   };
 
   const handleMonkey = async () => {
-    await onSave(match.id, {monkey: true, home: null, away: null});
+    setH(null); setA(null);
+    await onSave(match.id, {home: null, away: null});
   };
 
   const dir = h!=null && a!=null ? getDir(+h,+a) : null;
   const venue = MATCH_VENUE[match.id] || match.venue || null;
   return(
-    <div className={`match-row ${locked?"locked-row":""} ${saved?"saved-row":""} ${monkey?"monkey-row":""}`}>
+    <div className={`match-row ${locked?"locked-row":""} ${saved?"saved-row":""}`}>
       <div className="match-meta">
         {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · {groupLabel(match.group)}
         {locked ? <span className="lock-badge-sm"> 🔒</span> : <span className="open-badge-sm"> ✏️</span>}
@@ -89,18 +89,15 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
       )}
       <div className="match-body">
         <div className={`team-name ${dir==="home"?"winner":""}`}>{withFlag(teamNames?.[match.home]||match.home)}</div>
-        {monkey
-          ? <div className="score-area monkey-score">🐒</div>
-          : <div className="score-area">
-              <NumStepper value={h} onChange={setH} disabled={locked}/>
-              <span className="colon">:</span>
-              <NumStepper value={a} onChange={setA} disabled={locked}/>
-            </div>
-        }
+        <div className="score-area">
+          <NumStepper value={h} onChange={setH} disabled={locked}/>
+          <span className="colon">:</span>
+          <NumStepper value={a} onChange={setA} disabled={locked}/>
+        </div>
         <div className={`team-name away ${dir==="away"?"winner":""}`}>{withFlag(teamNames?.[match.away]||match.away)}</div>
         {!locked && (
           <>
-            {!monkey&&<button className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`} onClick={handleSave} disabled={!dirty||saving}>{saved?"✓":saving?"...":"💾"}</button>}
+            <button className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`} onClick={handleSave} disabled={!dirty||saving}>{saved?"✓":saving?"...":"💾"}</button>
             <button className="btn-monkey" onClick={handleMonkey} title="קוף תהמר לי">🐒</button>
           </>
         )}

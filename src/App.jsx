@@ -622,7 +622,7 @@ export default function App(){
     const rnd=()=>Math.floor(Math.random()*Math.random()*5);
     const toResolve=GROUP_MATCHES.filter(m=>{
       const b=me.bets.matches[m.id];
-      return b?.monkey===true && b?.home==null && isMatchLocked(m.id, game.results?.matches?.[m.id]);
+      return b?.home==null && b?.away==null && isMatchLocked(m.id, game.results?.matches?.[m.id]);
     });
     if(!toResolve.length) return;
     const updatedMatches={...me.bets.matches};
