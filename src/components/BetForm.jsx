@@ -68,8 +68,7 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
   };
 
   const handleMonkey = async () => {
-    if(monkey) await onSave(match.id, {monkey: false, home: null, away: null});
-    else await onSave(match.id, {monkey: true, home: null, away: null});
+    await onSave(match.id, {monkey: true, home: null, away: null});
   };
 
   const dir = h!=null && a!=null ? getDir(+h,+a) : null;
@@ -102,7 +101,7 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
         {!locked && (
           <>
             {!monkey&&<button className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`} onClick={handleSave} disabled={!dirty||saving}>{saved?"✓":saving?"...":"💾"}</button>}
-            <button className={`btn-monkey${monkey?" btn-monkey-active":""}`} onClick={handleMonkey} title="קוף תהמר לי">🐒</button>
+            <button className="btn-monkey" onClick={handleMonkey} title="קוף תהמר לי">🐒</button>
           </>
         )}
       </div>
