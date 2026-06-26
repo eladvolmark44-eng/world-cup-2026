@@ -67,8 +67,13 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
   };
 
   const handleMonkey = async () => {
-    setH(null); setA(null);
-    await onSave(match.id, {home: null, away: null});
+    const rnd=()=>Math.floor(Math.random()*Math.random()*5);
+    const rh=rnd(), ra=rnd();
+    setH(rh); setA(ra);
+    setSaving(true);
+    await onSave(match.id, {home: rh, away: ra});
+    setSaving(false); setSaved(true);
+    setTimeout(()=>setSaved(false), 1500);
   };
 
   const dir = h!=null && a!=null ? getDir(+h,+a) : null;
