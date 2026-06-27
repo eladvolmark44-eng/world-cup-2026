@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { onSnapshot, collection, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from "firebase/auth";
 import { db, auth, loadGame, saveGame, saveParticipant } from "./firebase.js";
-import { GROUP_MATCHES, GROUPS_2026 } from "./constants/tournament.js";
+import { GROUP_MATCHES, GROUPS_2026, KO_BRACKET } from "./constants/tournament.js";
 import { SOFA_TEAM_MAP } from "./constants/api.js";
 import { ADMIN_UID, MONKEY_BOT, ASSISTANT_UID } from "./constants/game.js";
 import {
@@ -280,6 +280,16 @@ export default function App(){
         const firstWCKickoff = Math.min(...GROUP_MATCHES.filter(m=>m.group!=="יזיזות").map(m=>new Date(m.kickoff).getTime()));
         const wcStarted = Date.now() >= firstWCKickoff - 2*60*60*1000;
 
+        // ISO dates of any match (group or knockout) queued for a forced re-sync —
+        // used to re-fetch that day for both the group and knockout score paths.
+        const forcedDates = forced.map(id => {
+          const gm = GROUP_MATCHES.find(x=>x.id===id);
+          if(gm?.kickoff) return isoDate(new Date(gm.kickoff));
+          const km = KO_BRACKET.find(x=>x.id===id);
+          if(km?.date){ const [d,mo]=km.date.split('/'); return `2026-${mo}-${d}`; }
+          return null;
+        }).filter(Boolean);
+
         let standingsData = { response: [] }; // kept for compatibility, no longer used for standings
 
         // ── MATCHES ────────────────────────────────────────────────
@@ -305,12 +315,8 @@ export default function App(){
               .filter(m => { const t=new Date(m.kickoff).getTime(); return m.group!=="יזיזות" && now >= t - 5*60*1000 && now <= t + SYNC_WINDOW; })
               .map(m => isoDate(new Date(m.kickoff)))
           )];
-          // Also include the date of any match queued for a forced re-sync, so it gets
-          // re-fetched even if it finished long before today's active window.
-          const forcedDates = forced
-            .map(id => { const gm=GROUP_MATCHES.find(x=>x.id===id); return gm?.kickoff ? isoDate(new Date(gm.kickoff)) : null; })
-            .filter(Boolean);
           // Always include today (for freshly started matches), plus any kickoff dates
+          // and the dates of any matches queued for a forced re-sync.
           const wcDates = [...new Set([todayISO, ...activeWCDates, ...forcedDates])];
           for (const iso of wcDates) {
             const ymd = iso.replace(/-/g, '');
@@ -438,8 +444,12 @@ export default function App(){
         }
 
         // ── KNOCKOUT ─────────────────────────────────────────────────
-        const koResults = {};
-        const koMatchesArr = [];
+        // Merge onto stored results (keyed by ESPN apiId) so knockout fixtures + scores
+        // accumulate across days all the way to the final, instead of being wiped to only
+        // today's matches each cycle.
+        const koResults = {...(cur.results?.koResults||{})};
+        const koMap = {};
+        (cur.results?.knockoutMatches||[]).forEach(k=>{ if(k.apiId) koMap[k.apiId]=k; });
 
         if (wcStarted) {
           try{
@@ -448,7 +458,7 @@ export default function App(){
               "Quarterfinals":"רבע גמר","Semifinals":"חצי גמר",
               "3rd Place Playoff":"מקום שלישי","Final":"גמר",
             };
-            for (const iso of [todayISO]) {
+            for (const iso of [...new Set([todayISO, ...forcedDates])]) {
               const ymd = iso.replace(/-/g,'');
               try{
                 const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${ymd}`);
@@ -485,12 +495,15 @@ export default function App(){
                     const winner = hC.winner===true ? "home" : aC.winner===true ? "away" : null;
                     koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive, minute, ...(winner?{winner}:{})};
                   }
-                  koMatchesArr.push(koMatch);
+                  koMap[ev.id] = koMatch;
                 }
               } catch(e) {}
             }
           } catch(e) {}
+        }
+        const koMatchesArr = Object.values(koMap);
 
+        if (wcStarted) {
           // ── TOP SCORER + TOTAL GOALS (WC only, not friendlies) ─────────────
           // topScorer (header) and topScorers (full list) must come from the same
           // fetch and be written in the same updateDoc call below — otherwise two

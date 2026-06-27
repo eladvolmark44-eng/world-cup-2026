@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db, saveParticipant, saveGame } from "../firebase.js";
-import { GROUP_MATCHES, GROUPS_2026 } from "../constants/tournament.js";
+import { GROUP_MATCHES, GROUPS_2026, KO_BRACKET } from "../constants/tournament.js";
 import { API_SOURCES } from "../constants/api.js";
 import { probeApiSource } from "../utils/api.js";
 import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts, withFlag } from "../utils/helpers.js";
@@ -286,8 +286,10 @@ function ForceResyncEditor({game, showToast}){
   const [mid, setMid] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const m = mid ? GROUP_MATCHES.find(x=>x.id===mid) : null;
-  const cur = mid ? game?.results?.matches?.[mid] : null;
+  const gm = mid ? GROUP_MATCHES.find(x=>x.id===mid) : null;
+  const km = mid && !gm ? KO_BRACKET.find(x=>x.id===mid) : null;
+  const m = gm || km;
+  const cur = gm ? game?.results?.matches?.[mid] : null;
   const pending = mid ? game?.forceResync?.[mid] === true : false;
 
   const run = async () => {
@@ -306,13 +308,20 @@ function ForceResyncEditor({game, showToast}){
       <div className="admin-bet-selects">
         <select className="admin-bet-sel" value={mid} onChange={e=>setMid(e.target.value)}>
           <option value="">— בחר משחק —</option>
-          {GROUP_MATCHES.map(x=><option key={x.id} value={x.id}>{x.home} – {x.away} ({x.date})</option>)}
+          <optgroup label="שלב הבתים">
+            {GROUP_MATCHES.map(x=><option key={x.id} value={x.id}>{x.home} – {x.away} ({x.date})</option>)}
+          </optgroup>
+          <optgroup label="נוקאאוט">
+            {KO_BRACKET.map(x=><option key={x.id} value={x.id}>{x.stage} · {x.date} ({x.id})</option>)}
+          </optgroup>
         </select>
       </div>
       {m&&(
         <div className="admin-bet-row">
           <span className="admin-bet-team" dir="rtl">
-            {m.home} {cur?.home!=null?`${cur.away} : ${cur.home}`:"– : –"} {m.away}
+            {gm
+              ? `${gm.home} ${cur?.home!=null?`${cur.away} : ${cur.home}`:"– : –"} ${gm.away}`
+              : `${km.stage} · ${km.date}`}
           </span>
           <button className="btn-admin-save-bet" onClick={run} disabled={busy||pending}>
             {pending?"ממתין...":busy?"...":"סנכרן עכשיו"}
@@ -320,7 +329,7 @@ function ForceResyncEditor({game, showToast}){
         </div>
       )}
       <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:".3rem",textAlign:"right",direction:"rtl"}}>
-        מושך מחדש את התוצאה וכל הנתונים מה-API ודורס את מה ששמור — עוקף את ההגנות שמונעות עדכון.
+        מושך מחדש את התוצאה וכל הנתונים מה-API ודורס את מה ששמור — עוקף את ההגנות שמונעות עדכון. כולל כל משחקי הנוקאאוט עד הגמר.
       </div>
     </div>
   );
