@@ -186,7 +186,7 @@ export const MATCH_VENUE = {
   J6:"אצטדיון AT&T, ארלינגטון",
 };
 
-export const ALL_MATCH_DATES = [...new Set(GROUP_MATCHES.filter(m=>m.date).map(m=>m.date))]
+const GROUP_DATES = [...new Set(GROUP_MATCHES.filter(m=>m.date).map(m=>m.date))]
   .sort((a,b)=>{
     const aT=Math.min(...GROUP_MATCHES.filter(m=>m.date===a&&m.kickoff).map(m=>new Date(m.kickoff).getTime()));
     const bT=Math.min(...GROUP_MATCHES.filter(m=>m.date===b&&m.kickoff).map(m=>new Date(m.kickoff).getTime()));
@@ -292,3 +292,9 @@ export const KO_BRACKET = [
   {id:"M103", stage:"מקום שלישי", date:"18/07", venue:"אצטדיון הארד רוק, מיאמי גרדנס", slots:[{t:"LM",m:"M101"},{t:"LM",m:"M102"}]},
   {id:"M104", stage:"גמר", date:"19/07", venue:"אצטדיון מטלייף, איסט רת'רפורד", slots:[{t:"WM",m:"M101"},{t:"WM",m:"M102"}]},
 ];
+
+// All match days across the tournament (group stage + full knockout bracket),
+// sorted chronologically — drives the schedule date navigation.
+const _parseDM = s => { const [d,m]=s.split('/'); return new Date(2026, parseInt(m)-1, parseInt(d)).getTime(); };
+export const ALL_MATCH_DATES = [...new Set([...GROUP_DATES, ...KO_BRACKET.map(m=>m.date)])]
+  .sort((a,b)=>_parseDM(a)-_parseDM(b));

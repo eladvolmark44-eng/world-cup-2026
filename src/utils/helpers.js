@@ -1,5 +1,5 @@
 import { PLAYER_NAME_HE, findPlayerNameHe } from "../constants/playerNamesHe.js";
-import { GROUPS_2026, GROUP_MATCHES, GROUP_LAST_MATCH, GROUP_STAGE_END_TS, TOURNAMENT_END, FLAG_MAP, KO_POINTS, ALL_MATCH_DATES } from "../constants/tournament.js";
+import { GROUPS_2026, GROUP_MATCHES, GROUP_LAST_MATCH, GROUP_STAGE_END_TS, TOURNAMENT_END, FLAG_MAP, KO_POINTS, ALL_MATCH_DATES, KO_BRACKET } from "../constants/tournament.js";
 import { STRIKER_FLAGS, STRIKER_API_NAMES, PLAYER_HEB } from "../constants/players.js";
 import { PRESET_BETS_BY_NAME, YELLOW_CARD_UID } from "../constants/game.js";
 
@@ -133,6 +133,64 @@ export function calcScoreBreakdown(bets={},results={}){
     }
   });
   return {groups,matches};
+}
+
+// Builds the full knockout fixture list (M73-M104) from KO_BRACKET, resolving each
+// match's teams as they become known: R32 from group results, 3rd-place + later rounds
+// from the actual ESPN fixtures (matched by a known team), winners propagated forward.
+// Returns MatchRow-compatible objects with {home, away, homeLabel, awayLabel, res}.
+export function buildKnockoutSchedule(results={}, teamNames={}){
+  const espn = results.knockoutMatches||[];
+  const koResults = results.koResults||{};
+  const nameOf = t => teamNames?.[t]||t;
+  const byStage = {};
+  espn.forEach(e=>{ (byStage[e.stage] ||= []).push(e); });
+
+  const resolved = {}; // matchId -> {winnerTeam, loserTeam}
+  const out = [];
+
+  const resolveSlotTeam = slot => {
+    if(slot.t==="W"||slot.t==="RU"){
+      const pair=results.groups?.[slot.g];
+      if(pair?.length) return {team: nameOf(slot.t==="W"?pair[0]:pair[1])};
+      return {label:`${slot.t==="W"?"מנצחת":"סגנית"} בית ${slot.g}`};
+    }
+    if(slot.t==="3RD") return {label:`שלישית ${slot.g.join("/")}`};
+    if(slot.t==="WM"){ const r=resolved[slot.m]; return r?.winnerTeam?{team:r.winnerTeam}:{label:`מנצחת ${slot.m}`}; }
+    if(slot.t==="LM"){ const r=resolved[slot.m]; return r?.loserTeam?{team:r.loserTeam}:{label:`מפסידה ${slot.m}`}; }
+    return {label:"—"};
+  };
+
+  for(const bm of KO_BRACKET){
+    const c0=resolveSlotTeam(bm.slots[0]), c1=resolveSlotTeam(bm.slots[1]);
+    let home=c0.team||null, away=c1.team||null;
+    let homeLabel=c0.label||null, awayLabel=c1.label||null;
+    let res=null, kickoff=null, venue=bm.venue, date=bm.date;
+
+    // Find the actual ESPN fixture by matching a known team within this stage
+    const known=[home,away].filter(Boolean);
+    let ef=null;
+    const pool=byStage[bm.stage]||[];
+    if(known.length){
+      ef = pool.find(e=>known.every(k=>e.home===k||e.away===k)) || pool.find(e=>known.some(k=>e.home===k||e.away===k));
+    }
+    if(ef){
+      home=ef.home; away=ef.away; homeLabel=null; awayLabel=null;
+      if(ef.kickoff) kickoff=ef.kickoff;
+      if(ef.venue) venue=ef.venue;
+      const r=koResults[ef.apiId];
+      if(r){
+        res={home:r.home, away:r.away, live:r.live, minute:r.minute};
+        if(!r.live){
+          const wTeam = r.winner==="home"?ef.home : r.winner==="away"?ef.away
+            : r.home>r.away?ef.home : r.away>r.home?ef.away : null;
+          if(wTeam) resolved[bm.id]={winnerTeam:wTeam, loserTeam: wTeam===ef.home?ef.away:ef.home};
+        }
+      }
+    }
+    out.push({id:bm.id, stage:bm.stage, date, venue, kickoff, home, away, homeLabel, awayLabel, res});
+  }
+  return out;
 }
 
 // Returns the display symbol for a player at position i in a sorted ranked array.

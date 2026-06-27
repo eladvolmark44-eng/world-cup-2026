@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS, KO_BRACKET, FLAG_MAP } from "../constants/tournament.js";
-import { withFlag, computeGroupStandings, getDefaultMatchDate } from "../utils/helpers.js";
+import { withFlag, computeGroupStandings, getDefaultMatchDate, buildKnockoutSchedule } from "../utils/helpers.js";
 import { DateNav, MatchRow } from "./common.jsx";
 
 // Builds fake bracket data for a private "what would this look like" preview.
@@ -28,29 +28,29 @@ export function buildMockKnockoutPreview(){
 export function ScheduleView({results,teamNames,odds}){
   const [selDate,setSelDate]=useState(getDefaultMatchDate);
   const [koStage,setKoStage]=useState(null);
-  const koMatches=results.knockoutMatches||[];
   const KO_STAGES=["32 האחרונות","שמינית גמר","רבע גמר","חצי גמר","גמר"];
-  const hasKo=koMatches.length>0;
-  const dateMatches=GROUP_MATCHES.filter(m=>m.date===selDate);
+  // Full knockout fixture list (M73-M104), teams + scores filled in as they're known
+  const koSchedule=buildKnockoutSchedule(results,teamNames);
+  // Group matches + knockout matches for the chosen day
+  const dateMatches=[
+    ...GROUP_MATCHES.filter(m=>m.date===selDate),
+    ...koSchedule.filter(m=>m.date===selDate),
+  ];
   const renderMatch=(m,i)=>{
-    const res=results.matches?.[m.id]||(m.apiId?results.koResults?.[m.apiId]:null);
+    const res=m.res!==undefined?m.res:(results.matches?.[m.id]||(m.apiId?results.koResults?.[m.apiId]:null));
     return <MatchRow key={m.id||i} m={m} res={res} teamNames={teamNames} odds={odds}/>;
   };
   return(
     <div>
       <DateNav selectedDate={selDate} onChange={d=>{setSelDate(d);setKoStage(null);}}/>
-      {hasKo&&(
-        <div className="filter-row" style={{marginTop:".3rem"}}>
-          {KO_STAGES.map(s=>(
-            <button key={s} className={`filter-btn ${koStage===s?"active":""}`} onClick={()=>setKoStage(p=>p===s?null:s)}>{s}</button>
-          ))}
-        </div>
-      )}
+      <div className="filter-row" style={{marginTop:".3rem"}}>
+        {KO_STAGES.map(s=>(
+          <button key={s} className={`filter-btn ${koStage===s?"active":""}`} onClick={()=>setKoStage(p=>p===s?null:s)}>{s}</button>
+        ))}
+      </div>
       <div className="scroll-area">
         {koStage?(
-          koMatches.filter(m=>m.stage===koStage).length>0
-            ?koMatches.filter(m=>m.stage===koStage).map((m,i)=>renderMatch(m,i))
-            :<div className="empty-msg">⏳ השלב טרם החל</div>
+          koSchedule.filter(m=>m.stage===koStage).map((m,i)=>renderMatch(m,i))
         ):(
           dateMatches.length>0
             ?dateMatches.map((m,i)=>renderMatch(m,i))

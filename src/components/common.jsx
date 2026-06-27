@@ -144,8 +144,8 @@ export function MatchRow({m, res, teamNames, odds, onClick}){
   useLiveTick(isLive);
   const isDone = hasRes && !isLive;
   const locked = isMatchLocked(m.id, res);
-  const homeName = teamNames?.[m.home]||m.home||"?";
-  const awayName = teamNames?.[m.away]||m.away||"?";
+  const homeName = m.home ? (teamNames?.[m.home]||m.home) : null;
+  const awayName = m.away ? (teamNames?.[m.away]||m.away) : null;
   const matchOdds = !locked && !hasRes && odds ? odds[`${m.home}_${m.away}`] : null;
   const venue = MATCH_VENUE[m.id] || m.venue || null;
   return(
@@ -157,9 +157,9 @@ export function MatchRow({m, res, teamNames, odds, onClick}){
         {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
       </div>
       <div className="sched-teams">
-        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{withFlag(homeName)}{isLive&&res?.reds?.home>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.home,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
+        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{homeName?withFlag(homeName):<span className="sched-tbd">{m.homeLabel||"?"}</span>}{isLive&&res?.reds?.home>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.home,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
         {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
-        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{isLive&&res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}{withFlag(awayName)}</span>
+        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{isLive&&res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}{awayName?withFlag(awayName):<span className="sched-tbd">{m.awayLabel||"?"}</span>}</span>
       </div>
       {venue&&<div className="sched-venue">🏟️ {venue}</div>}
       {matchOdds&&(

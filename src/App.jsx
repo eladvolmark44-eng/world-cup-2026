@@ -464,7 +464,8 @@ export default function App(){
                     const clockMatch = isLive ? (comp.status?.displayClock||"").match(/(\d+)(\+\d+)?/) : null;
                     const minute = clockMatch ? (clockMatch[1]+(clockMatch[2]||"")) :
                       (isLive && typeof comp.status?.clock==="number" ? String(Math.floor(comp.status.clock/60)) : null);
-                    koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive, minute};
+                    const winner = hC.winner===true ? "home" : aC.winner===true ? "away" : null;
+                    koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive, minute, ...(winner?{winner}:{})};
                   }
                   koMatchesArr.push(koMatch);
                 }
