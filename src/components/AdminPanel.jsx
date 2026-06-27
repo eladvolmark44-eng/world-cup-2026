@@ -282,65 +282,46 @@ function GroupBetsEditor({participants, showToast}){
   );
 }
 
-function MatchResultEditor({game, showToast}){
+function ForceResyncEditor({game, showToast}){
   const [mid, setMid] = useState("");
-  const [home, setHome] = useState(0);
-  const [away, setAway] = useState(0);
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const cur = mid ? game?.results?.matches?.[mid] : null;
   const m = mid ? GROUP_MATCHES.find(x=>x.id===mid) : null;
+  const cur = mid ? game?.results?.matches?.[mid] : null;
+  const pending = mid ? game?.forceResync?.[mid] === true : false;
 
-  const onSelect = id => {
-    setMid(id);
-    const r=game?.results?.matches?.[id];
-    setHome(r?.home??0); setAway(r?.away??0);
-  };
-  const save = async () => {
+  const run = async () => {
     if(!mid) return;
-    setSaving(true);
+    setBusy(true);
     try{
-      await updateDoc(doc(db,"mundial2026","game"),{
-        [`results.matches.${mid}`]: {home, away, live:false, endedAt:Date.now(), manual:true},
-      });
-      showToast("✅ תוצאה עודכנה ידנית");
+      await updateDoc(doc(db,"mundial2026","game"),{[`forceResync.${mid}`]: true});
+      showToast("🔄 בקשת סנכרון נשלחה — יתעדכן תוך ~15 שניות");
     }catch(e){showToast("❌ "+e.message);}
-    setSaving(false);
-  };
-  const clearManual = async () => {
-    if(!mid) return;
-    setSaving(true);
-    try{
-      await updateDoc(doc(db,"mundial2026","game"),{[`results.matches.${mid}.manual`]: false});
-      showToast("✅ הוחזר לסנכרון אוטומטי");
-    }catch(e){showToast("❌ "+e.message);}
-    setSaving(false);
+    setBusy(false);
   };
 
   return(
     <div className="admin-bet-editor">
-      <div className="admin-bet-title">🔧 עריכת תוצאת משחק</div>
+      <div className="admin-bet-title">🔄 סנכרון מחדש של משחק</div>
       <div className="admin-bet-selects">
-        <select className="admin-bet-sel" value={mid} onChange={e=>onSelect(e.target.value)}>
+        <select className="admin-bet-sel" value={mid} onChange={e=>setMid(e.target.value)}>
           <option value="">— בחר משחק —</option>
           {GROUP_MATCHES.map(x=><option key={x.id} value={x.id}>{x.home} – {x.away} ({x.date})</option>)}
         </select>
       </div>
       {m&&(
-        <>
-          <div className="admin-bet-row">
-            <span className="admin-bet-team">{m.home}</span>
-            <input type="number" min="0" max="20" value={home} onChange={e=>setHome(+e.target.value)} className="admin-score-in"/>
-            <span className="admin-bet-sep">:</span>
-            <input type="number" min="0" max="20" value={away} onChange={e=>setAway(+e.target.value)} className="admin-score-in"/>
-            <span className="admin-bet-team">{m.away}</span>
-            <button className="btn-admin-save-bet" onClick={save} disabled={saving}>{saving?"...":"שמור"}</button>
-          </div>
-          {cur?.manual
-            ? <button className="btn-admin-act" style={{marginTop:".4rem"}} onClick={clearManual} disabled={saving}>🔄 בטל נעילה ידנית (החזר לסנכרון אוטומטי)</button>
-            : <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:".3rem",textAlign:"right",direction:"rtl"}}>שמירה תנעל את התוצאה — הסנכרון האוטומטי לא ידרוס אותה</div>}
-        </>
+        <div className="admin-bet-row">
+          <span className="admin-bet-team" dir="rtl">
+            {m.home} {cur?.home!=null?`${cur.away} : ${cur.home}`:"– : –"} {m.away}
+          </span>
+          <button className="btn-admin-save-bet" onClick={run} disabled={busy||pending}>
+            {pending?"ממתין...":busy?"...":"סנכרן עכשיו"}
+          </button>
+        </div>
       )}
+      <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:".3rem",textAlign:"right",direction:"rtl"}}>
+        מושך מחדש את התוצאה וכל הנתונים מה-API ודורס את מה ששמור — עוקף את ההגנות שמונעות עדכון.
+      </div>
     </div>
   );
 }
@@ -532,7 +513,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
       </div>
       <CardsSection participants={participants} game={game} showToast={showToast}/>
       <AutoBetTagger participants={participants} showToast={showToast}/>
-      <MatchResultEditor game={game} showToast={showToast}/>
+      <ForceResyncEditor game={game} showToast={showToast}/>
       <GroupBetsEditor participants={participants} showToast={showToast}/>
       <div className="admin-bet-editor">
         <div className="admin-bet-title">✏️ עריכת הימור משחק</div>

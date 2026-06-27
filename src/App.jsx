@@ -107,7 +107,13 @@ export default function App(){
           const t = new Date(m.kickoff).getTime();
           return now >= t - 5*60*1000 && now <= t + SYNC_WINDOW;
         });
-        if (!hasActiveMatch) return;
+        // Admin-requested forced re-syncs (results.forceResync = {matchId:true}) must run
+        // even outside the normal active-match window and ignoring the throttle.
+        const gameSnap = await getDoc(doc(db,"mundial2026","game"));
+        const cur = gameSnap.exists() ? gameSnap.data() : {};
+        const forced = Object.keys(cur.forceResync||{}).filter(k=>cur.forceResync[k]);
+
+        if (!hasActiveMatch && forced.length===0) return;
 
         // ── LEADER LOCK: only one client calls ESPN at a time ───────
         const syncSnap = await getDoc(doc(db,"mundial2026","sync"));
@@ -115,8 +121,9 @@ export default function App(){
         const lastSync = syncData.lastSync ? new Date(syncData.lastSync).getTime() : 0;
         const secondsSinceLast = (now - lastSync) / 1000;
 
-        // If synced less than 45s ago by someone else, skip — read from Firebase instead
-        if (secondsSinceLast < 20 && syncData.syncedBy !== uid) return;
+        // If synced less than 20s ago by someone else, skip — read from Firebase instead
+        // (a pending forced re-sync overrides the throttle so it runs immediately).
+        if (secondsSinceLast < 20 && syncData.syncedBy !== uid && forced.length===0) return;
 
         // Claim the sync slot
         await setDoc(doc(db,"mundial2026","sync"), {
@@ -275,9 +282,6 @@ export default function App(){
 
         let standingsData = { response: [] }; // kept for compatibility, no longer used for standings
 
-        const gameSnap = await getDoc(doc(db,"mundial2026","game"));
-        const cur = gameSnap.exists() ? gameSnap.data() : {};
-
         // ── MATCHES ────────────────────────────────────────────────
         const byKey = {};
 
@@ -301,8 +305,13 @@ export default function App(){
               .filter(m => { const t=new Date(m.kickoff).getTime(); return m.group!=="יזיזות" && now >= t - 5*60*1000 && now <= t + SYNC_WINDOW; })
               .map(m => isoDate(new Date(m.kickoff)))
           )];
+          // Also include the date of any match queued for a forced re-sync, so it gets
+          // re-fetched even if it finished long before today's active window.
+          const forcedDates = forced
+            .map(id => { const gm=GROUP_MATCHES.find(x=>x.id===id); return gm?.kickoff ? isoDate(new Date(gm.kickoff)) : null; })
+            .filter(Boolean);
           // Always include today (for freshly started matches), plus any kickoff dates
-          const wcDates = [...new Set([todayISO, ...activeWCDates])];
+          const wcDates = [...new Set([todayISO, ...activeWCDates, ...forcedDates])];
           for (const iso of wcDates) {
             const ymd = iso.replace(/-/g, '');
             Object.assign(byKey, await fetchWithFallback(["fifa.world"], iso, ymd));
@@ -350,18 +359,21 @@ export default function App(){
           if (!src) continue;
 
           const prev = updatedMatches[m.id] || {};
-          // Admin manually corrected this result — never let auto-sync overwrite it.
-          if (prev.manual) continue;
-          // Guard against a stale/flaky fallback source (TheSportsDB in particular often
-          // returns placeholder 0-0 for a match it hasn't actually updated yet) overwriting
-          // a score we already confirmed — a real match's goal tally never decreases.
-          if (prev.home != null && prev.away != null && (src.home + src.away) < (prev.home + prev.away)) {
-            continue;
-          }
-          // Once a match is confirmed finished, don't let a fallback source that's still
-          // reporting it live (stale data, or simply hasn't caught up to the FT status) flip it back.
-          if (prev.live === false && prev.home != null && src.live) {
-            continue;
+          const isForced = forced.includes(m.id);
+          // A forced re-sync (admin-requested) bypasses both protective guards below and
+          // overwrites whatever is stored with a clean, fresh read from the sources.
+          if (!isForced) {
+            // Guard against a stale/flaky fallback source (TheSportsDB in particular often
+            // returns placeholder 0-0 for a match it hasn't actually updated yet) overwriting
+            // a score we already confirmed — a real match's goal tally never decreases.
+            if (prev.home != null && prev.away != null && (src.home + src.away) < (prev.home + prev.away)) {
+              continue;
+            }
+            // Once a match is confirmed finished, don't let a fallback source that's still
+            // reporting it live (stale data, or simply hasn't caught up to the FT status) flip it back.
+            if (prev.live === false && prev.home != null && src.live) {
+              continue;
+            }
           }
 
           const newEntry = {
@@ -371,9 +383,13 @@ export default function App(){
             ...(src.minute!=null ? {minute: src.minute} : {}),
           };
 
-          if (prev.home !== newEntry.home || prev.away !== newEntry.away || prev.live !== newEntry.live || prev.minute !== newEntry.minute) {
+          if (isForced || prev.home !== newEntry.home || prev.away !== newEntry.away || prev.live !== newEntry.live || prev.minute !== newEntry.minute) {
             if (prev.live && !newEntry.live) newEntry.endedAt = Date.now();
-            updatedMatches[m.id] = { ...prev, ...newEntry };
+            // Forced: replace cleanly (drop stale score fields) but keep red cards, which
+            // come from a separate hourly source; otherwise merge onto prev.
+            updatedMatches[m.id] = isForced
+              ? { ...newEntry, ...(prev.reds ? {reds: prev.reds} : {}) }
+              : { ...prev, ...newEntry };
             matchChanged = true;
           }
 
@@ -530,6 +546,8 @@ export default function App(){
               ...(goalsChanged ? {actualTotalGoals: wcGoals} : {}),
             };
           }
+          // Clear consumed forced-resync flags so they don't re-run every cycle.
+          if (forced.length) updates.forceResync = Object.fromEntries(forced.map(id=>[id,false]));
           if (Object.keys(updates).length) await saveGame(updates);
         } else {
           // Non-WC path (friendlies only)
