@@ -282,6 +282,69 @@ function GroupBetsEditor({participants, showToast}){
   );
 }
 
+function MatchResultEditor({game, showToast}){
+  const [mid, setMid] = useState("");
+  const [home, setHome] = useState(0);
+  const [away, setAway] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  const cur = mid ? game?.results?.matches?.[mid] : null;
+  const m = mid ? GROUP_MATCHES.find(x=>x.id===mid) : null;
+
+  const onSelect = id => {
+    setMid(id);
+    const r=game?.results?.matches?.[id];
+    setHome(r?.home??0); setAway(r?.away??0);
+  };
+  const save = async () => {
+    if(!mid) return;
+    setSaving(true);
+    try{
+      await updateDoc(doc(db,"mundial2026","game"),{
+        [`results.matches.${mid}`]: {home, away, live:false, endedAt:Date.now(), manual:true},
+      });
+      showToast("✅ תוצאה עודכנה ידנית");
+    }catch(e){showToast("❌ "+e.message);}
+    setSaving(false);
+  };
+  const clearManual = async () => {
+    if(!mid) return;
+    setSaving(true);
+    try{
+      await updateDoc(doc(db,"mundial2026","game"),{[`results.matches.${mid}.manual`]: false});
+      showToast("✅ הוחזר לסנכרון אוטומטי");
+    }catch(e){showToast("❌ "+e.message);}
+    setSaving(false);
+  };
+
+  return(
+    <div className="admin-bet-editor">
+      <div className="admin-bet-title">🔧 עריכת תוצאת משחק</div>
+      <div className="admin-bet-selects">
+        <select className="admin-bet-sel" value={mid} onChange={e=>onSelect(e.target.value)}>
+          <option value="">— בחר משחק —</option>
+          {GROUP_MATCHES.map(x=><option key={x.id} value={x.id}>{x.home} – {x.away} ({x.date})</option>)}
+        </select>
+      </div>
+      {m&&(
+        <>
+          <div className="admin-bet-row">
+            <span className="admin-bet-team">{m.home}</span>
+            <input type="number" min="0" max="20" value={home} onChange={e=>setHome(+e.target.value)} className="admin-score-in"/>
+            <span className="admin-bet-sep">:</span>
+            <input type="number" min="0" max="20" value={away} onChange={e=>setAway(+e.target.value)} className="admin-score-in"/>
+            <span className="admin-bet-team">{m.away}</span>
+            <button className="btn-admin-save-bet" onClick={save} disabled={saving}>{saving?"...":"שמור"}</button>
+          </div>
+          {cur?.manual
+            ? <button className="btn-admin-act" style={{marginTop:".4rem"}} onClick={clearManual} disabled={saving}>🔄 בטל נעילה ידנית (החזר לסנכרון אוטומטי)</button>
+            : <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:".3rem",textAlign:"right",direction:"rtl"}}>שמירה תנעל את התוצאה — הסנכרון האוטומטי לא ידרוס אותה</div>}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPanel({ participants, game, showToast, onTriggerWinner }) {
   const [confirmAction, setConfirmAction] = useState(null);
   const [running, setRunning] = useState(false);
@@ -469,6 +532,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
       </div>
       <CardsSection participants={participants} game={game} showToast={showToast}/>
       <AutoBetTagger participants={participants} showToast={showToast}/>
+      <MatchResultEditor game={game} showToast={showToast}/>
       <GroupBetsEditor participants={participants} showToast={showToast}/>
       <div className="admin-bet-editor">
         <div className="admin-bet-title">✏️ עריכת הימור משחק</div>

@@ -350,6 +350,8 @@ export default function App(){
           if (!src) continue;
 
           const prev = updatedMatches[m.id] || {};
+          // Admin manually corrected this result — never let auto-sync overwrite it.
+          if (prev.manual) continue;
           // Guard against a stale/flaky fallback source (TheSportsDB in particular often
           // returns placeholder 0-0 for a match it hasn't actually updated yet) overwriting
           // a score we already confirmed — a real match's goal tally never decreases.
