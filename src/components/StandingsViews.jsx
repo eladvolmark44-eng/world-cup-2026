@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS, KO_BRACKET, FLAG_MAP } from "../constants/tournament.js";
-import { withFlag, computeGroupStandings, getDefaultMatchDate, buildKnockoutSchedule } from "../utils/helpers.js";
+import { withFlag, computeGroupStandings, getDefaultMatchDate, buildKnockoutSchedule, bestThirdPlace } from "../utils/helpers.js";
 import { DateNav, MatchRow } from "./common.jsx";
 
 // Builds fake bracket data for a private "what would this look like" preview.
@@ -263,9 +263,26 @@ function BracketProjection({results, teamNames}){
   // Resolve advancing/winning teams into every fixture — updates after each match.
   const resById={};
   for(const k of buildKnockoutSchedule(results, teamNames)) resById[k.id]=k;
+  // Best third-placed teams (top 8 qualify) — computed from finished groups.
+  const thirds=bestThirdPlace(results);
   return(
     <div className="bk2-outer">
       <p className="section-note">📋 תרשים הנוקאאוט — הקבוצות נכנסות למשחקים אוטומטית עם סיום כל משחק.</p>
+      {thirds.length>0&&(
+        <div className="third-panel">
+          <div className="third-panel-title">🥉 דירוג מקומות שלישיים — 8 העליונות עולות</div>
+          <div className="third-panel-grid">
+            {thirds.map((t,i)=>(
+              <div key={t.group} className={`third-chip${t.qualified?" third-q":" third-out"}`}>
+                <span className="third-rank">{i+1}</span>
+                <span className="third-team">{withFlag(teamNames?.[t.team]||t.team)}</span>
+                <span className="third-grp">בית {t.group}</span>
+                <span className="third-pts">{t.pts}נק׳ · {t.gd>0?`+${t.gd}`:t.gd}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="bk2-scroll">
         <ProjRound ids={R32_L} byId={byId} resById={resById} teamNames={teamNames} label="32 אחרונות" side="r" showFlags/>
         <ProjRound ids={R16_L} byId={byId} resById={resById} teamNames={teamNames} label="שמינית גמר" side="r"/>

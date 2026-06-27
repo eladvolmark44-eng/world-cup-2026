@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { GROUP_MATCHES, GROUPS_2026, FLAG_MAP } from "../constants/tournament.js";
 import {
   isGlobalLocked, isTournamentOver, withFlag, withStrikerFlag, hePlayer,
-  calcScore, calcScoreBreakdown, rankSymbol, getDir, isChatLocked, getCardCounts, isStillLive
+  calcScore, calcScoreBreakdown, rankSymbol, getDir, isChatLocked, getCardCounts, isStillLive, buildKnockoutSchedule
 } from "../utils/helpers.js";
 import { NumStepper, MatchRow, MatchChat } from "./common.jsx";
 import { ALL_MATCH_DATES } from "../constants/tournament.js";
@@ -348,13 +348,18 @@ export default function HomeView({me, participants, results, teamNames, odds, li
   const lastDoneMatch=GROUP_MATCHES
     .filter(m=>results.matches?.[m.id]?.home!=null&&!isStillLive(m.id, results.matches?.[m.id]))
     .sort((a,b)=>new Date(b.kickoff).getTime()-new Date(a.kickoff).getTime())[0]||null;
-  const nextMatch=liveMatches.length===0&&GROUP_MATCHES
-    .filter(m=>{
-      if(!m.kickoff)return false;
-      const res=results.matches?.[m.id];
-      return res?.home==null;
-    })
-    .sort((a,b)=>new Date(a.kickoff).getTime()-new Date(b.kickoff).getTime())[0];
+  // Upcoming fixtures (group + knockout) that haven't started, soonest first.
+  const koSched=buildKnockoutSchedule(results, teamNames);
+  const upcoming=[
+    ...GROUP_MATCHES.filter(m=>m.kickoff && results.matches?.[m.id]?.home==null),
+    ...koSched.filter(m=>m.kickoff && m.res?.home==null),
+  ].sort((a,b)=>new Date(a.kickoff).getTime()-new Date(b.kickoff).getTime());
+  // Show every match that kicks off at the same (soonest) time, not just one.
+  const nextTs=upcoming[0]?.kickoff ? new Date(upcoming[0].kickoff).getTime() : null;
+  const nextMatches=liveMatches.length===0 && nextTs!=null
+    ? upcoming.filter(m=>new Date(m.kickoff).getTime()===nextTs)
+    : [];
+  const resFor=m=>m.res!==undefined?m.res:results.matches?.[m.id];
   const groupsPickedCount=Object.keys(GROUPS_2026).filter(g=>(myBets.groups?.[g]||[]).length===2).length;
   const ranked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},results,participants)})).sort((a,b)=>b.score-a.score);
   const medals=["🥇","🥈","🥉"];
@@ -405,11 +410,15 @@ export default function HomeView({me, participants, results, teamNames, odds, li
             );
           })}
         </div>
-      ):nextMatch&&(
+      ):nextMatches.length>0&&(
         <div className="home-card">
-          <div className="home-card-title">⏰ המשחק הבא</div>
-          <MatchRow m={nextMatch} res={results.matches?.[nextMatch.id]} teamNames={teamNames} odds={odds} onClick={()=>onMatchClick(nextMatch,results.matches?.[nextMatch.id])}/>
-          <MatchChat matchId={nextMatch.id} locked={isChatLocked(nextMatch.id,results.matches?.[nextMatch.id])} me={me}/>
+          <div className="home-card-title">⏰ {nextMatches.length>1?"המשחקים הבאים":"המשחק הבא"}</div>
+          {nextMatches.map((nm,i)=>(
+            <div key={nm.id} className={i>0?"results-match-block":""}>
+              <MatchRow m={nm} res={resFor(nm)} teamNames={teamNames} odds={odds} onClick={()=>onMatchClick(nm,resFor(nm))}/>
+              <MatchChat matchId={nm.id} locked={isChatLocked(nm.id,resFor(nm))} me={me}/>
+            </div>
+          ))}
         </div>
       )}
       <div className="home-card">

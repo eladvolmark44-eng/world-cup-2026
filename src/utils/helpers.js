@@ -296,6 +296,26 @@ export function resizeImageToDataURL(file,size=400){
   });
 }
 
+// Ranks the third-placed team of every group by FIFA criteria (pts → gd → gf) and marks
+// the best 8 as qualifiers. Each entry is only included once that group has played all 3
+// matches, so the ranking firms up automatically as the group stage completes.
+export function bestThirdPlace(results={}) {
+  const thirds = [];
+  for (const g of Object.keys(GROUPS_2026)) {
+    const st = computeGroupStandings(g, results.matches);
+    const teams = GROUPS_2026[g];
+    if (!teams.every(t => st[t].played === 3)) continue; // group not finished
+    const sorted = teams.slice().sort((a,b)=>{
+      const [sa,sb]=[st[a],st[b]];
+      return sb.pts!==sa.pts?sb.pts-sa.pts:sb.gd!==sa.gd?sb.gd-sa.gd:sb.gf-sa.gf;
+    });
+    const t = sorted[2];
+    thirds.push({ group: g, team: t, pts: st[t].pts, gd: st[t].gd, gf: st[t].gf });
+  }
+  thirds.sort((a,b)=> b.pts!==a.pts?b.pts-a.pts : b.gd!==a.gd?b.gd-a.gd : b.gf-a.gf);
+  return thirds.map((x,i)=>({ ...x, qualified: i < 8 }));
+}
+
 export function computeGroupStandings(letter, matches) {
   const teams = GROUPS_2026[letter];
   const st = {};

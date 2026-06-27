@@ -576,6 +576,17 @@
   .bk2-tn.bk2-win{font-weight:800;color:var(--green)}
   .bk2-sc{flex-shrink:0;font-weight:800;font-size:.72rem;margin-right:.3rem;min-width:.9rem;text-align:center}
   .bk2-card-live{border-color:rgba(255,64,64,.55)!important;box-shadow:0 0 0 1px rgba(255,64,64,.25)}
+  .third-panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.6rem;margin:0 .5rem .8rem;direction:rtl}
+  .third-panel-title{font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;text-align:center}
+  .third-panel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.35rem}
+  .third-chip{display:flex;align-items:center;gap:.35rem;padding:.3rem .45rem;border-radius:7px;border:1px solid var(--border);font-size:.7rem;background:var(--card2)}
+  .third-q{border-color:rgba(0,216,127,.5);background:rgba(0,216,127,.08)}
+  .third-out{opacity:.55}
+  .third-rank{font-weight:800;min-width:1.1rem;text-align:center;color:var(--muted)}
+  .third-q .third-rank{color:var(--green)}
+  .third-team{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .third-grp{font-size:.58rem;color:var(--muted);flex-shrink:0}
+  .third-pts{font-size:.58rem;color:var(--muted);flex-shrink:0}
   .bk2-row-flags{flex-direction:column;align-items:flex-end;justify-content:center;gap:.05rem}
   .bk2-row-lbl{font-size:.58rem;color:var(--muted);font-style:italic;line-height:1.2;direction:rtl}
   .bk2-row-emojis{font-size:.88rem;line-height:1.3;letter-spacing:.08em;direction:ltr}
