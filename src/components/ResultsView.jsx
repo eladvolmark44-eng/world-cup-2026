@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { GROUPS_2026, GROUP_MATCHES } from "../constants/tournament.js";
 import {
   isGlobalLocked, isMatchLocked, getDir, withFlag, getDefaultMatchDate,
-  computeGroupStandings, calcScore, canSeeMatchBet, canSeeGroupBet, canSeeSpecialBet
+  computeGroupStandings, calcScore, canSeeMatchBet, canSeeGroupBet, canSeeSpecialBet, buildKnockoutSchedule
 } from "../utils/helpers.js";
 import { DateNav, MatchRow, LiveBar } from "./common.jsx";
 import { MatchBetRow, PlayerBetsView } from "./BetForm.jsx";
@@ -153,6 +153,8 @@ export default function ResultsView({participants, viewerUid, results, teamNames
   useEffect(()=>{setGroupBets(me?.bets?.groups||{});},[JSON.stringify(me?.bets?.groups)]);
   const globalLocked=isGlobalLocked();
   const dateMatches=GROUP_MATCHES.filter(m=>m.date===revDate);
+  // Knockout fixtures for the selected day (teams + scores resolved as they're known).
+  const koDateMatches=buildKnockoutSchedule(results, teamNames).filter(m=>m.date===revDate);
   return(
     <div className="section">
       <LiveBar results={results} teamNames={teamNames}/>
@@ -164,7 +166,6 @@ export default function ResultsView({participants, viewerUid, results, teamNames
       {subTab==="matches"&&(
         <>
           <DateNav selectedDate={revDate} onChange={setRevDate}/>
-          {dateMatches.length===0&&<div className="empty-msg">No games on this date</div>}
           {dateMatches.map(m=>{
             const real=results.matches?.[m.id];
             const locked=isMatchLocked(m.id, real);
@@ -210,6 +211,12 @@ export default function ResultsView({participants, viewerUid, results, teamNames
               </div>
             );
           })}
+          {koDateMatches.map(m=>(
+            <div key={m.id} className="results-match-block">
+              <MatchRow m={m} res={m.res} teamNames={teamNames} onClick={onMatchClick&&m.home?()=>onMatchClick(m,m.res):undefined}/>
+            </div>
+          ))}
+          {dateMatches.length===0&&koDateMatches.length===0&&<div className="empty-msg">No games on this date</div>}
         </>
       )}
       {subTab==="groups"&&(
