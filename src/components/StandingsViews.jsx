@@ -79,6 +79,9 @@ export function PlayoffEditor({playoffNames,onSave}){
 }
 
 export function GroupStandingsView({results, teamNames}){
+  const thirds = bestThirdPlace(results);
+  const allGroupsDone = thirds.length === Object.keys(GROUPS_2026).length;
+  const advThirdGroups = new Set(thirds.filter(t=>t.qualified).map(t=>t.group));
   return(
     <>
     <div className="st-grid">
@@ -88,7 +91,8 @@ export function GroupStandingsView({results, teamNames}){
           const [sa,sb]=[st[a],st[b]];
           return sb.pts!==sa.pts?sb.pts-sa.pts:sb.gd!==sa.gd?sb.gd-sa.gd:sb.gf-sa.gf;
         });
-        const qualified = results.groups?.[g]||(sorted.every(t=>st[t].played===3)?sorted.slice(0,2):[]);
+        const groupDone = sorted.every(t=>st[t].played===3);
+        const qualified = results.groups?.[g]||(groupDone?sorted.slice(0,2):[]);
         return(
           <div key={g} className="st-group">
             <div className="st-group-hdr">בית {g}</div>
@@ -101,10 +105,21 @@ export function GroupStandingsView({results, teamNames}){
                 {sorted.map((t,i)=>{
                   const s=st[t], q=qualified.includes(t);
                   const isLast=i===sorted.length-1;
+                  // advanced? top2 → yes; 3rd → depends on the global best-thirds ranking; 4th → no.
+                  let adv=null;
+                  if(groupDone){
+                    if(i<2) adv=true;
+                    else if(i===2) adv = allGroupsDone ? advThirdGroups.has(g) : null;
+                    else adv=false;
+                  }
                   return(
                     <tr key={t} className={`${q?'st-q':''} ${isLast?'st-relegate':''}`}>
                       <td className="st-num">{i+1}</td>
-                      <td className="st-tc">{withFlag(teamNames?.[t]||t)}</td>
+                      <td className="st-tc">
+                        {adv===true&&<span className="adv-dot adv-yes"/>}
+                        {adv===false&&<span className="adv-dot adv-no"/>}
+                        {withFlag(teamNames?.[t]||t)}
+                      </td>
                       <td>{s.played}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td>
                       <td className={s.gd>0?'st-gd-pos':s.gd<0?'st-gd-neg':''}>{s.gd>0?'+':''}{s.gd}</td>
                       <td className="st-ptv">{s.pts}</td>

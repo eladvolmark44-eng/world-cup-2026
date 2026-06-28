@@ -145,6 +145,37 @@ export function calcScoreBreakdown(bets={},results={}){
   return {groups,matches};
 }
 
+// Seats the 8 best third-placed teams into the 8 Round-of-32 fixtures that have a "3RD"
+// slot, respecting each slot's eligible-groups list (FIFA's allocation constraint). Returns
+// { [matchId]: thirdPlaceTeamName }. Empty until the group stage is complete (all 12 thirds
+// ranked). The seating is a constraint-valid bipartite matching; ESPN's published draw, when
+// available, overrides it in buildKnockoutSchedule. Either way the bet is on the scoreline of
+// "group-winner vs 3rd", so the exact 3rd-place identity never affects betting or scoring.
+export function assignThirdPlace(results={}, nameOf=(t=>t)){
+  const thirds = bestThirdPlace(results).filter(t=>t.qualified);
+  if(thirds.length < 8) return {};
+  const qualGroups = thirds.map(t=>t.group);
+  const teamByGroup = {}; thirds.forEach(t=>{ teamByGroup[t.group]=nameOf(t.team); });
+  const slots = KO_BRACKET
+    .filter(m=>m.slots.some(s=>s.t==="3RD"))
+    .map(m=>({id:m.id, eligible:m.slots.find(s=>s.t==="3RD").g}));
+  // Bipartite matching (Kuhn's): each slot ↔ qualifying groups in its eligible list.
+  const adj = slots.map(s=> s.eligible.filter(g=>qualGroups.includes(g)).slice().sort());
+  const groupToSlot = {}; // group letter -> slot index
+  const augment = (si, seen) => {
+    for(const g of adj[si]){
+      if(seen.has(g)) continue;
+      seen.add(g);
+      if(groupToSlot[g]===undefined || augment(groupToSlot[g], seen)){ groupToSlot[g]=si; return true; }
+    }
+    return false;
+  };
+  for(let i=0;i<slots.length;i++) augment(i, new Set());
+  const out = {};
+  for(const [g,si] of Object.entries(groupToSlot)) out[slots[si].id]=teamByGroup[g];
+  return out;
+}
+
 // Builds the full knockout fixture list (M73-M104) from KO_BRACKET, resolving each
 // match's teams as they become known: R32 from group results, 3rd-place + later rounds
 // from the actual ESPN fixtures (matched by a known team), winners propagated forward.
@@ -158,21 +189,28 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
 
   const resolved = {}; // matchId -> {winnerTeam, loserTeam}
   const out = [];
+  // Computed third-place seating (matchId -> 3rd-place team) once the group stage is done,
+  // so the 8 third-place R32 fixtures open immediately instead of waiting for ESPN's draw.
+  const thirdByMatch = assignThirdPlace(results, nameOf);
 
-  const resolveSlotTeam = slot => {
+  const resolveSlotTeam = (slot, matchId) => {
     if(slot.t==="W"||slot.t==="RU"){
       const pair=results.groups?.[slot.g];
       if(pair?.length) return {team: nameOf(slot.t==="W"?pair[0]:pair[1])};
       return {label:`${slot.t==="W"?"מנצחת":"סגנית"} בית ${slot.g}`};
     }
-    if(slot.t==="3RD") return {label:`שלישית ${slot.g.join("/")}`};
+    if(slot.t==="3RD"){
+      const t=thirdByMatch[matchId];
+      if(t) return {team:t};
+      return {label:`שלישית ${slot.g.join("/")}`};
+    }
     if(slot.t==="WM"){ const r=resolved[slot.m]; return r?.winnerTeam?{team:r.winnerTeam}:{label:`מנצחת ${slot.m}`}; }
     if(slot.t==="LM"){ const r=resolved[slot.m]; return r?.loserTeam?{team:r.loserTeam}:{label:`מפסידה ${slot.m}`}; }
     return {label:"—"};
   };
 
   for(const bm of KO_BRACKET){
-    const c0=resolveSlotTeam(bm.slots[0]), c1=resolveSlotTeam(bm.slots[1]);
+    const c0=resolveSlotTeam(bm.slots[0], bm.id), c1=resolveSlotTeam(bm.slots[1], bm.id);
     let home=c0.team||null, away=c1.team||null;
     let homeLabel=c0.label||null, awayLabel=c1.label||null;
     let res=null, kickoff=null, venue=bm.venue, date=bm.date;

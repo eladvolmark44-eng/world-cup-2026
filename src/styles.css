@@ -511,6 +511,9 @@
   .st-gd-neg{color:var(--red)}
   .st-q{background:rgba(0,216,127,.06)}
   .st-q .st-num::after{content:"↑";font-size:.58rem;color:var(--green)}
+  .adv-dot{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;margin-left:.35rem;vertical-align:middle;flex-shrink:0}
+  .adv-yes{background:var(--green,#00d87f)}
+  .adv-no{background:#ff4040}
   @media(min-width:800px){
     .cg-card-hdr,.st-group-hdr{font-size:1rem;padding:.5rem .9rem}
     .st-table{font-size:.92rem}
