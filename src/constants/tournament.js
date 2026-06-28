@@ -12,6 +12,14 @@ export const GROUPS_2026 = {
   K: ["פורטוגל","אוזבקיסטן","קולומביה","קונגו דמוקרטית"],
   L: ["אנגליה","קרואטיה","גאנה","פנמה"],
 };
+// Manual result corrections. When an automatic source is confirmed wrong, the
+// value here always wins and is never clobbered by the next sync cycle. Keyed by
+// our internal match id; home/away are oriented to GROUP_MATCHES (home/away).
+export const RESULT_OVERRIDES = {
+  // G5 מצרים–איראן ended 1-1 (draw). API-Football mis-reported an Iran win.
+  G5: { home: 1, away: 1 },
+};
+
 export const ALL_TEAMS = Object.values(GROUPS_2026).flat();
 // Only real teams (no playoff placeholders) for champion picker
 export const REAL_TEAMS = ALL_TEAMS.filter(t => !t.startsWith("פלייאוף"));

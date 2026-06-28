@@ -288,10 +288,17 @@ export default async function handler(req, res) {
       {id:"J6",home:"ירדן",away:"ארגנטינה"},
     ];
 
+    // Hand-corrected results that always win over the API (mirror of
+    // RESULT_OVERRIDES in src/constants/tournament.js — keep both in sync).
+    const RESULT_OVERRIDES = {
+      G5: { home: 1, away: 1 }, // מצרים–איראן ended 1-1; API mis-reported an Iran win
+    };
+
     const updatedMatches = { ...currentResults.matches };
     let updatedCount = 0;
 
     for (const m of GROUP_MATCHES) {
+      if (RESULT_OVERRIDES[m.id]) continue; // never let the API touch a corrected result
       const key = `${m.home}_${m.away}`;
       if (matches[key]) {
         const prev = currentResults.matches?.[m.id];
@@ -319,6 +326,12 @@ export default async function handler(req, res) {
         };
         updatedCount++;
       }
+    }
+
+    // Apply hand-corrected results last so the API can never clobber them.
+    for (const [id, ov] of Object.entries(RESULT_OVERRIDES)) {
+      const prev = updatedMatches[id] || {};
+      updatedMatches[id] = { ...prev, home: ov.home, away: ov.away, live: false, status: "FT" };
     }
 
     // Save to Firebase

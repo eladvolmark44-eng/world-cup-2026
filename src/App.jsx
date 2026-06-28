@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { onSnapshot, collection, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from "firebase/auth";
 import { db, auth, loadGame, saveGame, saveParticipant } from "./firebase.js";
-import { GROUP_MATCHES, GROUPS_2026, KO_BRACKET } from "./constants/tournament.js";
+import { GROUP_MATCHES, GROUPS_2026, KO_BRACKET, RESULT_OVERRIDES } from "./constants/tournament.js";
 import { SOFA_TEAM_MAP } from "./constants/api.js";
 import { ADMIN_UID, MONKEY_BOT, ASSISTANT_UID } from "./constants/game.js";
 import {
@@ -116,6 +116,21 @@ export default function App(){
         const gameSnap = await getDoc(doc(db,"mundial2026","game"));
         const cur = gameSnap.exists() ? gameSnap.data() : {};
         const forced = Object.keys(cur.forceResync||{}).filter(k=>cur.forceResync[k]);
+
+        // Reconcile manual result overrides immediately, even outside active match
+        // windows — a hand-correction must take effect without waiting for a live game.
+        {
+          const om = {};
+          for (const [id, ov] of Object.entries(RESULT_OVERRIDES)) {
+            const prev = cur.results?.matches?.[id];
+            if (!prev || prev.home !== ov.home || prev.away !== ov.away || prev.live) {
+              om[id] = { ...(prev||{}), home: ov.home, away: ov.away, live: false, status: "FT", endedAt: prev?.endedAt ?? Date.now() };
+            }
+          }
+          if (Object.keys(om).length) {
+            await saveGame({ results: { ...cur.results, matches: { ...(cur.results?.matches||{}), ...om } } });
+          }
+        }
 
         if (!hasActiveMatch && forced.length===0) return;
 
@@ -378,6 +393,7 @@ export default function App(){
         }
 
         for (const m of GROUP_MATCHES) {
+          if (RESULT_OVERRIDES[m.id]) continue; // hand-corrected result wins; never let the API touch it
           const key = `${m.home}_${m.away}`;
           const src = byKey[key] || fdFallback[key];
           if (!src) continue;
@@ -424,6 +440,17 @@ export default function App(){
             if (!existing || existing.home !== afSrc.reds.home || existing.away !== afSrc.reds.away) {
               redUpdates[`results.matches.${m.id}.reds`] = afSrc.reds;
             }
+          }
+        }
+
+        // ── Manual result overrides ──────────────────────────────────
+        // Force hand-corrected results onto the stored data so standings,
+        // advancement and per-user scoring all read the right number.
+        for (const [id, ov] of Object.entries(RESULT_OVERRIDES)) {
+          const prev = updatedMatches[id] || {};
+          if (prev.home !== ov.home || prev.away !== ov.away || prev.live) {
+            updatedMatches[id] = { ...prev, home: ov.home, away: ov.away, live: false, status: "FT", endedAt: prev.endedAt ?? Date.now() };
+            matchChanged = true;
           }
         }
 
