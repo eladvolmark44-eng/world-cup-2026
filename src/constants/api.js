@@ -91,7 +91,6 @@ export const SOFA_TEAM_MAP = {
   "North Macedonia":"מקדוניה הצפונית","Republic of Ireland":"אירלנד",
 };
 
-const AF_KEY = import.meta.env?.VITE_AF_KEY || "";
 const fdProxy = path => `/api/fd-proxy?path=${encodeURIComponent(path)}`;
 
 // ── API health checks (admin panel) ─────────────────────────────────────────
@@ -116,8 +115,8 @@ export const API_SOURCES = [
     count:d=>d?.events?.length||0,
   },
   {
-    id:"sofa", label:"SofaScore · תוצאות חיות", needsToken:false,
-    url:()=>"https://api.sofascore.com/api/v1/sport/football/events/live",
+    id:"sofa", label:"SofaScore · תוצאות חיות", needsToken:true,
+    url:()=>`/api/sofa-proxy?path=${encodeURIComponent("/sport/football/events/live")}`,
     count:d=>d?.events?.length||0,
   },
   {
@@ -127,18 +126,8 @@ export const API_SOURCES = [
   },
   {
     id:"apifootball", label:"API-Football · אדומים + גיבוי", needsToken:true,
-    url:()=>"https://v3.football.api-sports.io/status",
-    headers:()=>({"x-apisports-key":AF_KEY}),
-    // /status doesn't consume the daily quota and reports remaining requests.
-    classify:(status,d)=>{
-      if(status===401||status===403) return {level:"error",msg:"טוקן לא תקין / נחסם"};
-      const errs=d?.errors;
-      const hasErrs=errs && (Array.isArray(errs)?errs.length:Object.keys(errs).length);
-      if(hasErrs) return {level:"error",msg:"שגיאה מה-API",detail:JSON.stringify(errs)};
-      const reqs=d?.response?.requests;
-      if(reqs) return {level:reqs.current>=reqs.limit_day?"warn":"ok",msg:`תקין · ${reqs.current}/${reqs.limit_day} בקשות היום`};
-      return {level:"warn",msg:"מגיב אך ללא נתוני מכסה"};
-    },
+    url:()=>`/api/af-proxy?date=${todayISOForProbe()}`,
+    count:d=>Array.isArray(d?.response)?d.response.length:0,
   },
   {
     id:"footballdata", label:"football-data.org · גיבוי WC", needsToken:true,

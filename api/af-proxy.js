@@ -9,8 +9,9 @@ export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const { date, key } = req.query;
-  // Allow a server-side env key too, so the client doesn't have to ship one.
-  const apiKey = key || process.env.AF_KEY || "";
+  // Prefer the server-side env key (API_FOOTBALL_KEY) so the client never ships a key;
+  // fall back to a client-passed key or the alt AF_KEY name.
+  const apiKey = process.env.API_FOOTBALL_KEY || process.env.AF_KEY || key || "";
   if (!apiKey) return res.status(400).json({ error: "missing key" });
   if (!date) return res.status(400).json({ error: "missing date" });
 

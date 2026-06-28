@@ -20,12 +20,6 @@ import MatchDetailView from "./components/MatchViews.jsx";
 import ResultsView from "./components/ResultsView.jsx";
 import AdminPanel, { ProfileEditModal, AssistantPanel } from "./components/AdminPanel.jsx";
 
-const AF_KEYS = [
-  import.meta.env?.VITE_AF_KEY,
-  import.meta.env?.VITE_AF_KEY_2,
-  import.meta.env?.VITE_AF_KEY_3,
-].filter(Boolean);
-
 export default function App(){
   const [authUser,setAuthUser]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
@@ -260,37 +254,31 @@ export default function App(){
             const d=await r.json();
             if(d.events?.length) mergeBetter(merged, parseSofaScore(d.events));
           }catch(e){}
-          // 4. API-Football — rate-limited to once per hour; rotate keys when quota exhausted
+          // 4. API-Football — via same-origin proxy (key lives server-side in API_FOOTBALL_KEY).
+          // Free tier is quota-limited, so only fetch today's date and at most once/hour.
           const lastAF = syncData.lastApiFootballSync ? new Date(syncData.lastApiFootballSync).getTime() : 0;
-          if (Date.now() - lastAF > 60 * 60 * 1000 && AF_KEYS.length) {
-            const exhausted = syncData.exhaustedAfKeys?.[iso] || [];
-            const activeKey = AF_KEYS.find(k => !exhausted.includes(k));
-            if (activeKey) {
-              try{
-                const r=await fetch(`/api/af-proxy?date=${iso}&key=${encodeURIComponent(activeKey)}`);
-                const d=await r.json();
-                // Detect quota exhaustion
-                const errs=d?.errors;
-                const isQuotaErr=errs&&(Array.isArray(errs)?errs.length:Object.keys(errs).length);
-                if(isQuotaErr){
-                  // Mark this key as exhausted for today, try next key on next cycle
-                  await setDoc(doc(db,"mundial2026","sync"),{exhaustedAfKeys:{...syncData.exhaustedAfKeys,[iso]:[...exhausted,activeKey]}},{merge:true});
-                } else {
-                  for(const f of(d.response||[])){
-                    const{fixture:fi,teams,goals}=f;
-                    const s=fi.status.short;
-                    const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
-                    if((fin||live)&&goals.home!=null&&goals.away!=null){
-                      const minute=live ? (fi.status.elapsed??null) : null;
-                      const afRes={};
-                      addBothKeys(afRes,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
-                      mergeBetter(merged, afRes);
-                    }
+          if (iso === todayISO && Date.now() - lastAF > 60 * 60 * 1000) {
+            try{
+              const r=await fetch(`/api/af-proxy?date=${iso}`);
+              const d=await r.json();
+              const errs=d?.errors;
+              const isQuotaErr=errs&&(Array.isArray(errs)?errs.length:Object.keys(errs).length);
+              if(!isQuotaErr){
+                for(const f of(d.response||[])){
+                  const{fixture:fi,teams,goals}=f;
+                  const s=fi.status.short;
+                  const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
+                  if((fin||live)&&goals.home!=null&&goals.away!=null){
+                    const minute=live ? (fi.status.elapsed??null) : null;
+                    const afRes={};
+                    addBothKeys(afRes,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+                    mergeBetter(merged, afRes);
                   }
-                  await setDoc(doc(db,"mundial2026","sync"),{lastApiFootballSync:new Date().toISOString()},{merge:true});
                 }
-              }catch(e){}
-            }
+              }
+              // Mark synced either way so a quota error doesn't cause repeated hammering.
+              await setDoc(doc(db,"mundial2026","sync"),{lastApiFootballSync:new Date().toISOString()},{merge:true});
+            }catch(e){}
           }
           return merged;
         };
