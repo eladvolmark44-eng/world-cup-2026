@@ -483,6 +483,16 @@ export default function App(){
                       stage = heb2; break;
                     }
                   }
+                  const dateStr = ev.date ? new Date(ev.date).toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit"}) : "";
+                  // ESPN's note text isn't always present/parseable — fall back to inferring the
+                  // stage from the fixture date against the official bracket, so knockout matches
+                  // are never silently dropped.
+                  if (!stage) {
+                    const dm = ev.date
+                      ? `${String(new Date(ev.date).getDate()).padStart(2,'0')}/${String(new Date(ev.date).getMonth()+1).padStart(2,'0')}`
+                      : null;
+                    stage = KO_BRACKET.find(k=>k.date===dm)?.stage || null;
+                  }
                   if (!stage) continue;
                   const hC = comp.competitors?.find(c=>c.homeAway==="home");
                   const aC = comp.competitors?.find(c=>c.homeAway==="away");
@@ -490,7 +500,6 @@ export default function App(){
                   const state = comp.status?.type?.state;
                   const isFinished = state === "post";
                   const isLive = state === "in";
-                  const dateStr = ev.date ? new Date(ev.date).toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit"}) : "";
                   const venueObj = comp?.venue;
                   const venue = venueObj?.fullName ? `${venueObj.fullName}${venueObj.address?.city ? ', '+venueObj.address.city : ''}` : null;
                   const koMatch = {

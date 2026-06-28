@@ -140,7 +140,7 @@ function useLiveTick(active){
 
 export function MatchRow({m, res, teamNames, odds, onClick}){
   const hasRes = res?.home!=null && res?.away!=null;
-  const isLive = isStillLive(m.id, res);
+  const isLive = isStillLive(m.id, res, m.kickoff);
   useLiveTick(isLive);
   const isDone = hasRes && !isLive;
   const locked = isMatchLocked(m.id, res);

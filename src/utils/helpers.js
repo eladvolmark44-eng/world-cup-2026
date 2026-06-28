@@ -50,11 +50,15 @@ export function isGlobalLocked() { return now() >= new Date("2026-06-11T22:00:00
 // flaky third-party APIs into leaving (or flipping back) a finished match's live flag to true —
 // this overrides that regardless of what's stored, so the UI never gets stuck showing "live".
 const MAX_LIVE_MS = 3 * 60 * 60 * 1000;
-export function isStillLive(matchId, matchRes) {
+export function isStillLive(matchId, matchRes, kickoff) {
   if (matchRes?.live !== true) return false;
   const m = GROUP_MATCHES.find(g => g.id === matchId);
-  if (!m?.kickoff) return true;
-  return now() < new Date(m.kickoff).getTime() + MAX_LIVE_MS;
+  // Group matches: 3h ceiling. Knockout (not in GROUP_MATCHES) can have extra time +
+  // penalties, so allow 4.5h from the fixture's kickoff when we know it; never "forever".
+  const ko = !m;
+  const k = m?.kickoff || kickoff;
+  if (!k) return ko ? false : true;
+  return now() < new Date(k).getTime() + (ko ? 4.5*60*60*1000 : MAX_LIVE_MS);
 }
 
 export function isGroupRevealed(group) { return now() >= new Date(GROUP_LAST_MATCH[group]).getTime(); }
