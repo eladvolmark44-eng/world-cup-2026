@@ -152,18 +152,22 @@ export function calcScoreBreakdown(bets={},results={}){
 // available, overrides it in buildKnockoutSchedule. Either way the bet is on the scoreline of
 // "group-winner vs 3rd", so the exact 3rd-place identity never affects betting or scoring.
 export function assignThirdPlace(results={}, nameOf=(t=>t)){
-  const thirds = bestThirdPlace(results).filter(t=>t.qualified);
-  if(thirds.length < 8) return {};
-  const qualGroups = thirds.map(t=>t.group);
-  const teamByGroup = {}; thirds.forEach(t=>{ teamByGroup[t.group]=nameOf(t.team); });
+  const all = bestThirdPlace(results);
+  if(all.filter(t=>t.qualified).length < 8) return {};
+  // Third-placed team for every finished group (used for the pinned seatings, which
+  // we trust even if the auto-ranking and the stored data momentarily disagree).
+  const teamByGroup = {}; all.forEach(t=>{ teamByGroup[t.group]=nameOf(t.team); });
+  // Groups whose third advanced, per the live ranking — used only for the matching.
+  const qualGroups = all.filter(t=>t.qualified).map(t=>t.group);
 
   const out = {};
   const usedGroups = new Set();
   const usedSlots = new Set();
   // Apply the confirmed official FIFA seatings first (the generic matching below
-  // only finds *a* valid assignment, not necessarily FIFA's), then match the rest.
+  // only finds *a* valid assignment, not necessarily FIFA's). These are pinned
+  // unconditionally — they are the ground-truth draw — then we match the rest.
   for(const [mid, g] of Object.entries(THIRD_SEAT_OVERRIDE)){
-    if(qualGroups.includes(g)){ out[mid]=teamByGroup[g]; usedGroups.add(g); usedSlots.add(mid); }
+    if(teamByGroup[g]){ out[mid]=teamByGroup[g]; usedGroups.add(g); usedSlots.add(mid); }
   }
 
   const slots = KO_BRACKET
