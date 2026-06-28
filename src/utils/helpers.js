@@ -37,11 +37,14 @@ export function isChatLocked(matchId, matchRes) {
   if (matchRes.endedAt) return now() >= matchRes.endedAt + 5 * 60 * 1000;
   return true; // finished with no recorded end time (legacy) — treat as already locked
 }
-export function isMatchLocked(matchId, matchRes) {
+export function isMatchLocked(matchId, matchRes, kickoff) {
   if (matchRes?.live === true || matchRes?.home != null) return true;
-  // Safety fallback: 20min after scheduled kickoff in case sync is delayed
+  // Group matches: lock 20min after scheduled kickoff (safety fallback when sync is delayed).
   const m = GROUP_MATCHES.find(g => g.id === matchId);
-  return m?.kickoff ? now() >= new Date(m.kickoff).getTime() + 20*60*1000 : true;
+  if (m?.kickoff) return now() >= new Date(m.kickoff).getTime() + 20*60*1000;
+  // Knockout matches aren't in GROUP_MATCHES — lock at their kickoff when provided.
+  if (kickoff) return now() >= new Date(kickoff).getTime();
+  return true;
 }
 export function isGlobalLocked() { return now() >= new Date("2026-06-11T22:00:00+03:00").getTime(); }
 

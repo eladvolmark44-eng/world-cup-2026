@@ -44,7 +44,7 @@ function GroupPicker({groupId,teams,picks,onChange,locked,teamNames}){
 }
 
 export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
-  const locked = isMatchLocked(match.id, res);
+  const locked = isMatchLocked(match.id, res, match.kickoff);
   const matchOdds = !locked && odds?.[`${match.home}_${match.away}`];
   const [h, setH] = useState(savedBet?.home ?? null);
   const [a, setA] = useState(savedBet?.away ?? null);

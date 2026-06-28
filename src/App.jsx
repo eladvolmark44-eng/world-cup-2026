@@ -502,7 +502,8 @@ export default function App(){
                       stage = heb2; break;
                     }
                   }
-                  const dateStr = ev.date ? new Date(ev.date).toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit"}) : "";
+                  // Use DD/MM (slashes) to match group-match dates and the date navigator.
+                  const dateStr = ev.date ? `${String(new Date(ev.date).getDate()).padStart(2,'0')}/${String(new Date(ev.date).getMonth()+1).padStart(2,'0')}` : "";
                   // ESPN's note text isn't always present/parseable — fall back to inferring the
                   // stage from the fixture date against the official bracket, so knockout matches
                   // are never silently dropped.
@@ -797,6 +798,7 @@ export default function App(){
               teamNames={teamNames}
               me={me}
               onSaveMatch={handleSaveMatchBet}
+              onSaveKoMatch={handleSaveKoMatchBet}
               onSaveBets={handleSaveBets}
               odds={odds}
               subTab={resultsSubTab}
