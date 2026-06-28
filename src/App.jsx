@@ -364,6 +364,11 @@ export default function App(){
             }catch(e){}
           }
         }
+        // football-data.org is currently the most reliable working source — let its finished/
+        // higher-score results OVERRIDE a stale or frozen entry from ESPN (which otherwise wins
+        // just by being keyed first). The per-match regression guard then locks the corrected
+        // score in so ESPN can't re-freeze it.
+        mergeBetter(byKey, fdFallback);
 
         // ── Match state updates ──────────────────────────────────────
         const updatedMatches = {...(cur.results?.matches||{})};
