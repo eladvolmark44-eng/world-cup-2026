@@ -103,10 +103,20 @@ export default function App(){
         // 10h window: covers live play (2h) + overnight catchup if midnight sync was missed
         const now = Date.now();
         const SYNC_WINDOW = 10 * 60 * 60 * 1000;
-        const hasActiveMatch = GROUP_MATCHES.some(m => {
+        const hasActiveGroupMatch = GROUP_MATCHES.some(m => {
           const t = new Date(m.kickoff).getTime();
           return now >= t - 5*60*1000 && now <= t + SYNC_WINDOW;
         });
+        // Knockout fixtures have no kickoff time in KO_BRACKET (only a date), so treat the
+        // whole knockout match-day as active — otherwise, once the group stage ends, the sync
+        // would stop entirely and live knockout scores would never update.
+        const hasActiveKoDay = KO_BRACKET.some(m => {
+          if(!m.date) return false;
+          const [d,mo] = m.date.split('/');
+          const dayStart = new Date(2026, +mo-1, +d).getTime();
+          return now >= dayStart - 5*60*1000 && now <= dayStart + 34*60*60*1000;
+        });
+        const hasActiveMatch = hasActiveGroupMatch || hasActiveKoDay;
         // Admin-requested forced re-syncs (results.forceResync = {matchId:true}) must run
         // even outside the normal active-match window and ignoring the throttle.
         const gameSnap = await getDoc(doc(db,"mundial2026","game"));
