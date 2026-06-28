@@ -503,7 +503,13 @@ export default function App(){
               "Quarterfinals":"רבע גמר","Semifinals":"חצי גמר",
               "3rd Place Playoff":"מקום שלישי","Final":"גמר",
             };
-            for (const iso of [...new Set([...windowISO, ...forcedDates])]) {
+            // Pull upcoming knockout fixtures (within ~10 days) so their real kickoff
+            // times & venues populate ahead of time — otherwise a match more than a day
+            // out shows only its bracket date with no time. Bounded so we don't fetch
+            // the whole tournament every cycle; later rounds enter the window as they near.
+            const koUpcoming = [...new Set(KO_BRACKET.map(k=>{ const [d,mo]=k.date.split('/'); return `2026-${mo}-${d}`; }))]
+              .filter(iso => { const t=new Date(iso+"T12:00:00").getTime(); return t >= now - 24*60*60*1000 && t <= now + 10*24*60*60*1000; });
+            for (const iso of [...new Set([...windowISO, ...forcedDates, ...koUpcoming])]) {
               const ymd = iso.replace(/-/g,'');
               try{
                 const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${ymd}`);
