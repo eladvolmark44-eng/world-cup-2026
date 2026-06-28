@@ -262,7 +262,7 @@ export default function ResultsView({participants, viewerUid, results, teamNames
                     if(!bet||bet.home==null)return null;
                     const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
                     const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
-                    const gained=hasReal?(exact?pts.dir+pts.exact:correct?pts.dir:0):null;
+                    const gained=hasReal?(exact?pts.exact:correct?pts.dir:0):null;
                     return(
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>

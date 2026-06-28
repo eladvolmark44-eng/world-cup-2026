@@ -124,7 +124,8 @@ export function calcScore(bets={},results={},allP=[]){
       if(!bet||!real||real.live||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
       const pts=KO_POINTS[km.stage]||{dir:2,exact:5};
       if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
-        t+=pts.dir; if(+bet.home===+real.home&&+bet.away===+real.away)t+=pts.exact;
+        // Exact score awards pts.exact as the TOTAL (not on top of pts.dir).
+        t += (+bet.home===+real.home && +bet.away===+real.away) ? pts.exact : pts.dir;
       }
     });
   }
