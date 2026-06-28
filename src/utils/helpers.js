@@ -1,5 +1,5 @@
 import { PLAYER_NAME_HE, findPlayerNameHe } from "../constants/playerNamesHe.js";
-import { GROUPS_2026, GROUP_MATCHES, GROUP_LAST_MATCH, GROUP_STAGE_END_TS, TOURNAMENT_END, FLAG_MAP, KO_POINTS, ALL_MATCH_DATES, KO_BRACKET } from "../constants/tournament.js";
+import { GROUPS_2026, GROUP_MATCHES, GROUP_LAST_MATCH, GROUP_STAGE_END_TS, TOURNAMENT_END, FLAG_MAP, KO_POINTS, ALL_MATCH_DATES, KO_BRACKET, THIRD_SEAT_OVERRIDE } from "../constants/tournament.js";
 import { STRIKER_FLAGS, STRIKER_API_NAMES, PLAYER_HEB } from "../constants/players.js";
 import { PRESET_BETS_BY_NAME, YELLOW_CARD_UID } from "../constants/game.js";
 
@@ -156,11 +156,21 @@ export function assignThirdPlace(results={}, nameOf=(t=>t)){
   if(thirds.length < 8) return {};
   const qualGroups = thirds.map(t=>t.group);
   const teamByGroup = {}; thirds.forEach(t=>{ teamByGroup[t.group]=nameOf(t.team); });
+
+  const out = {};
+  const usedGroups = new Set();
+  const usedSlots = new Set();
+  // Apply the confirmed official FIFA seatings first (the generic matching below
+  // only finds *a* valid assignment, not necessarily FIFA's), then match the rest.
+  for(const [mid, g] of Object.entries(THIRD_SEAT_OVERRIDE)){
+    if(qualGroups.includes(g)){ out[mid]=teamByGroup[g]; usedGroups.add(g); usedSlots.add(mid); }
+  }
+
   const slots = KO_BRACKET
-    .filter(m=>m.slots.some(s=>s.t==="3RD"))
+    .filter(m=>m.slots.some(s=>s.t==="3RD") && !usedSlots.has(m.id))
     .map(m=>({id:m.id, eligible:m.slots.find(s=>s.t==="3RD").g}));
-  // Bipartite matching (Kuhn's): each slot ↔ qualifying groups in its eligible list.
-  const adj = slots.map(s=> s.eligible.filter(g=>qualGroups.includes(g)).slice().sort());
+  // Bipartite matching (Kuhn's): each remaining slot ↔ remaining qualifying groups.
+  const adj = slots.map(s=> s.eligible.filter(g=>qualGroups.includes(g) && !usedGroups.has(g)).slice().sort());
   const groupToSlot = {}; // group letter -> slot index
   const augment = (si, seen) => {
     for(const g of adj[si]){
@@ -171,7 +181,6 @@ export function assignThirdPlace(results={}, nameOf=(t=>t)){
     return false;
   };
   for(let i=0;i<slots.length;i++) augment(i, new Set());
-  const out = {};
   for(const [g,si] of Object.entries(groupToSlot)) out[slots[si].id]=teamByGroup[g];
   return out;
 }

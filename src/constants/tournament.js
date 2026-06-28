@@ -20,6 +20,19 @@ export const RESULT_OVERRIDES = {
   G5: { home: 1, away: 1 },
 };
 
+// Official FIFA third-place allocation for the actual set of qualifying thirds.
+// Our generic matching only finds *a* valid assignment; FIFA uses a fixed lookup
+// table keyed by which groups' thirds advanced. These are the confirmed seatings
+// (match id → group letter whose 3rd-placed team plays there); any 3rd-place slot
+// not listed here is filled by the matching from the remaining groups.
+export const THIRD_SEAT_OVERRIDE = {
+  M74: "D", // W-E vs 3rd-D  (גרמניה–פרגוואי)
+  M77: "F", // W-I vs 3rd-F  (צרפת–שבדיה)
+  M79: "E", // W-A vs 3rd-E  (מקסיקו–אקוודור)
+  M81: "B", // W-D vs 3rd-B  (ארה"ב–בוסניה)
+  M85: "J", // W-B vs 3rd-J  (שוויץ–אלג'יריה)
+};
+
 export const ALL_TEAMS = Object.values(GROUPS_2026).flat();
 // Only real teams (no playoff placeholders) for champion picker
 export const REAL_TEAMS = ALL_TEAMS.filter(t => !t.startsWith("פלייאוף"));
