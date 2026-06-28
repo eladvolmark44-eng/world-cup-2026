@@ -11,7 +11,7 @@ import {
 } from "./utils/helpers.js";
 import {
   setKoKickoffs, hasMatchWithin30Min, hasMatchWithin2Hours,
-  fetchOdds, syncMatchData, fdProxy
+  fetchOdds, syncMatchData, fdProxy, sofaProxy
 } from "./utils/api.js";
 import { Toast, SignInScreen } from "./components/common.jsx";
 import HomeView, { WinnerAnnouncement, DailyRankAnimation } from "./components/HomeView.jsx";
@@ -222,6 +222,21 @@ export default function App(){
           return res;
         };
 
+        // Merge a source's parsed results into `merged`, but let a later source OVERRIDE an
+        // existing entry when it carries fresher data — a finished result beats a still-"live"
+        // one, and (same liveness) more goals beats fewer. This is what makes the backup
+        // sources actually back each other up: a stale/frozen entry from one provider no longer
+        // blocks a correct entry from another.
+        const mergeBetter = (merged, res) => {
+          for(const [k,v] of Object.entries(res||{})){
+            const cur = merged[k];
+            if(!cur){ merged[k]=v; continue; }
+            const curFin = cur.live===false, vFin = v.live===false;
+            if(vFin !== curFin){ if(vFin) merged[k]=v; continue; }
+            if((v.home+v.away) > (cur.home+cur.away)) merged[k]=v;
+          }
+        };
+
         // Fetch from multiple sources — merge all to avoid ESPN early-return missing small matches
         const fetchWithFallback = async (espnSlugs, iso, ymd) => {
           const merged = {};
@@ -230,26 +245,20 @@ export default function App(){
             try{
               const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`);
               const d=await r.json();
-              if(d.events?.length) Object.assign(merged, parseESPN(d.events));
+              if(d.events?.length) mergeBetter(merged, parseESPN(d.events));
             }catch(e){}
           }
-          // 2. TheSportsDB — always supplement
+          // 2. TheSportsDB — supplement / override stale
           try{
             const r=await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${iso}&s=Soccer`);
             const d=await r.json();
-            if(d.events?.length){
-              const p=parseSportsDB(d.events);
-              for(const [k,v] of Object.entries(p)) if(!merged[k]) merged[k]=v;
-            }
+            if(d.events?.length) mergeBetter(merged, parseSportsDB(d.events));
           }catch(e){}
-          // 3. SofaScore — always supplement (covers obscure matches ESPN/TheSportsDB miss)
+          // 3. SofaScore — via same-origin proxy (direct calls are IP/CORS-blocked)
           try{
-            const r=await fetch(`https://api.sofascore.com/api/v1/sport/football/scheduled-events/${iso}`);
+            const r=await fetch(sofaProxy(`/sport/football/scheduled-events/${iso}`));
             const d=await r.json();
-            if(d.events?.length){
-              const p=parseSofaScore(d.events);
-              for(const [k,v] of Object.entries(p)) if(!merged[k]) merged[k]=v;
-            }
+            if(d.events?.length) mergeBetter(merged, parseSofaScore(d.events));
           }catch(e){}
           // 4. API-Football — rate-limited to once per hour; rotate keys when quota exhausted
           const lastAF = syncData.lastApiFootballSync ? new Date(syncData.lastApiFootballSync).getTime() : 0;
@@ -273,8 +282,9 @@ export default function App(){
                     const fin=["FT","AET","PEN"].includes(s),live=["1H","2H","HT","ET","BT","P","SUSP","INT","LIVE"].includes(s);
                     if((fin||live)&&goals.home!=null&&goals.away!=null){
                       const minute=live ? (fi.status.elapsed??null) : null;
-                      const k1=`${heb(teams.home.name)}_${heb(teams.away.name)}`;
-                      if(!merged[k1]) addBothKeys(merged,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+                      const afRes={};
+                      addBothKeys(afRes,heb(teams.home.name),heb(teams.away.name),goals.home,goals.away,fin?"FT":"LIVE",live,minute);
+                      mergeBetter(merged, afRes);
                     }
                   }
                   await setDoc(doc(db,"mundial2026","sync"),{lastApiFootballSync:new Date().toISOString()},{merge:true});
