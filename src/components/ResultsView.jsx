@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { GROUPS_2026, GROUP_MATCHES, KO_POINTS } from "../constants/tournament.js";
 import {
   isGlobalLocked, isMatchLocked, getDir, withFlag, getDefaultMatchDate,
-  computeGroupStandings, calcScore, canSeeMatchBet, canSeeGroupBet, canSeeSpecialBet
+  computeGroupStandings, calcScore, canSeeMatchBet, canSeeGroupBet, canSeeSpecialBet, buildKnockoutSchedule
 } from "../utils/helpers.js";
 import { DateNav, MatchRow, LiveBar } from "./common.jsx";
 import { MatchBetRow, PlayerBetsView } from "./BetForm.jsx";
@@ -153,8 +153,9 @@ export default function ResultsView({participants, viewerUid, results, teamNames
   useEffect(()=>{setGroupBets(me?.bets?.groups||{});},[JSON.stringify(me?.bets?.groups)]);
   const globalLocked=isGlobalLocked();
   const dateMatches=GROUP_MATCHES.filter(m=>m.date===revDate);
-  // ESPN-published knockout fixtures for the selected day — bettable + scoreable (keyed ko_<apiId>).
-  const koDateMatches=(results.knockoutMatches||[]).filter(m=>m.date===revDate);
+  // Full knockout bracket for the selected day — every fixture shows (with TBD slots until
+  // its teams are known), and opens for betting as soon as both teams are seated.
+  const koDateMatches=buildKnockoutSchedule(results, teamNames).filter(m=>m.date===revDate);
   return(
     <div className="section">
       <LiveBar results={results} teamNames={teamNames}/>
@@ -212,10 +213,21 @@ export default function ResultsView({participants, viewerUid, results, teamNames
             );
           })}
           {koDateMatches.map(m=>{
-            const real=results.koResults?.[m.apiId];
-            const locked=isMatchLocked(m.id, real, m.kickoff);
+            const real=m.res;
             const hasReal=real?.home!=null&&real?.away!=null;
+            const bothKnown=!!(m.home&&m.away);
+            const started=m.kickoff?Date.now()>=new Date(m.kickoff).getTime():false;
+            const locked=hasReal||real?.live||started;
             const pts=KO_POINTS[m.stage]||{dir:2,exact:5};
+            // Teams not yet decided → show the fixture with TBD slots, no betting.
+            if(!bothKnown){
+              return(
+                <div key={m.id} className="results-match-block">
+                  <MatchRow m={m} res={real} teamNames={teamNames}/>
+                </div>
+              );
+            }
+            // Both teams known and not started → open for betting.
             if(!locked){
               return(
                 <div key={m.id} className="results-match-block">
@@ -231,9 +243,10 @@ export default function ResultsView({participants, viewerUid, results, teamNames
                 </div>
               );
             }
+            // Started/finished → show result + revealed bets.
             return(
               <div key={m.id} className="results-match-block">
-                <MatchRow m={m} res={real} teamNames={teamNames} onClick={onMatchClick&&m.home?()=>onMatchClick(m,real):undefined}/>
+                <MatchRow m={m} res={real} teamNames={teamNames} onClick={onMatchClick?()=>onMatchClick(m,real):undefined}/>
                 <div className="rev-bets-row">
                   {participants.map(p=>{
                     const bet=p.bets?.koMatches?.[m.id];

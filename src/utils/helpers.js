@@ -97,14 +97,17 @@ export function calcScore(bets={},results={},allP=[]){
       t+=1;if(+bet.home===+real.home&&+bet.away===+real.away)t+=2;
     }
   });
-  // KO match bets — points depend on stage
-  if(bets.koMatches && results.koResults){
+  // KO match bets — keyed by bracket id (M73..M104); score against the resolved bracket
+  // (teams seated + result mapped to a stable slot order). Points depend on stage.
+  if(bets.koMatches){
+    const koById={};
+    for(const k of buildKnockoutSchedule(results, {})) koById[k.id]=k;
     Object.keys(bets.koMatches).forEach(id=>{
       const bet=bets.koMatches[id];
-      const real=results.koResults?.[id.replace("ko_","")];
-      if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
-      const koMatch=(results.knockoutMatches||[]).find(m=>m.id===id);
-      const pts=KO_POINTS[koMatch?.stage]||{dir:2,exact:5};
+      const km=koById[id];
+      const real=km?.res;
+      if(!bet||!real||real.live||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
+      const pts=KO_POINTS[km.stage]||{dir:2,exact:5};
       if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
         t+=pts.dir; if(+bet.home===+real.home&&+bet.away===+real.away)t+=pts.exact;
       }
@@ -176,18 +179,28 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
 
     // Find the actual ESPN fixture by matching a known team within this stage
     const known=[home,away].filter(Boolean);
-    let ef=null;
+    let ef=null, apiId=null;
     const pool=byStage[bm.stage]||[];
     if(known.length){
       ef = pool.find(e=>known.every(k=>e.home===k||e.away===k)) || pool.find(e=>known.some(k=>e.home===k||e.away===k));
     }
     if(ef){
-      home=ef.home; away=ef.away; homeLabel=null; awayLabel=null;
+      apiId=ef.apiId;
       if(ef.kickoff) kickoff=ef.kickoff;
       if(ef.venue) venue=ef.venue;
+      // Preserve a STABLE slot order (home=slot0, away=slot1) so a bet's home/away never
+      // flips when ESPN later publishes the fixture in the opposite orientation. Fill only
+      // the unknown side from the ESPN pairing.
+      const efTeams=[ef.home, ef.away];
+      if(home && !away){ away=efTeams.find(t=>t!==home)||null; awayLabel=null; }
+      else if(away && !home){ home=efTeams.find(t=>t!==away)||null; homeLabel=null; }
+      else if(!home && !away){ home=ef.home; away=ef.away; homeLabel=null; awayLabel=null; }
       const r=koResults[ef.apiId];
       if(r){
-        res={home:r.home, away:r.away, live:r.live, minute:r.minute};
+        // Map the ESPN result (ef.home/ef.away order) onto our slot order.
+        const rHome = home===ef.home?r.home : home===ef.away?r.away : r.home;
+        const rAway = away===ef.home?r.home : away===ef.away?r.away : r.away;
+        res={home:rHome, away:rAway, live:r.live, minute:r.minute};
         if(!r.live){
           const wTeam = r.winner==="home"?ef.home : r.winner==="away"?ef.away
             : r.home>r.away?ef.home : r.away>r.home?ef.away : null;
@@ -195,7 +208,7 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
         }
       }
     }
-    out.push({id:bm.id, stage:bm.stage, date, venue, kickoff, home, away, homeLabel, awayLabel, res});
+    out.push({id:bm.id, stage:bm.stage, date, venue, kickoff, apiId, home, away, homeLabel, awayLabel, res});
   }
   return out;
 }
