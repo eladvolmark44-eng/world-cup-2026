@@ -81,7 +81,7 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
   return(
     <div className={`match-row ${locked?"locked-row":""} ${saved?"saved-row":""}`}>
       <div className="match-meta">
-        {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · {groupLabel(match.group)}
+        {match.date}{match.kickoff && ` ${formatKickoffTime(match.kickoff)}`} · {match.group?groupLabel(match.group):match.stage||""}
         {locked ? <span className="lock-badge-sm"> 🔒</span> : <span className="open-badge-sm"> ✏️</span>}
       </div>
       {matchOdds && (
