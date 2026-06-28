@@ -384,6 +384,8 @@ export async function syncMatchData(setLiveStats){
           const newHome=homeC?.score!=null?parseInt(homeC.score,10):null;
           const newAway=awayC?.score!=null?parseInt(awayC.score,10):null;
           const prev=matches[matchId]||{};
+          // Admin manually set this result — never let the live poll touch it.
+          if(prev.manual) continue;
           // Once another sync path has already confirmed this match finished, don't let
           // this poll flip it back to live just because ESPN's status hasn't caught up yet
           // (this function never writes live:false itself, so it can only do harm here).

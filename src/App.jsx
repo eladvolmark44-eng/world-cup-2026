@@ -376,6 +376,9 @@ export default function App(){
 
           const prev = updatedMatches[m.id] || {};
           const isForced = forced.includes(m.id);
+          // Admin manually set this result — auto-sync must never overwrite it (unless the
+          // admin explicitly forced a re-sync of this exact match).
+          if (prev.manual && !isForced) continue;
           // A forced re-sync (admin-requested) bypasses both protective guards below and
           // overwrites whatever is stored with a clean, fresh read from the sources.
           if (!isForced) {
@@ -475,6 +478,17 @@ export default function App(){
                 const d=await r.json();
                 for (const ev of (d.events||[])) {
                   const comp = ev.competitions?.[0];
+                  const hC = comp?.competitors?.find(c=>c.homeAway==="home");
+                  const aC = comp?.competitors?.find(c=>c.homeAway==="away");
+                  if (!hC || !aC) continue;
+                  const homeHeb = heb(hC.team?.displayName||"");
+                  const awayHeb = heb(aC.team?.displayName||"");
+                  // The group stage's last round and the first R32 share a date (28/06), so never
+                  // treat an actual group fixture as a knockout match — it would pollute the bracket.
+                  const isGroupFixture = GROUP_MATCHES.some(g =>
+                    (g.home===homeHeb&&g.away===awayHeb)||(g.home===awayHeb&&g.away===homeHeb));
+                  if (isGroupFixture) continue;
+
                   const notes = comp?.notes || [];
                   const noteText = notes.find(n=>n.type==="event")?.headline || comp?.status?.type?.description || "";
                   let stage = null;
@@ -494,9 +508,6 @@ export default function App(){
                     stage = KO_BRACKET.find(k=>k.date===dm)?.stage || null;
                   }
                   if (!stage) continue;
-                  const hC = comp.competitors?.find(c=>c.homeAway==="home");
-                  const aC = comp.competitors?.find(c=>c.homeAway==="away");
-                  if (!hC || !aC) continue;
                   const state = comp.status?.type?.state;
                   const isFinished = state === "post";
                   const isLive = state === "in";
@@ -504,7 +515,7 @@ export default function App(){
                   const venue = venueObj?.fullName ? `${venueObj.fullName}${venueObj.address?.city ? ', '+venueObj.address.city : ''}` : null;
                   const koMatch = {
                     id: `ko_${ev.id}`, apiId: ev.id, stage, date: dateStr,
-                    home: heb(hC.team?.displayName||""), away: heb(aC.team?.displayName||""),
+                    home: homeHeb, away: awayHeb,
                     kickoff: ev.date||null, venue,
                   };
                   if ((isFinished||isLive) && hC.score != null) {
