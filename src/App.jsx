@@ -267,7 +267,7 @@ export default function App(){
             const activeKey = AF_KEYS.find(k => !exhausted.includes(k));
             if (activeKey) {
               try{
-                const r=await fetch(`https://v3.football.api-sports.io/fixtures?date=${iso}`,{headers:{"x-apisports-key":activeKey}});
+                const r=await fetch(`/api/af-proxy?date=${iso}&key=${encodeURIComponent(activeKey)}`);
                 const d=await r.json();
                 // Detect quota exhaustion
                 const errs=d?.errors;
