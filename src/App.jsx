@@ -287,6 +287,12 @@ export default function App(){
 
         const today = yyyymmdd(now2);
         const todayISO = isoDate(now2);
+        // ESPN/SofaScore bucket fixtures by their own timezone, so a late-night (local) match
+        // can land on the previous or next calendar day in their feed. Always fetch a
+        // yesterday/today/tomorrow window so a live match is never missed and never freezes.
+        const yesterdayISO = isoDate(new Date(now2.getTime() - 24*60*60*1000));
+        const tomorrowISO = isoDate(new Date(now2.getTime() + 24*60*60*1000));
+        const windowISO = [yesterdayISO, todayISO, tomorrowISO];
         const firstWCKickoff = Math.min(...GROUP_MATCHES.filter(m=>m.group!=="יזיזות").map(m=>new Date(m.kickoff).getTime()));
         const wcStarted = Date.now() >= firstWCKickoff - 2*60*60*1000;
 
@@ -325,9 +331,8 @@ export default function App(){
               .filter(m => { const t=new Date(m.kickoff).getTime(); return m.group!=="יזיזות" && now >= t - 5*60*1000 && now <= t + SYNC_WINDOW; })
               .map(m => isoDate(new Date(m.kickoff)))
           )];
-          // Always include today (for freshly started matches), plus any kickoff dates
-          // and the dates of any matches queued for a forced re-sync.
-          const wcDates = [...new Set([todayISO, ...activeWCDates, ...forcedDates])];
+          // Yesterday/today/tomorrow window (timezone-safe) + active kickoff dates + forced.
+          const wcDates = [...new Set([...windowISO, ...activeWCDates, ...forcedDates])];
           for (const iso of wcDates) {
             const ymd = iso.replace(/-/g, '');
             Object.assign(byKey, await fetchWithFallback(["fifa.world"], iso, ymd));
@@ -376,9 +381,6 @@ export default function App(){
 
           const prev = updatedMatches[m.id] || {};
           const isForced = forced.includes(m.id);
-          // Admin manually set this result — auto-sync must never overwrite it (unless the
-          // admin explicitly forced a re-sync of this exact match).
-          if (prev.manual && !isForced) continue;
           // A forced re-sync (admin-requested) bypasses both protective guards below and
           // overwrites whatever is stored with a clean, fresh read from the sources.
           if (!isForced) {
@@ -471,7 +473,7 @@ export default function App(){
               "Quarterfinals":"רבע גמר","Semifinals":"חצי גמר",
               "3rd Place Playoff":"מקום שלישי","Final":"גמר",
             };
-            for (const iso of [...new Set([todayISO, ...forcedDates])]) {
+            for (const iso of [...new Set([...windowISO, ...forcedDates])]) {
               const ymd = iso.replace(/-/g,'');
               try{
                 const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${ymd}`);
