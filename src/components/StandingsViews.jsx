@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS, KO_BRACKET, FLAG_MAP } from "../constants/tournament.js";
+import { GROUPS_2026, GROUP_MATCHES, ALL_TEAMS, REAL_TEAMS, KO_BRACKET, FLAG_MAP, ALL_MATCH_DATES } from "../constants/tournament.js";
 import { withFlag, computeGroupStandings, getDefaultMatchDate, buildKnockoutSchedule, bestThirdPlace } from "../utils/helpers.js";
 import { DateNav, MatchRow } from "./common.jsx";
 
@@ -36,13 +36,21 @@ export function ScheduleView({results,teamNames,odds}){
     ...GROUP_MATCHES.filter(m=>m.date===selDate),
     ...koSchedule.filter(m=>m.date===selDate),
   ];
+  // Knockout days are bucketed in Israel time and may land on dates outside the static
+  // list, so fold the actual fixture dates into the navigator.
+  const navDates=(()=>{
+    const parse=s=>{const [d,m]=s.split('/');return new Date(2026,+m-1,+d).getTime();};
+    const set=new Set(ALL_MATCH_DATES);
+    koSchedule.forEach(m=>{ if(m.date) set.add(m.date); });
+    return [...set].sort((a,b)=>parse(a)-parse(b));
+  })();
   const renderMatch=(m,i)=>{
     const res=m.res!==undefined?m.res:(results.matches?.[m.id]||(m.apiId?results.koResults?.[m.apiId]:null));
     return <MatchRow key={m.id||i} m={m} res={res} teamNames={teamNames} odds={odds}/>;
   };
   return(
     <div>
-      <DateNav selectedDate={selDate} onChange={d=>{setSelDate(d);setKoStage(null);}}/>
+      <DateNav selectedDate={selDate} onChange={d=>{setSelDate(d);setKoStage(null);}} dates={navDates}/>
       <div className="filter-row" style={{marginTop:".3rem"}}>
         {KO_STAGES.map(s=>(
           <button key={s} className={`filter-btn ${koStage===s?"active":""}`} onClick={()=>setKoStage(p=>p===s?null:s)}>{s}</button>

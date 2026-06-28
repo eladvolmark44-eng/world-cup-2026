@@ -8,10 +8,25 @@ export function withFlag(name) {
   if (name.startsWith("פלייאוף")) return `❓ ${name}`;
   return FLAG_MAP[name] ? `${FLAG_MAP[name]} ${name}` : name;
 }
+// Show every kickoff in Israel time. Group fixtures carry an explicit +03:00 offset
+// (so the literal HH:MM is already Israel time), but ESPN knockout fixtures come in
+// UTC ("…Z") — extracting the literal hour showed them 3h early. Parse the instant
+// and format it in Asia/Jerusalem so both sources display correctly.
 export function formatKickoffTime(kickoff) {
   if (!kickoff) return "";
-  const m = kickoff.match(/T(\d{2}:\d{2})/);
-  return m ? m[1] : "";
+  const d = new Date(kickoff);
+  if (isNaN(d.getTime())) { const m = kickoff.match(/T(\d{2}:\d{2})/); return m ? m[1] : ""; }
+  return d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+}
+// Israel-local DD/MM for an ISO instant — used to bucket knockout fixtures onto the
+// correct calendar day (a late US kickoff rolls into the next day Israel time).
+export function israelDateDM(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jerusalem", day: "2-digit", month: "2-digit" }).formatToParts(d);
+  const dd = p.find(x=>x.type==="day")?.value, mm = p.find(x=>x.type==="month")?.value;
+  return dd && mm ? `${dd}/${mm}` : null;
 }
 export function withStrikerFlag(name){ return name ? `${STRIKER_FLAGS[name]||""} ${name}`.trim() : "—"; }
 export function apiNameToHeb(apiName){
@@ -237,7 +252,7 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
     }
     if(ef){
       apiId=ef.apiId;
-      if(ef.kickoff) kickoff=ef.kickoff;
+      if(ef.kickoff){ kickoff=ef.kickoff; const dm=israelDateDM(ef.kickoff); if(dm) date=dm; }
       if(ef.venue) venue=ef.venue;
       // Preserve a STABLE slot order (home=slot0, away=slot1) so a bet's home/away never
       // flips when ESPN later publishes the fixture in the opposite orientation. Fill only

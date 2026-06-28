@@ -92,12 +92,12 @@ export function SignInScreen({onSignIn,loading}){
   );
 }
 
-export function DateNav({selectedDate,onChange}){
+export function DateNav({selectedDate,onChange,dates=ALL_MATCH_DATES}){
   const MONTHS=["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
   const parseDate=s=>{const [d,m]=s.split('/');return new Date(2026,parseInt(m)-1,parseInt(d)).getTime();};
   const selMs=selectedDate?parseDate(selectedDate):0;
-  const prevDate=ALL_MATCH_DATES.filter(d=>parseDate(d)<selMs).at(-1)||null;
-  const nextDate=ALL_MATCH_DATES.find(d=>parseDate(d)>selMs)||null;
+  const prevDate=dates.filter(d=>parseDate(d)<selMs).at(-1)||null;
+  const nextDate=dates.find(d=>parseDate(d)>selMs)||null;
   const [dd,mm]=(selectedDate||"").split("/");
   const label=dd&&mm?`${parseInt(dd)} ${MONTHS[parseInt(mm)]}`:selectedDate;
   const _td=new Date();

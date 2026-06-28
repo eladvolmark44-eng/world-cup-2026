@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { GROUPS_2026, GROUP_MATCHES, KO_POINTS } from "../constants/tournament.js";
+import { useState, useEffect, useMemo } from "react";
+import { GROUPS_2026, GROUP_MATCHES, KO_POINTS, ALL_MATCH_DATES } from "../constants/tournament.js";
 import {
   isGlobalLocked, isMatchLocked, getDir, withFlag, getDefaultMatchDate,
   computeGroupStandings, calcScore, canSeeMatchBet, canSeeGroupBet, canSeeSpecialBet, buildKnockoutSchedule
@@ -153,9 +153,18 @@ export default function ResultsView({participants, viewerUid, results, teamNames
   useEffect(()=>{setGroupBets(me?.bets?.groups||{});},[JSON.stringify(me?.bets?.groups)]);
   const globalLocked=isGlobalLocked();
   const dateMatches=GROUP_MATCHES.filter(m=>m.date===revDate);
-  // Full knockout bracket for the selected day — every fixture shows (with TBD slots until
-  // its teams are known), and opens for betting as soon as both teams are seated.
-  const koDateMatches=buildKnockoutSchedule(results, teamNames).filter(m=>m.date===revDate);
+  // Full knockout bracket — built once, then filtered to the selected day. Every fixture
+  // shows (with TBD slots until its teams are known) and opens for betting once seated.
+  const koSched=useMemo(()=>buildKnockoutSchedule(results, teamNames),[results, teamNames]);
+  const koDateMatches=koSched.filter(m=>m.date===revDate);
+  // Knockout kickoffs are bucketed in Israel time, which can roll a match onto a day not
+  // in the static list — fold the actual fixture dates in so navigation never loses a match.
+  const navDates=useMemo(()=>{
+    const parse=s=>{const [d,m]=s.split('/');return new Date(2026,+m-1,+d).getTime();};
+    const set=new Set(ALL_MATCH_DATES);
+    koSched.forEach(m=>{ if(m.date) set.add(m.date); });
+    return [...set].sort((a,b)=>parse(a)-parse(b));
+  },[koSched]);
   return(
     <div className="section">
       <LiveBar results={results} teamNames={teamNames}/>
@@ -166,7 +175,7 @@ export default function ResultsView({participants, viewerUid, results, teamNames
       </div>
       {subTab==="matches"&&(
         <>
-          <DateNav selectedDate={revDate} onChange={setRevDate}/>
+          <DateNav selectedDate={revDate} onChange={setRevDate} dates={navDates}/>
           {dateMatches.map(m=>{
             const real=results.matches?.[m.id];
             const locked=isMatchLocked(m.id, real);
