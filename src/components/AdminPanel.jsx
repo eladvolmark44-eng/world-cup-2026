@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db, saveParticipant, saveGame } from "../firebase.js";
 import { GROUP_MATCHES, GROUPS_2026, KO_BRACKET } from "../constants/tournament.js";
-import { API_SOURCES } from "../constants/api.js";
+import { API_SOURCES, SOFA_TEAM_MAP } from "../constants/api.js";
 import { probeApiSource } from "../utils/api.js";
 import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts, withFlag } from "../utils/helpers.js";
 import { NumStepper } from "./common.jsx";
@@ -35,6 +35,56 @@ function KoPreviewSection(){
         </div>
       )}
     </>
+  );
+}
+
+function ScoreSyncDebug(){
+  const [info,setInfo]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const run=async()=>{
+    setBusy(true);
+    const out={events:[], sync:null, errors:[]};
+    try{
+      const s=await getDoc(doc(db,"mundial2026","sync"));
+      out.sync=s.exists()?s.data():null;
+    }catch(e){out.errors.push("sync read: "+e.message);}
+    const heb=n=>SOFA_TEAM_MAP[n]||n;
+    const now=new Date();
+    const ymdOf=off=>{const x=new Date(now.getTime()+off*86400000);return `${x.getFullYear()}${String(x.getMonth()+1).padStart(2,'0')}${String(x.getDate()).padStart(2,'0')}`;};
+    for(const ymd of [ymdOf(-1),ymdOf(0),ymdOf(1)]){
+      try{
+        const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${ymd}`);
+        const d=await r.json();
+        for(const ev of (d.events||[])){
+          const comp=ev.competitions?.[0];
+          const hC=comp?.competitors?.find(c=>c.homeAway==="home");
+          const aC=comp?.competitors?.find(c=>c.homeAway==="away");
+          out.events.push({
+            ymd,
+            home:heb(hC?.team?.displayName||"?"),
+            away:heb(aC?.team?.displayName||"?"),
+            score:`${hC?.score??"-"}:${aC?.score??"-"}`,
+            state:comp?.status?.type?.state||"?",
+          });
+        }
+      }catch(e){out.errors.push(ymd+": "+e.message);}
+    }
+    setInfo(out);
+    setBusy(false);
+  };
+  return(
+    <div className="admin-bet-editor">
+      <div className="admin-bet-title">🩺 דיבאג סנכרון תוצאות</div>
+      <button className="btn-admin-act" onClick={run} disabled={busy}>{busy?"בודק...":"בדוק מה ESPN מחזיר"}</button>
+      {info&&(
+        <div style={{fontSize:".62rem",marginTop:".5rem",direction:"ltr",textAlign:"left",lineHeight:1.5}}>
+          <div>lastSync: {info.sync?.lastSync||"—"}</div>
+          <div>events found: {info.events.length}</div>
+          {info.events.map((e,i)=><div key={i}>{e.ymd}: {e.home} {e.score} {e.away} [{e.state}]</div>)}
+          {info.errors.map((e,i)=><div key={i} style={{color:"#f88"}}>ERR {e}</div>)}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -486,6 +536,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
         <div className="admin-stat"><span className="admin-stat-val">{GROUP_MATCHES.length}</span><span>משחקי ליגה</span></div>
       </div>
       <ApiHealthPanel/>
+      <ScoreSyncDebug/>
       <div className="admin-winner-section">
         <div className="admin-action-info">
           <span className="admin-action-label">🎉 אנימציית מנצח</span>
