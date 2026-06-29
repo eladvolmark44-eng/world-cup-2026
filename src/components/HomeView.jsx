@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { GROUP_MATCHES, GROUPS_2026, FLAG_MAP } from "../constants/tournament.js";
+import { GROUP_MATCHES, GROUPS_2026, FLAG_MAP, KO_POINTS } from "../constants/tournament.js";
 import {
   isGlobalLocked, isTournamentOver, withFlag, withStrikerFlag, hePlayer,
   calcScore, calcScoreBreakdown, rankSymbol, getDir, isChatLocked, getCardCounts, isStillLive, buildKnockoutSchedule
@@ -344,19 +344,29 @@ export default function HomeView({me, participants, results, teamNames, odds, li
     setFunSaving(false);
   };
   const nowTs=Date.now();
-  const liveMatches=GROUP_MATCHES.filter(m=>isStillLive(m.id, results.matches?.[m.id]));
-  const lastDoneMatch=GROUP_MATCHES
-    .filter(m=>results.matches?.[m.id]?.home!=null&&!isStillLive(m.id, results.matches?.[m.id]))
-    .sort((a,b)=>new Date(b.kickoff).getTime()-new Date(a.kickoff).getTime())[0]||null;
-  // Upcoming fixtures (group + knockout) that haven't started, soonest first.
   const koSched=buildKnockoutSchedule(results, teamNames);
+  // A match stays on the home card while it's live AND for 30 min after it ends, so
+  // everyone can see the final score and how it scored before it drops off.
+  const DONE_GRACE_MS=30*60*1000;
+  const recentlyDone=(m,res,ko)=>{
+    if(!res||res.home==null||res.live) return false;
+    const end=res.endedAt || (m.kickoff ? new Date(m.kickoff).getTime()+(ko?2.5:2)*60*60*1000 : null);
+    return end!=null && nowTs < end + DONE_GRACE_MS;
+  };
+  // Current = live or just-finished, across group + knockout, soonest kickoff first.
+  const currentMatches=[
+    ...GROUP_MATCHES.map(m=>({m,res:results.matches?.[m.id],ko:false})),
+    ...koSched.map(m=>({m,res:m.res,ko:true})),
+  ].filter(({m,res,ko})=>isStillLive(m.id,res,m.kickoff)||recentlyDone(m,res,ko))
+   .sort((a,b)=>new Date(a.m.kickoff||0).getTime()-new Date(b.m.kickoff||0).getTime());
+  // Upcoming fixtures (group + knockout) that haven't started, soonest first.
   const upcoming=[
     ...GROUP_MATCHES.filter(m=>m.kickoff && results.matches?.[m.id]?.home==null),
     ...koSched.filter(m=>m.kickoff && m.res?.home==null),
   ].sort((a,b)=>new Date(a.kickoff).getTime()-new Date(b.kickoff).getTime());
   // Show every match that kicks off at the same (soonest) time, not just one.
   const nextTs=upcoming[0]?.kickoff ? new Date(upcoming[0].kickoff).getTime() : null;
-  const nextMatches=liveMatches.length===0 && nextTs!=null
+  const nextMatches=currentMatches.length===0 && nextTs!=null
     ? upcoming.filter(m=>new Date(m.kickoff).getTime()===nextTs)
     : [];
   const resFor=m=>m.res!==undefined?m.res:results.matches?.[m.id];
@@ -376,22 +386,23 @@ export default function HomeView({me, participants, results, teamNames, odds, li
   },[tournamentOver, leader?.uid]);
   return(
     <div className="section">
-      {liveMatches.length>0?(
+      {currentMatches.length>0?(
         <div className="home-card">
           <div className="home-card-title">🔴 משחקים חיים</div>
-          {liveMatches.map(m=>{
-            const real=results.matches[m.id];
+          {currentMatches.map(({m,res,ko})=>{
+            const real=res;
             const hasReal=real?.home!=null&&real?.away!=null;
+            const kp=ko?(KO_POINTS[m.stage]||{dir:2,exact:5}):null;
             return(
               <div key={m.id} className="results-match-block">
                 <MatchRow m={m} res={real} teamNames={teamNames} onClick={()=>onMatchClick(m,real)}/>
                 <div className="rev-bets-row">
                   {participants.map(p=>{
-                    const bet=p.bets?.matches?.[m.id];
+                    const bet=ko?p.bets?.koMatches?.[m.id]:p.bets?.matches?.[m.id];
                     if(!bet||bet.home==null)return null;
                     const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
                     const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
-                    const pts=hasReal?(exact?3:correct?1:0):null;
+                    const pts=hasReal?(ko?(exact?kp.exact:correct?kp.dir:0):(exact?3:correct?1:0)):null;
                     return(
                       <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
                         <span className="chip-name">{p.name.split(" ")[0]}</span>
