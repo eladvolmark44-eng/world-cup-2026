@@ -121,7 +121,9 @@ export function calcScore(bets={},results={},allP=[]){
       const bet=bets.koMatches[id];
       const km=koById[id];
       const real=km?.res;
-      if(!bet||!real||real.live||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
+      // Score knockout bets live too (like group matches) so the leaderboard total
+      // moves as goals go in — not only once the match is final.
+      if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
       const pts=KO_POINTS[km.stage]||{dir:2,exact:5};
       if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
         // Exact score awards pts.exact as the TOTAL (not on top of pts.dir).
@@ -158,6 +160,19 @@ export function calcScoreBreakdown(bets={},results={}){
       matches+=1;if(+bet.home===+real.home&&+bet.away===+real.away)matches+=2;
     }
   });
+  // Knockout match points roll into the same ⚽ bucket, live (mirrors calcScore).
+  if(bets.koMatches){
+    const koById={};
+    for(const k of buildKnockoutSchedule(results, {})) koById[k.id]=k;
+    Object.keys(bets.koMatches).forEach(id=>{
+      const bet=bets.koMatches[id], real=koById[id]?.res;
+      if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
+      const pts=KO_POINTS[koById[id].stage]||{dir:2,exact:5};
+      if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
+        matches += (+bet.home===+real.home && +bet.away===+real.away) ? pts.exact : pts.dir;
+      }
+    });
+  }
   return {groups,matches};
 }
 
