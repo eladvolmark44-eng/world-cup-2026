@@ -561,8 +561,12 @@ export default function App(){
                     const clockMatch = isLive ? (comp.status?.displayClock||"").match(/(\d+)(\+\d+)?/) : null;
                     const minute = clockMatch ? (clockMatch[1]+(clockMatch[2]||"")) :
                       (isLive && typeof comp.status?.clock==="number" ? String(Math.floor(comp.status.clock/60)) : null);
+                    // ESPN keeps state "in" through extra time and the penalty shootout and only
+                    // flips to "post" once the tie is fully settled, so the score/winner keep
+                    // updating until the very end. winner is set from the shootout result too.
                     const winner = hC.winner===true ? "home" : aC.winner===true ? "away" : null;
-                    koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive, minute, ...(winner?{winner}:{})};
+                    const prevKo = koResults[ev.id];
+                    koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive, minute, ...(winner?{winner}:{}), ...(isFinished?{endedAt: prevKo?.endedAt || Date.now()}:{})};
                   }
                   koMap[ev.id] = koMatch;
                 }
