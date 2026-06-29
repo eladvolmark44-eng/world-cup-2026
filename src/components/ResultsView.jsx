@@ -165,6 +165,115 @@ export default function ResultsView({participants, viewerUid, results, teamNames
     koSched.forEach(m=>{ if(m.date) set.add(m.date); });
     return [...set].sort((a,b)=>parse(a)-parse(b));
   },[koSched]);
+  const renderGroupMatch=(m)=>{
+    const real=results.matches?.[m.id];
+    const locked=isMatchLocked(m.id, real);
+    const hasReal=real?.home!=null&&real?.away!=null;
+    if(!locked){
+      return(
+        <div key={m.id} className="results-match-block">
+          <MatchBetRow match={m} savedBet={me?.bets?.matches?.[m.id]} onSave={onSaveMatch} teamNames={teamNames} odds={odds} res={results?.matches?.[m.id]}/>
+          <div className="rev-bets-row">
+            {participants.filter(p=>p.uid!==viewerUid).map(p=>(
+              <div key={p.uid} className="rev-bet-chip locked-chip">
+                <span className="chip-name">{p.name.split(" ")[0]}</span>
+                <span className="chip-score">🔒</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return(
+      <div key={m.id} className="results-match-block">
+        <MatchRow m={m} res={real} teamNames={teamNames} onClick={onMatchClick?()=>onMatchClick(m,real):undefined}/>
+        <div className="rev-bets-row">
+          {participants.map(p=>{
+            const bet=p.bets?.matches?.[m.id];
+            if(!bet||bet.home==null)return null;
+            const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
+            const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
+            const pts=hasReal?(exact?3:correct?1:0):null;
+            return(
+              <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
+                <span className="chip-name">{p.name.split(" ")[0]}</span>
+                <span className="chip-score">{bet.away}:{bet.home}</span>
+                {bet.auto&&<span title="אוטומטי">🎲</span>}
+                {bet.adminEdited&&<span className="var-badge" title="שונה ע״י מנהל">📺VAR</span>}
+                {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
+                {exact&&<span>🎯</span>}
+                {!exact&&correct&&<span>✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+  const renderKoMatch=(m)=>{
+    const real=m.res;
+    const hasReal=real?.home!=null&&real?.away!=null;
+    const bothKnown=!!(m.home&&m.away);
+    const started=m.kickoff?Date.now()>=new Date(m.kickoff).getTime():false;
+    const locked=hasReal||real?.live||started;
+    const pts=KO_POINTS[m.stage]||{dir:2,exact:5};
+    if(!bothKnown){
+      return(
+        <div key={m.id} className="results-match-block">
+          <MatchRow m={m} res={real} teamNames={teamNames}/>
+        </div>
+      );
+    }
+    if(!locked){
+      return(
+        <div key={m.id} className="results-match-block">
+          <MatchBetRow match={m} savedBet={me?.bets?.koMatches?.[m.id]} onSave={onSaveKoMatch} teamNames={teamNames} odds={odds} res={real}/>
+          <div className="rev-bets-row">
+            {participants.filter(p=>p.uid!==viewerUid).map(p=>(
+              <div key={p.uid} className="rev-bet-chip locked-chip">
+                <span className="chip-name">{p.name.split(" ")[0]}</span>
+                <span className="chip-score">🔒</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return(
+      <div key={m.id} className="results-match-block">
+        <MatchRow m={m} res={real} teamNames={teamNames} onClick={onMatchClick?()=>onMatchClick(m,real):undefined}/>
+        <div className="rev-bets-row">
+          {participants.map(p=>{
+            const bet=p.bets?.koMatches?.[m.id];
+            if(!bet||bet.home==null)return null;
+            const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
+            const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
+            const gained=hasReal?(exact?pts.exact:correct?pts.dir:0):null;
+            return(
+              <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
+                <span className="chip-name">{p.name.split(" ")[0]}</span>
+                <span className="chip-score">{bet.away}:{bet.home}</span>
+                {gained!==null&&<span className="chip-pts">{gained>0?`+${gained}נק׳`:"✗"}</span>}
+                {exact&&<span>🎯</span>}
+                {!exact&&correct&&<span>✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+  // All matches for the selected day (group + knockout) interleaved and sorted by kickoff,
+  // so e.g. a 20:00 game shows above a 23:30 one regardless of bracket order. Fixtures
+  // without a known kickoff time yet sort to the end.
+  const dayMatches=[
+    ...dateMatches.map(m=>({m,type:"group"})),
+    ...koDateMatches.map(m=>({m,type:"ko"})),
+  ].sort((a,b)=>{
+    const ta=a.m.kickoff?new Date(a.m.kickoff).getTime():Infinity;
+    const tb=b.m.kickoff?new Date(b.m.kickoff).getTime():Infinity;
+    return ta-tb;
+  });
   return(
     <div className="section">
       <LiveBar results={results} teamNames={teamNames}/>
@@ -176,108 +285,8 @@ export default function ResultsView({participants, viewerUid, results, teamNames
       {subTab==="matches"&&(
         <>
           <DateNav selectedDate={revDate} onChange={setRevDate} dates={navDates}/>
-          {dateMatches.map(m=>{
-            const real=results.matches?.[m.id];
-            const locked=isMatchLocked(m.id, real);
-            const hasReal=real?.home!=null&&real?.away!=null;
-            if(!locked){
-              return(
-                <div key={m.id} className="results-match-block">
-                  <MatchBetRow match={m} savedBet={me?.bets?.matches?.[m.id]} onSave={onSaveMatch} teamNames={teamNames} odds={odds} res={results?.matches?.[m.id]}/>
-                  <div className="rev-bets-row">
-                    {participants.filter(p=>p.uid!==viewerUid).map(p=>(
-                      <div key={p.uid} className="rev-bet-chip locked-chip">
-                        <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">🔒</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-            return(
-              <div key={m.id} className="results-match-block">
-                <MatchRow m={m} res={real} teamNames={teamNames} onClick={onMatchClick?()=>onMatchClick(m,real):undefined}/>
-                <div className="rev-bets-row">
-                  {participants.map(p=>{
-                    const bet=p.bets?.matches?.[m.id];
-                    if(!bet||bet.home==null)return null;
-                    const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
-                    const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
-                    const pts=hasReal?(exact?3:correct?1:0):null;
-                    return(
-                      <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
-                        <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">{bet.away}:{bet.home}</span>
-                        {bet.auto&&<span title="אוטומטי">🎲</span>}
-                        {bet.adminEdited&&<span className="var-badge" title="שונה ע״י מנהל">📺VAR</span>}
-                        {pts!==null&&<span className="chip-pts">{pts>0?`+${pts}נק׳`:"✗"}</span>}
-                        {exact&&<span>🎯</span>}
-                        {!exact&&correct&&<span>✓</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-          {koDateMatches.map(m=>{
-            const real=m.res;
-            const hasReal=real?.home!=null&&real?.away!=null;
-            const bothKnown=!!(m.home&&m.away);
-            const started=m.kickoff?Date.now()>=new Date(m.kickoff).getTime():false;
-            const locked=hasReal||real?.live||started;
-            const pts=KO_POINTS[m.stage]||{dir:2,exact:5};
-            // Teams not yet decided → show the fixture with TBD slots, no betting.
-            if(!bothKnown){
-              return(
-                <div key={m.id} className="results-match-block">
-                  <MatchRow m={m} res={real} teamNames={teamNames}/>
-                </div>
-              );
-            }
-            // Both teams known and not started → open for betting.
-            if(!locked){
-              return(
-                <div key={m.id} className="results-match-block">
-                  <MatchBetRow match={m} savedBet={me?.bets?.koMatches?.[m.id]} onSave={onSaveKoMatch} teamNames={teamNames} odds={odds} res={real}/>
-                  <div className="rev-bets-row">
-                    {participants.filter(p=>p.uid!==viewerUid).map(p=>(
-                      <div key={p.uid} className="rev-bet-chip locked-chip">
-                        <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">🔒</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-            // Started/finished → show result + revealed bets.
-            return(
-              <div key={m.id} className="results-match-block">
-                <MatchRow m={m} res={real} teamNames={teamNames} onClick={onMatchClick?()=>onMatchClick(m,real):undefined}/>
-                <div className="rev-bets-row">
-                  {participants.map(p=>{
-                    const bet=p.bets?.koMatches?.[m.id];
-                    if(!bet||bet.home==null)return null;
-                    const correct=hasReal&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
-                    const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
-                    const gained=hasReal?(exact?pts.exact:correct?pts.dir:0):null;
-                    return(
-                      <div key={p.uid} className={`rev-bet-chip ${exact?"exact":correct?"correct":hasReal?"wrong":""}`}>
-                        <span className="chip-name">{p.name.split(" ")[0]}</span>
-                        <span className="chip-score">{bet.away}:{bet.home}</span>
-                        {gained!==null&&<span className="chip-pts">{gained>0?`+${gained}נק׳`:"✗"}</span>}
-                        {exact&&<span>🎯</span>}
-                        {!exact&&correct&&<span>✓</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-          {dateMatches.length===0&&koDateMatches.length===0&&<div className="empty-msg">No games on this date</div>}
+          {dayMatches.map(({m,type})=> type==="group"?renderGroupMatch(m):renderKoMatch(m))}
+          {dayMatches.length===0&&<div className="empty-msg">No games on this date</div>}
         </>
       )}
       {subTab==="groups"&&(

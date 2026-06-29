@@ -35,7 +35,11 @@ export function ScheduleView({results,teamNames,odds}){
   const dateMatches=[
     ...GROUP_MATCHES.filter(m=>m.date===selDate),
     ...koSchedule.filter(m=>m.date===selDate),
-  ];
+  ].sort((a,b)=>{
+    const ta=a.kickoff?new Date(a.kickoff).getTime():Infinity;
+    const tb=b.kickoff?new Date(b.kickoff).getTime():Infinity;
+    return ta-tb;
+  });
   // Knockout days are bucketed in Israel time and may land on dates outside the static
   // list, so fold the actual fixture dates into the navigator.
   const navDates=(()=>{
