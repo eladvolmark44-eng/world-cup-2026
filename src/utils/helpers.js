@@ -242,7 +242,9 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
     const c0=resolveSlotTeam(bm.slots[0], bm.id), c1=resolveSlotTeam(bm.slots[1], bm.id);
     let home=c0.team||null, away=c1.team||null;
     let homeLabel=c0.label||null, awayLabel=c1.label||null;
-    let res=null, kickoff=null, venue=bm.venue, date=bm.date;
+    // Base date/time from the hardcoded official schedule (Israel time) so every fixture
+    // — even ones still TBD — shows a kickoff; ESPN overrides below if/when it has it.
+    let res=null, kickoff=bm.kickoff||null, venue=bm.venue, date=bm.date;
 
     // Find the actual ESPN fixture by matching a known team within this stage
     const known=[home,away].filter(Boolean);
