@@ -284,7 +284,12 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
         // Map the ESPN result (ef.home/ef.away order) onto our slot order.
         const rHome = home===ef.home?r.home : home===ef.away?r.away : r.home;
         const rAway = away===ef.home?r.home : away===ef.away?r.away : r.away;
-        res={home:rHome, away:rAway, live:r.live, minute:r.minute};
+        // Same mapping for the penalty-shootout tally, so it shows on the right side.
+        let pens=null;
+        if(r.pens){
+          pens={ home: home===ef.away?r.pens.away:r.pens.home, away: away===ef.home?r.pens.home:r.pens.away };
+        }
+        res={home:rHome, away:rAway, live:r.live, minute:r.minute, ...(pens?{pens}:{})};
         if(!r.live){
           const wTeam = r.winner==="home"?ef.home : r.winner==="away"?ef.away
             : r.home>r.away?ef.home : r.away>r.home?ef.away : null;

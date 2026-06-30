@@ -143,6 +143,11 @@ export function MatchRow({m, res, teamNames, odds, onClick}){
   const isLive = isStillLive(m.id, res, m.kickoff);
   useLiveTick(isLive);
   const isDone = hasRes && !isLive;
+  // Penalty shootout: when regulation is level, the winner is whoever has more pens.
+  const penWin = res?.pens && +res.home===+res.away
+    ? (+res.pens.home>+res.pens.away?"home":+res.pens.away>+res.pens.home?"away":null) : null;
+  const homeWon = isDone && (+res?.home>+res?.away || penWin==="home");
+  const awayWon = isDone && (+res?.away>+res?.home || penWin==="away");
   const locked = isMatchLocked(m.id, res);
   const homeName = m.home ? (teamNames?.[m.home]||m.home) : null;
   const awayName = m.away ? (teamNames?.[m.away]||m.away) : null;
@@ -157,10 +162,11 @@ export function MatchRow({m, res, teamNames, odds, onClick}){
         {!locked&&!hasRes&&m.kickoff&&<span className="open-badge-sm"> ✏️ פתוח להימור</span>}
       </div>
       <div className="sched-teams">
-        <span className={isDone&&+res.home>+res.away?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{homeName?withFlag(homeName):<span className="sched-tbd">{m.homeLabel||"?"}</span>}{isLive&&res?.reds?.home>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.home,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
+        <span className={homeWon?"sched-winner":isLive&&+res.home>+res.away?"sched-winning":""}>{homeName?withFlag(homeName):<span className="sched-tbd">{m.homeLabel||"?"}</span>}{isLive&&res?.reds?.home>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.home,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}</span>
         {hasRes?<span dir="ltr" className={`sched-score ${isLive?"sched-score-live":""}`}>{res.away} – {res.home}</span>:<span className="sched-vs">vs</span>}
-        <span className={isDone&&+res.away>+res.home?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{isLive&&res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}{awayName?withFlag(awayName):<span className="sched-tbd">{m.awayLabel||"?"}</span>}</span>
+        <span className={awayWon?"sched-winner":isLive&&+res.away>+res.home?"sched-winning":""}>{isLive&&res?.reds?.away>0&&<span className="rc-badge">{Array.from({length:Math.min(res.reds.away,3)}).map((_,i)=><span key={i} className="redcard"/>)}</span>}{awayName?withFlag(awayName):<span className="sched-tbd">{m.awayLabel||"?"}</span>}</span>
       </div>
+      {res?.pens&&<div className="sched-pens" dir="ltr">⚽ פנדלים {res.pens.away} – {res.pens.home}</div>}
       {venue&&<div className="sched-venue">🏟️ {venue}</div>}
       {matchOdds&&(
         <div className="match-odds" style={{marginTop:".3rem",marginBottom:0}}>

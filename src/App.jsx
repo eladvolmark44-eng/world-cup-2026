@@ -563,10 +563,16 @@ export default function App(){
                       (isLive && typeof comp.status?.clock==="number" ? String(Math.floor(comp.status.clock/60)) : null);
                     // ESPN keeps state "in" through extra time and the penalty shootout and only
                     // flips to "post" once the tie is fully settled, so the score/winner keep
-                    // updating until the very end. winner is set from the shootout result too.
-                    const winner = hC.winner===true ? "home" : aC.winner===true ? "away" : null;
+                    // updating until the very end.
+                    // Penalty shootout tally (ESPN exposes competitor.shootoutScore). Capture it so
+                    // a tie decided on penalties knows who advanced even if the winner flag is late.
+                    const hPen = hC.shootoutScore!=null ? parseInt(hC.shootoutScore,10) : null;
+                    const aPen = aC.shootoutScore!=null ? parseInt(aC.shootoutScore,10) : null;
+                    const pens = (hPen!=null && aPen!=null) ? {home:hPen, away:aPen} : null;
+                    let winner = hC.winner===true ? "home" : aC.winner===true ? "away" : null;
+                    if(!winner && pens && pens.home!==pens.away) winner = pens.home>pens.away ? "home" : "away";
                     const prevKo = koResults[ev.id];
-                    koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive, minute, ...(winner?{winner}:{}), ...(isFinished?{endedAt: prevKo?.endedAt || Date.now()}:{})};
+                    koResults[ev.id] = {home:parseInt(hC.score,10), away:parseInt(aC.score,10), live:isLive, minute, ...(winner?{winner}:{}), ...(pens?{pens}:{}), ...(isFinished?{endedAt: prevKo?.endedAt || Date.now()}:{})};
                   }
                   koMap[ev.id] = koMatch;
                 }
