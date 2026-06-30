@@ -297,6 +297,16 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
         }
       }
     }
+
+    // Admin manual override (results.koOverrides[id]) — wins over the API and is never
+    // clobbered by sync. home/away are in our slot order; pens decide a level tie.
+    const ov = results.koOverrides?.[bm.id];
+    if(ov && ov.home!=null && ov.away!=null && home && away){
+      res = { home:+ov.home, away:+ov.away, live:false, ...(ov.pens?{pens:{home:+ov.pens.home, away:+ov.pens.away}}:{}) };
+      const penW = ov.pens && +ov.home===+ov.away ? (+ov.pens.home>+ov.pens.away?"home":+ov.pens.away>+ov.pens.home?"away":null) : null;
+      const wSide = +ov.home>+ov.away?"home":+ov.away>+ov.home?"away":penW;
+      if(wSide) resolved[bm.id]={winnerTeam: wSide==="home"?home:away, loserTeam: wSide==="home"?away:home};
+    }
     out.push({id:bm.id, stage:bm.stage, date, venue, kickoff, apiId, home, away, homeLabel, awayLabel, res});
   }
   return out;

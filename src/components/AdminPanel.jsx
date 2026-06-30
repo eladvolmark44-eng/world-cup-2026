@@ -4,7 +4,7 @@ import { db, saveParticipant, saveGame } from "../firebase.js";
 import { GROUP_MATCHES, GROUPS_2026, KO_BRACKET } from "../constants/tournament.js";
 import { API_SOURCES, SOFA_TEAM_MAP } from "../constants/api.js";
 import { probeApiSource } from "../utils/api.js";
-import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts, withFlag } from "../utils/helpers.js";
+import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts, withFlag, buildKnockoutSchedule } from "../utils/helpers.js";
 import { NumStepper } from "./common.jsx";
 import { KnockoutBracketView, buildMockKnockoutPreview } from "./StandingsViews.jsx";
 
@@ -332,6 +332,77 @@ function GroupBetsEditor({participants, showToast}){
   );
 }
 
+function KoResultEditor({game, showToast}){
+  const teamNames = game?.playoffNames || {};
+  const sched = buildKnockoutSchedule(game?.results||{}, teamNames).filter(m=>m.home&&m.away);
+  const [mid, setMid] = useState("");
+  const [h, setH] = useState("");
+  const [a, setA] = useState("");
+  const [ph, setPh] = useState("");
+  const [pa, setPa] = useState("");
+  const [busy, setBusy] = useState(false);
+  const m = mid ? sched.find(x=>x.id===mid) : null;
+  const ov = mid ? game?.results?.koOverrides?.[mid] : null;
+
+  const save = async () => {
+    if(!mid || h===""|| a==="") { showToast("❌ הזן תוצאה"); return; }
+    setBusy(true);
+    try{
+      const entry = { home:+h, away:+a };
+      if(ph!==""&&pa!=="") entry.pens = { home:+ph, away:+pa };
+      await updateDoc(doc(db,"mundial2026","game"),{[`results.koOverrides.${mid}`]: entry});
+      showToast("✅ תוצאת הנוקאאוט נשמרה (גוברת על הסנכרון)");
+    }catch(e){showToast("❌ "+e.message);}
+    setBusy(false);
+  };
+  const clear = async () => {
+    if(!mid) return;
+    setBusy(true);
+    try{
+      const { deleteField } = await import("firebase/firestore");
+      await updateDoc(doc(db,"mundial2026","game"),{[`results.koOverrides.${mid}`]: deleteField()});
+      showToast("🗑️ ההתאמה הוסרה — חוזר לסנכרון האוטומטי");
+    }catch(e){showToast("❌ "+e.message);}
+    setBusy(false);
+  };
+
+  return(
+    <div className="admin-bet-editor">
+      <div className="admin-bet-title">✏️ עריכת תוצאת נוקאאוט</div>
+      <div className="admin-bet-selects">
+        <select className="admin-bet-sel" value={mid} onChange={e=>{const v=e.target.value;setMid(v);const x=sched.find(s=>s.id===v);const o=game?.results?.koOverrides?.[v];setH(o?.home??x?.res?.home??"");setA(o?.away??x?.res?.away??"");setPh(o?.pens?.home??x?.res?.pens?.home??"");setPa(o?.pens?.away??x?.res?.pens?.away??"");}}>
+          <option value="">— בחר משחק —</option>
+          {sched.map(x=><option key={x.id} value={x.id}>{x.stage} · {(teamNames[x.home]||x.home)} – {(teamNames[x.away]||x.away)} ({x.date})</option>)}
+        </select>
+      </div>
+      {m&&(
+        <>
+          <div className="admin-bet-row" dir="rtl">
+            <span className="admin-bet-team">{withFlag(teamNames[m.home]||m.home)}</span>
+            <input className="admin-bet-sel" style={{width:"3rem",textAlign:"center"}} type="number" min="0" value={h} onChange={e=>setH(e.target.value)}/>
+            <span>:</span>
+            <input className="admin-bet-sel" style={{width:"3rem",textAlign:"center"}} type="number" min="0" value={a} onChange={e=>setA(e.target.value)}/>
+            <span className="admin-bet-team">{withFlag(teamNames[m.away]||m.away)}</span>
+          </div>
+          <div className="admin-bet-row" dir="rtl" style={{gap:".4rem",alignItems:"center"}}>
+            <span style={{fontSize:".72rem",color:"var(--muted)"}}>פנדלים (רק בתיקו):</span>
+            <input className="admin-bet-sel" style={{width:"3rem",textAlign:"center"}} type="number" min="0" placeholder="–" value={ph} onChange={e=>setPh(e.target.value)}/>
+            <span>:</span>
+            <input className="admin-bet-sel" style={{width:"3rem",textAlign:"center"}} type="number" min="0" placeholder="–" value={pa} onChange={e=>setPa(e.target.value)}/>
+          </div>
+          <div className="admin-bet-row">
+            <button className="btn-admin-save-bet" onClick={save} disabled={busy}>{busy?"...":"💾 שמור תוצאה"}</button>
+            {ov&&<button className="btn-admin-save-bet" style={{background:"#7a2b2b"}} onClick={clear} disabled={busy}>🗑️ הסר התאמה</button>}
+          </div>
+        </>
+      )}
+      <div style={{fontSize:".6rem",color:"var(--muted)",marginTop:".3rem",textAlign:"right",direction:"rtl"}}>
+        קובע תוצאה ידנית למשחק נוקאאוט שגוברת על הסנכרון האוטומטי ולא נדרסת. בתיקו שמוכרע בפנדלים — מלא גם פנדלים כדי שהמנצחת תעלה. להסרה לחץ "הסר התאמה".
+      </div>
+    </div>
+  );
+}
+
 function ForceResyncEditor({game, showToast}){
   const [mid, setMid] = useState("");
   const [busy, setBusy] = useState(false);
@@ -573,6 +644,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
       </div>
       <CardsSection participants={participants} game={game} showToast={showToast}/>
       <AutoBetTagger participants={participants} showToast={showToast}/>
+      <KoResultEditor game={game} showToast={showToast}/>
       <ForceResyncEditor game={game} showToast={showToast}/>
       <GroupBetsEditor participants={participants} showToast={showToast}/>
       <div className="admin-bet-editor">

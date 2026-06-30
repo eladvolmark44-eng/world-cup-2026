@@ -7,7 +7,7 @@ import { SOFA_TEAM_MAP } from "./constants/api.js";
 import { ADMIN_UID, MONKEY_BOT, ASSISTANT_UID } from "./constants/game.js";
 import {
   getPresetBets, calcScore, rankSymbol, isTournamentOver,
-  getLastCompletedMatchDay, hePlayer, isMatchLocked
+  getLastCompletedMatchDay, hePlayer, isMatchLocked, buildKnockoutSchedule
 } from "./utils/helpers.js";
 import {
   setKoKickoffs, hasMatchWithin30Min, hasMatchWithin2Hours,
@@ -727,21 +727,31 @@ export default function App(){
     await saveParticipant({...cur,uid:authUser.uid,bets:updatedBets});
   };
 
-  // Auto-resolve monkey bets: when a match locks and bet is {monkey:true}, generate random scores
+  // Auto-resolve monkey bets: when a match locks with no bet, fill a random score. Covers
+  // both group and knockout matches (knockout fixtures whose teams are already seated).
   useEffect(()=>{
     if(!authUser) return;
     const me=participants.find(p=>p.uid===authUser.uid);
-    if(!me?.bets?.matches) return;
+    if(!me) return;
     const rnd=()=>Math.floor(Math.random()*Math.random()*5);
+    const curMatches=me.bets?.matches||{};
     const toResolve=GROUP_MATCHES.filter(m=>{
-      const b=me.bets.matches[m.id];
+      const b=curMatches[m.id];
       return b?.home==null && b?.away==null && isMatchLocked(m.id, game.results?.matches?.[m.id]);
     });
-    if(!toResolve.length) return;
-    const updatedMatches={...me.bets.matches};
+    const curKo=me.bets?.koMatches||{};
+    const koToResolve=buildKnockoutSchedule(game.results||{}).filter(m=>{
+      if(!m.home||!m.away) return false;
+      const b=curKo[m.id];
+      return b?.home==null && b?.away==null && isMatchLocked(m.id, m.res, m.kickoff);
+    });
+    if(!toResolve.length && !koToResolve.length) return;
+    const updatedMatches={...curMatches};
     toResolve.forEach(m=>{ updatedMatches[m.id]={home:rnd(),away:rnd(),monkey:true}; });
-    saveParticipant({...me,uid:authUser.uid,bets:{...me.bets,matches:updatedMatches}});
-  },[authUser?.uid, game.results?.matches]);
+    const updatedKo={...curKo};
+    koToResolve.forEach(m=>{ updatedKo[m.id]={home:rnd(),away:rnd(),monkey:true}; });
+    saveParticipant({...me,uid:authUser.uid,bets:{...me.bets,matches:updatedMatches,koMatches:updatedKo}});
+  },[authUser?.uid, game.results?.matches, game.results?.koResults]);
 
   const teamNames=game.playoffNames||{};
   const me=authUser?participants.find(p=>p.uid===authUser.uid):null;

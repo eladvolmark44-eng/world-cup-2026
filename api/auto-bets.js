@@ -6,7 +6,7 @@
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { GROUP_MATCHES } from "../src/constants/tournament.js";
-import { isMatchLocked, generateAutoBet } from "../src/utils/helpers.js";
+import { isMatchLocked, generateAutoBet, buildKnockoutSchedule } from "../src/utils/helpers.js";
 
 function initFirebase() {
   if (getApps().length > 0) return getFirestore();
@@ -17,6 +17,10 @@ function initFirebase() {
 
 export async function fillMissingBets(db, results) {
   const partSnap = await db.collection("mundial2026/game/participants").get();
+
+  // Locked knockout fixtures whose teams are known — these need auto-fill too.
+  const koFixtures = buildKnockoutSchedule(results || {})
+    .filter(m => m.home && m.away && isMatchLocked(m.id, m.res, m.kickoff));
 
   const writes = [];
   let filledBets = 0;
@@ -35,14 +39,22 @@ export async function fillMissingBets(db, results) {
       autoBets[m.id] = generateAutoBet(p.uid, m.id);
     }
 
-    const count = Object.keys(autoBets).length;
+    const koBets = p.bets?.koMatches || {};
+    const autoKo = {};
+    for (const m of koFixtures) {
+      const bet = koBets[m.id];
+      if (bet && bet.home != null) continue;
+      autoKo[m.id] = generateAutoBet(p.uid, m.id);
+    }
+
+    const count = Object.keys(autoBets).length + Object.keys(autoKo).length;
     if (!count) continue;
 
     filledBets += count;
     filledParticipants++;
     writes.push(
       db.doc(`mundial2026/game/participants/${docSnap.id}`).set(
-        { bets: { ...(p.bets || {}), matches: { ...matchBets, ...autoBets } } },
+        { bets: { ...(p.bets || {}), matches: { ...matchBets, ...autoBets }, koMatches: { ...koBets, ...autoKo } } },
         { merge: true }
       )
     );
