@@ -500,10 +500,17 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
     setFunHideSaving(false);
   };
 
+  // Knockout fixtures whose teams are seated — editable per-user just like group matches.
+  const betKoSched = buildKnockoutSchedule(game?.results||{}, game?.playoffNames||{}).filter(m=>m.home&&m.away);
+  const isKoBet = id => KO_BRACKET.some(k=>k.id===id);
+  const betBucket = id => isKoBet(id) ? "koMatches" : "matches";
+  const betMatchObj = !betMatchId ? null
+    : isKoBet(betMatchId) ? betKoSched.find(m=>m.id===betMatchId) : GROUP_MATCHES.find(m=>m.id===betMatchId);
+
   const onBetMatchChange = (uid, mid) => {
     setBetMatchId(mid);
     if(uid && mid) {
-      const existing = participants.find(p=>p.uid===uid)?.bets?.matches?.[mid];
+      const existing = participants.find(p=>p.uid===uid)?.bets?.[betBucket(mid)]?.[mid];
       setBetHome(existing?.home ?? 0);
       setBetAway(existing?.away ?? 0);
     }
@@ -511,7 +518,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
   const onBetUidChange = (uid) => {
     setBetUid(uid);
     if(uid && betMatchId) {
-      const existing = participants.find(p=>p.uid===uid)?.bets?.matches?.[betMatchId];
+      const existing = participants.find(p=>p.uid===uid)?.bets?.[betBucket(betMatchId)]?.[betMatchId];
       setBetHome(existing?.home ?? 0);
       setBetAway(existing?.away ?? 0);
     }
@@ -522,7 +529,8 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
     if(!p)return;
     setBetSaving(true);
     try{
-      await saveParticipant({...p,bets:{...(p.bets||{}),matches:{...(p.bets?.matches||{}),[betMatchId]:{home:betHome,away:betAway,adminEdited:true}}}});
+      const bucket = betBucket(betMatchId);
+      await saveParticipant({...p,bets:{...(p.bets||{}),[bucket]:{...(p.bets?.[bucket]||{}),[betMatchId]:{home:betHome,away:betAway,adminEdited:true}}}});
       showToast("✅ הימור עודכן");
     }catch(e){showToast("❌ "+e.message);}
     setBetSaving(false);
@@ -656,16 +664,21 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
           </select>
           <select className="admin-bet-sel" value={betMatchId} onChange={e=>onBetMatchChange(betUid,e.target.value)}>
             <option value="">— בחר משחק —</option>
-            {GROUP_MATCHES.map(m=><option key={m.id} value={m.id}>{m.home} – {m.away} ({m.date})</option>)}
+            <optgroup label="שלב הבתים">
+              {GROUP_MATCHES.map(m=><option key={m.id} value={m.id}>{m.home} – {m.away} ({m.date})</option>)}
+            </optgroup>
+            <optgroup label="נוקאאוט">
+              {betKoSched.map(m=><option key={m.id} value={m.id}>{m.home} – {m.away} ({m.stage} · {m.date})</option>)}
+            </optgroup>
           </select>
         </div>
         {betUid&&betMatchId&&(
           <div className="admin-bet-row">
-            <span className="admin-bet-team">{GROUP_MATCHES.find(m=>m.id===betMatchId)?.home}</span>
+            <span className="admin-bet-team">{betMatchObj?.home}</span>
             <input type="number" min="0" max="20" value={betHome} onChange={e=>setBetHome(+e.target.value)} className="admin-score-in"/>
             <span className="admin-bet-sep">:</span>
             <input type="number" min="0" max="20" value={betAway} onChange={e=>setBetAway(+e.target.value)} className="admin-score-in"/>
-            <span className="admin-bet-team">{GROUP_MATCHES.find(m=>m.id===betMatchId)?.away}</span>
+            <span className="admin-bet-team">{betMatchObj?.away}</span>
             <button className="btn-admin-save-bet" onClick={saveBet} disabled={betSaving}>{betSaving?"שומר...":"שמור"}</button>
           </div>
         )}
