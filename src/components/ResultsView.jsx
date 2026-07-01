@@ -22,7 +22,7 @@ export function RevealedBetsView({participants, viewerUid, results, teamNames}){
   if(activePlayer) return(
     <div className="section">
       <button className="btn-back-sm" onClick={()=>setActivePlayer(null)}>→ חזרה לרשימה</button>
-      <PlayerBetsView player={activePlayer} viewerUid={viewerUid} results={results} teamNames={teamNames}/>
+      <PlayerBetsView player={activePlayer} viewerUid={viewerUid} results={results} teamNames={teamNames} participants={participants}/>
     </div>
   );
 

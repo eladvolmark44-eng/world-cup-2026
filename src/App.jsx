@@ -778,7 +778,7 @@ export default function App(){
           <span className="header-title">הימורים של {selectedPlayer.name}</span>
         </div>
         <div className="main-body">
-          <PlayerBetsView player={selectedPlayer} viewerUid={authUser.uid} results={game.results||{}} teamNames={teamNames}/>
+          <PlayerBetsView player={selectedPlayer} viewerUid={authUser.uid} results={game.results||{}} teamNames={teamNames} participants={participants}/>
         </div>
       </div>
     </div>

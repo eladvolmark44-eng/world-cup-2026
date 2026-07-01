@@ -144,8 +144,10 @@ export function calcScore(bets={},results={},allP=[]){
   return t;
 }
 
-export function calcScoreBreakdown(bets={},results={}){
-  let groups=0,matches=0;
+// Per-category point breakdown (mirrors calcScore): 🏠 group-position picks, ⚽ group
+// matches, 🏆 knockout matches, plus champion / golden-boot / total-goals once decided.
+export function calcScoreBreakdown(bets={},results={},allP=[]){
+  let groups=0,matches=0,knockout=0,champion=0,goldenBoot=0,totalGoals=0;
   Object.keys(GROUPS_2026).forEach(g=>{
     const correct=results.groups?.[g];
     if(!correct?.length) return;
@@ -160,7 +162,6 @@ export function calcScoreBreakdown(bets={},results={}){
       matches+=1;if(+bet.home===+real.home&&+bet.away===+real.away)matches+=2;
     }
   });
-  // Knockout match points roll into the same ⚽ bucket, live (mirrors calcScore).
   if(bets.koMatches){
     const koById={};
     for(const k of buildKnockoutSchedule(results, {})) koById[k.id]=k;
@@ -169,11 +170,20 @@ export function calcScoreBreakdown(bets={},results={}){
       if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
       const pts=KO_POINTS[koById[id].stage]||{dir:2,exact:5};
       if(getDir(bet.home,bet.away)===getDir(real.home,real.away)){
-        matches += (+bet.home===+real.home && +bet.away===+real.away) ? pts.exact : pts.dir;
+        knockout += (+bet.home===+real.home && +bet.away===+real.away) ? pts.exact : pts.dir;
       }
     });
   }
-  return {groups,matches};
+  if(isTournamentOver()){
+    if(bets.champion&&bets.champion===results.champion)champion+=12;
+    if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())goldenBoot+=12;
+    if(bets.totalGoals!=null&&results.actualTotalGoals!=null){
+      const myD=Math.abs(+bets.totalGoals-+results.actualTotalGoals);
+      const diffs=allP.map(p=>Math.abs((p.bets?.totalGoals??9999)-+results.actualTotalGoals));
+      if(diffs.length&&myD===Math.min(...diffs))totalGoals+=10;
+    }
+  }
+  return {groups,matches,knockout,champion,goldenBoot,totalGoals};
 }
 
 // Seats the 8 best third-placed teams into the 8 Round-of-32 fixtures that have a "3RD"

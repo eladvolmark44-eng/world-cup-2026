@@ -3,7 +3,7 @@ import { GROUPS_2026, GROUP_MATCHES, REAL_TEAMS, MATCH_VENUE } from "../constant
 import { STRIKERS, STRIKER_FLAGS } from "../constants/players.js";
 import {
   isMatchLocked, isGlobalLocked, getDir, withFlag, withStrikerFlag,
-  formatKickoffTime, groupLabel, calcScore, canSeeGroupBet, canSeeMatchBet,
+  formatKickoffTime, groupLabel, calcScore, calcScoreBreakdown, canSeeGroupBet, canSeeMatchBet,
   canSeeSpecialBet, getDefaultMatchDate
 } from "../utils/helpers.js";
 import { NumStepper, DateNav } from "./common.jsx";
@@ -112,11 +112,12 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
   );
 }
 
-export function PlayerBetsView({player,viewerUid,results,teamNames}){
+export function PlayerBetsView({player,viewerUid,results,teamNames,participants=[]}){
   const [tab,setTab]=useState("groups");
   const bets=player.bets||{};
   const globalLocked=isGlobalLocked();
   const medals=["🥇","🥈","🥉"];
+  const bd=calcScoreBreakdown(bets,results,participants);
   const hasSpecial=globalLocked&&(bets.champion||bets.goldenBoot||(bets.totalGoals!=null&&bets.totalGoals!==""));
   return(
     <div className="player-bets-view">
@@ -127,7 +128,15 @@ export function PlayerBetsView({player,viewerUid,results,teamNames}){
         <div className="pbv-name">{player.name}{player.isBot&&<span className="bot-badge"> 🤖</span>}</div>
         <div className="pbv-meta">
           {player.rank&&<span className="pbv-rank-badge">{medals[player.rank-1]||`#${player.rank}`}</span>}
-          <span className="pbv-score-badge">{calcScore(bets,results,[])} נק׳</span>
+          <span className="pbv-score-badge">{calcScore(bets,results,participants)} נק׳</span>
+        </div>
+        <div className="pbv-breakdown">
+          <span className="pbv-bd-item">🏠 {bd.groups}</span>
+          <span className="pbv-bd-item">⚽ {bd.matches}</span>
+          <span className="pbv-bd-item">🏆 {bd.knockout}</span>
+          {bd.champion>0&&<span className="pbv-bd-item">🥇 {bd.champion}</span>}
+          {bd.goldenBoot>0&&<span className="pbv-bd-item">👟 {bd.goldenBoot}</span>}
+          {bd.totalGoals>0&&<span className="pbv-bd-item">🥅 {bd.totalGoals}</span>}
         </div>
         {hasSpecial&&(
           <div className="pbv-special-row">

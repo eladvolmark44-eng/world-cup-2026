@@ -486,7 +486,13 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                     :<span className="lb-circle-icon">👟</span>}
                 </div>
                 <span className="lb-score">
-                  {p.score>0&&(()=>{const bd=calcScoreBreakdown(p.bets||{},results);return(<span className="lb-score-detail">🏠{bd.groups}·⚽{bd.matches}</span>);})()}
+                  {p.score>0&&(()=>{const bd=calcScoreBreakdown(p.bets||{},results,participants);return(
+                    <span className="lb-score-detail">🏠{bd.groups}·⚽{bd.matches}·🏆{bd.knockout}
+                      {bd.champion>0&&<>·🥇{bd.champion}</>}
+                      {bd.goldenBoot>0&&<>·👟{bd.goldenBoot}</>}
+                      {bd.totalGoals>0&&<>·🥅{bd.totalGoals}</>}
+                    </span>
+                  );})()}
                   <span>{p.score>0?`${p.score} נק׳`:"—"}</span>
                 </span>
               </div>
