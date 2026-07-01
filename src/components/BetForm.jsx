@@ -100,13 +100,13 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
           <NumStepper value={a} onChange={setA} disabled={locked}/>
         </div>
         <div className={`team-name away ${dir==="away"?"winner":""}`}>{withFlag(teamNames?.[match.away]||match.away)}</div>
-        {!locked && (
-          <>
-            <button className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`} onClick={handleSave} disabled={!dirty||saving}>{saved?"✓":saving?"...":"💾"}</button>
-            <button className="btn-monkey" onClick={handleMonkey} title="קוף תהמר לי">🐒</button>
-          </>
-        )}
       </div>
+      {!locked && (
+        <div className="match-actions">
+          <button className="btn-monkey" onClick={handleMonkey} title="קוף תהמר לי">🐒</button>
+          <button className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`} onClick={handleSave} disabled={!dirty||saving}>{saved?"✓ נשמר":saving?"...":"💾 שמור"}</button>
+        </div>
+      )}
       {venue&&<div className="sched-venue">🏟️ {venue}</div>}
     </div>
   );
@@ -156,14 +156,20 @@ export function PlayerBetsView({player,viewerUid,results,teamNames,participants=
           {Object.entries(GROUPS_2026).map(([g,teams])=>{
             const revealed=canSeeGroupBet(g,viewerUid,player.uid);
             const picks=bets.groups?.[g]||[];
+            const correct=results.groups?.[g]||[];
+            const done=correct.length>0;
+            const hits=done?((picks[0]===correct[0]?1:0)+(picks[1]===correct[1]?1:0)):0;
+            const gpts=hits===2?5:hits===1?2:0;
             return(
               <div key={g} className="group-box">
-                <div className="group-label">בית {g} {!revealed&&"🔒"}</div>
+                <div className="group-label">
+                  בית {g} {!revealed&&"🔒"}
+                  {revealed&&done&&<span className={`grp-pts ${gpts>0?"grp-pts-pos":"grp-pts-zero"}`}>{gpts>0?`+${gpts} נק׳`:"✗ 0"}</span>}
+                </div>
                 {revealed?(
                   <div className="team-grid">
                     {teams.map(t=>{
                       const idx=picks.indexOf(t);
-                      const correct=results.groups?.[g]||[];
                       const hit=(idx===0&&correct[0]===t)||(idx===1&&correct[1]===t);
                       return(
                         <div key={t} className={`team-btn readonly ${idx>=0?"sel":""} ${hit?"correct":""}`}>

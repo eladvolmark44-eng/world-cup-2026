@@ -182,10 +182,12 @@
   .odds-val{font-size:.85rem;font-weight:800;color:#f0c040}
   .match-meta{font-size:.85rem;color:var(--muted);margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem}
   .match-body{display:flex;align-items:center;gap:.5rem}
-  /* min-width:0 lets a long team name (e.g. "קונגו דמוקרטית") shrink/wrap instead of
-     pushing the save/monkey buttons outside the card. */
-  .team-name{font-size:.95rem;font-weight:600;flex:1;min-width:0;text-align:right;overflow-wrap:anywhere}
+  /* min-width:0 + nowrap/ellipsis lets a long team name (e.g. "קונגו דמוקרטית") shrink
+     gracefully instead of breaking one Hebrew letter per line. Action buttons live in a
+     separate .match-actions row so the names always get the full width here. */
+  .team-name{font-size:.95rem;font-weight:600;flex:1;min-width:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .team-name.away{text-align:left}
+  .match-actions{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;margin-top:.5rem}
   .team-name.winner{color:var(--green)}
   .score-area{display:flex;align-items:center;gap:.35rem}
   .colon{font-weight:800;color:var(--muted)}
@@ -234,6 +236,9 @@
   .ko-pts{font-weight:800;font-size:.78rem;border-radius:12px;padding:.08rem .5rem}
   .ko-pts-pos{color:var(--green);background:rgba(0,216,127,.15)}
   .ko-pts-zero{color:var(--muted);background:rgba(255,255,255,.05)}
+  .grp-pts{font-weight:800;font-size:.75rem;border-radius:12px;padding:.08rem .5rem;margin-right:.5rem}
+  .grp-pts-pos{color:var(--green);background:rgba(0,216,127,.15)}
+  .grp-pts-zero{color:var(--muted);background:rgba(255,255,255,.05)}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .pbv-profile-card{display:flex;flex-direction:column;align-items:center;gap:.55rem;background:var(--card2);border-radius:16px;padding:1.4rem 1rem 1.1rem;margin-bottom:.8rem}
