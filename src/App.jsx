@@ -707,24 +707,26 @@ export default function App(){
     }catch(e){console.error(e);}
     setSigningIn(false);
   };
+  // All bet saves write ONLY the fields that changed (Firestore merge deep-merges nested
+  // maps), so a save can never clobber another bet that was written around the same time
+  // from a slightly stale React snapshot — the previous whole-object writes could.
   const handleSaveBets=async bets=>{
     if(!authUser)return;
-    const cur=participants.find(p=>p.uid===authUser.uid)||{};
-    await saveParticipant({...cur,uid:authUser.uid,bets});
-    showToast("✅ הימורים נשמרו!");
+    // Don't touch match/knockout score bets from this (groups/champion/etc.) form.
+    const {matches, koMatches, ...general}=bets||{};
+    try{ await saveParticipant({uid:authUser.uid,bets:general}); showToast("✅ הימורים נשמרו!"); }
+    catch(e){ showToast("❌ השמירה נכשלה — נסה שוב"); }
   };
 
   const handleSaveMatchBet=async(matchId, matchBet)=>{
     if(!authUser)return;
-    const cur=participants.find(p=>p.uid===authUser.uid)||{};
-    const updatedBets={...cur.bets,matches:{...cur.bets?.matches,[matchId]:matchBet}};
-    await saveParticipant({...cur,uid:authUser.uid,bets:updatedBets});
+    try{ await saveParticipant({uid:authUser.uid,bets:{matches:{[matchId]:matchBet}}}); }
+    catch(e){ showToast("❌ שמירת ההימור נכשלה — נסה שוב"); }
   };
   const handleSaveKoMatchBet=async(matchId, matchBet)=>{
     if(!authUser)return;
-    const cur=participants.find(p=>p.uid===authUser.uid)||{};
-    const updatedBets={...cur.bets,koMatches:{...cur.bets?.koMatches,[matchId]:matchBet}};
-    await saveParticipant({...cur,uid:authUser.uid,bets:updatedBets});
+    try{ await saveParticipant({uid:authUser.uid,bets:{koMatches:{[matchId]:matchBet}}}); }
+    catch(e){ showToast("❌ שמירת ההימור נכשלה — נסה שוב"); }
   };
 
   // Auto-resolve monkey bets: when a match locks with no bet, fill a random score. Covers
@@ -746,11 +748,14 @@ export default function App(){
       return b?.home==null && b?.away==null && isMatchLocked(m.id, m.res, m.kickoff);
     });
     if(!toResolve.length && !koToResolve.length) return;
-    const updatedMatches={...curMatches};
-    toResolve.forEach(m=>{ updatedMatches[m.id]={home:rnd(),away:rnd(),monkey:true}; });
-    const updatedKo={...curKo};
-    koToResolve.forEach(m=>{ updatedKo[m.id]={home:rnd(),away:rnd(),monkey:true}; });
-    saveParticipant({...me,uid:authUser.uid,bets:{...me.bets,matches:updatedMatches,koMatches:updatedKo}});
+    // Write ONLY the newly auto-filled keys (merge preserves everything else) so this can
+    // never overwrite a bet the user just saved from a snapshot this effect hasn't seen yet.
+    const fillM={}; toResolve.forEach(m=>{ fillM[m.id]={home:rnd(),away:rnd(),monkey:true}; });
+    const fillK={}; koToResolve.forEach(m=>{ fillK[m.id]={home:rnd(),away:rnd(),monkey:true}; });
+    saveParticipant({uid:authUser.uid,bets:{
+      ...(Object.keys(fillM).length?{matches:fillM}:{}),
+      ...(Object.keys(fillK).length?{koMatches:fillK}:{}),
+    }});
   },[authUser?.uid, game.results?.matches, game.results?.koResults]);
 
   const teamNames=game.playoffNames||{};
