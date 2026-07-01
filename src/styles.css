@@ -187,7 +187,7 @@
      separate .match-actions row so the names always get the full width here. */
   .team-name{font-size:.95rem;font-weight:600;flex:1;min-width:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .team-name.away{text-align:left}
-  .match-actions{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;margin-top:.5rem}
+  .match-actions{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:.5rem}
   .team-name.winner{color:var(--green)}
   .score-area{display:flex;align-items:center;gap:.35rem}
   .colon{font-weight:800;color:var(--muted)}
