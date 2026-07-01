@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { GROUPS_2026, GROUP_MATCHES, REAL_TEAMS, MATCH_VENUE } from "../constants/tournament.js";
+import { GROUPS_2026, GROUP_MATCHES, REAL_TEAMS, MATCH_VENUE, KO_POINTS } from "../constants/tournament.js";
 import { STRIKERS, STRIKER_FLAGS } from "../constants/players.js";
 import {
   isMatchLocked, isGlobalLocked, getDir, withFlag, withStrikerFlag,
   formatKickoffTime, groupLabel, calcScore, calcScoreBreakdown, canSeeGroupBet, canSeeMatchBet,
-  canSeeSpecialBet, getDefaultMatchDate
+  canSeeSpecialBet, getDefaultMatchDate, buildKnockoutSchedule
 } from "../utils/helpers.js";
 import { NumStepper, DateNav } from "./common.jsx";
 
@@ -207,6 +207,46 @@ export function PlayerBetsView({player,viewerUid,results,teamNames,participants=
           })}
         </div>
       )}
+      {tab==="knockout"&&(()=>{
+        const shown=buildKnockoutSchedule(results, teamNames)
+          .filter(m=>m.home&&m.away&&isMatchLocked(m.id, m.res, m.kickoff));
+        return(
+          <div className="scroll-area">
+            {shown.length===0
+              ? <div className="empty-msg">עדיין אין משחקי נוקאאוט שהתחילו</div>
+              : shown.map(m=>{
+                  const bet=bets.koMatches?.[m.id];
+                  const real=m.res;
+                  const done=real?.home!=null&&real?.away!=null&&!real?.live;
+                  const kp=KO_POINTS[m.stage]||{dir:2,exact:5};
+                  const correct=done&&bet?.home!=null&&getDir(+bet.home,+bet.away)===getDir(+real.home,+real.away);
+                  const exact=correct&&+bet.home===+real.home&&+bet.away===+real.away;
+                  const gained=done?(exact?kp.exact:correct?kp.dir:0):null;
+                  return(
+                    <div key={m.id} className={`match-row ${correct?"correct-row":""}`}>
+                      <div className="match-meta">{m.date}{m.kickoff&&` ${formatKickoffTime(m.kickoff)}`} · {m.stage}</div>
+                      <div className="match-body">
+                        <span className="team-name">{withFlag(teamNames?.[m.home]||m.home)}</span>
+                        <div className="score-area">
+                          {real?.home!=null
+                            ? <span dir="ltr" className="ko-real-score">{real.away}–{real.home}{real.live?" 🔴":""}</span>
+                            : <span className="hidden-score">vs</span>}
+                        </div>
+                        <span className="team-name away">{withFlag(teamNames?.[m.away]||m.away)}</span>
+                      </div>
+                      <div className="ko-bet-line">
+                        {bet?.home!=null
+                          ? <span dir="ltr" className={`bet-score ${exact?"exact":correct?"dir-ok":""}`}>ניחוש {bet.home}:{bet.away}{exact?" 🎯":correct?" ✓":""}</span>
+                          : <span className="hidden-score">ללא ניחוש</span>}
+                        {gained!==null&&<span className={`ko-pts ${gained>0?"ko-pts-pos":"ko-pts-zero"}`}>{gained>0?`+${gained} נק׳`:"✗ 0"}</span>}
+                      </div>
+                    </div>
+                  );
+                })
+            }
+          </div>
+        );
+      })()}
       {tab==="special"&&(()=>{
         const finished=GROUP_MATCHES.filter(m=>{
           const r=results.matches?.[m.id];

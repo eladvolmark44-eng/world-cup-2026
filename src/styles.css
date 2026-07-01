@@ -227,8 +227,13 @@
   .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center;display:flex;flex-direction:column;align-items:center;gap:.15rem}
   .lb-score-detail{font-size:.5rem;font-weight:600;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.1rem .3rem;letter-spacing:.01em;white-space:nowrap}
   /* Score breakdown on its own full-width line under the player row, so it has room. */
-  .lb-breakdown-row{grid-column:1 / -1;display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-start;margin-top:.45rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,.07)}
+  .lb-breakdown-row{grid-column:1 / -1;display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end;margin-top:.45rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,.07)}
   .lb-bd{font-size:.66rem;font-weight:700;color:var(--muted);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.1rem .45rem;white-space:nowrap}
+  .ko-bet-line{display:flex;align-items:center;justify-content:center;gap:.6rem;margin-top:.4rem;padding-top:.35rem;border-top:1px solid rgba(255,255,255,.06)}
+  .ko-real-score{font-weight:800;font-size:.95rem}
+  .ko-pts{font-weight:800;font-size:.78rem;border-radius:12px;padding:.08rem .5rem}
+  .ko-pts-pos{color:var(--green);background:rgba(0,216,127,.15)}
+  .ko-pts-zero{color:var(--muted);background:rgba(255,255,255,.05)}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .pbv-profile-card{display:flex;flex-direction:column;align-items:center;gap:.55rem;background:var(--card2);border-radius:16px;padding:1.4rem 1rem 1.1rem;margin-bottom:.8rem}
