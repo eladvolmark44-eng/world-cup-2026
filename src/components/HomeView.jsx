@@ -486,15 +486,18 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                     :<span className="lb-circle-icon">👟</span>}
                 </div>
                 <span className="lb-score">
-                  {p.score>0&&(()=>{const bd=calcScoreBreakdown(p.bets||{},results,participants);return(
-                    <span className="lb-score-detail">🏠{bd.groups}·⚽{bd.matches}·🏆{bd.knockout}
-                      {bd.champion>0&&<>·🥇{bd.champion}</>}
-                      {bd.goldenBoot>0&&<>·👟{bd.goldenBoot}</>}
-                      {bd.totalGoals>0&&<>·🥅{bd.totalGoals}</>}
-                    </span>
-                  );})()}
                   <span>{p.score>0?`${p.score} נק׳`:"—"}</span>
                 </span>
+                {p.score>0&&(()=>{const bd=calcScoreBreakdown(p.bets||{},results,participants);return(
+                  <div className="lb-breakdown-row">
+                    <span className="lb-bd">🏠 {bd.groups}</span>
+                    <span className="lb-bd">⚽ {bd.matches}</span>
+                    <span className="lb-bd">🏆 {bd.knockout}</span>
+                    {bd.champion>0&&<span className="lb-bd">🥇 {bd.champion}</span>}
+                    {bd.goldenBoot>0&&<span className="lb-bd">👟 {bd.goldenBoot}</span>}
+                    {bd.totalGoals>0&&<span className="lb-bd">🥅 {bd.totalGoals}</span>}
+                  </div>
+                );})()}
               </div>
             );
           })}

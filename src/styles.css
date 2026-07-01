@@ -226,6 +226,9 @@
   .lb-boot-chip{display:inline-flex;align-items:center;justify-content:center;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.15rem .35rem;font-size:.52rem;font-weight:600;text-align:center;line-height:1.2;word-break:break-word;max-width:100%;color:var(--text)}
   .lb-score{font-size:.78rem;font-weight:800;color:var(--green);text-align:center;display:flex;flex-direction:column;align-items:center;gap:.15rem}
   .lb-score-detail{font-size:.5rem;font-weight:600;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.1rem .3rem;letter-spacing:.01em;white-space:nowrap}
+  /* Score breakdown on its own full-width line under the player row, so it has room. */
+  .lb-breakdown-row{grid-column:1 / -1;display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-start;margin-top:.45rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,.07)}
+  .lb-bd{font-size:.66rem;font-weight:700;color:var(--muted);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.1rem .45rem;white-space:nowrap}
   .empty-msg{text-align:center;color:var(--muted);padding:2rem;font-size:.9rem}
   .player-bets-view{display:flex;flex-direction:column;gap:.8rem}
   .pbv-profile-card{display:flex;flex-direction:column;align-items:center;gap:.55rem;background:var(--card2);border-radius:16px;padding:1.4rem 1rem 1.1rem;margin-bottom:.8rem}
