@@ -1,0 +1,66 @@
+rules_version = '2';
+
+// Firestore security rules for the World Cup 2026 betting app.
+//
+// Threat model: a small pool of players who sign in with Google. The Test-Mode
+// rules left the whole database open to the public internet; these rules close
+// that by requiring authentication for every read and write, and additionally
+// stop one player from tampering with another player's bets.
+//
+// Architecture note: score/result syncing runs in the *client* (any signed-in
+// player's browser writes results onto mundial2026/game), so the game and sync
+// documents must stay writable by any authenticated user — locking them to the
+// admin would freeze results whenever the admin isn't online. Per-user bet docs
+// ARE locked down, since that is the real-money integrity concern.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── helpers ──────────────────────────────────────────────────────────
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isStaff() {
+      // Admin + assistant UIDs (kept in sync with src/constants/game.js).
+      return request.auth != null && request.auth.uid in [
+        '8tDgIRJQDFZyiTvaR0pP8nXShgH2',
+        '18QvfShudxTTsPfUJPpLhEQNp3h1'
+      ];
+    }
+
+    // ── main game doc: results, group standings, KO overrides, cards … ─────
+    // Read: any signed-in player. Write: any signed-in player, because the
+    // live score sync runs client-side and merges results here.
+    match /mundial2026/game {
+      allow read, write: if signedIn();
+    }
+
+    // ── per-player bets ────────────────────────────────────────────────────
+    // Anyone signed in can read (leaderboards, revealed bets). Only the owner
+    // — or staff (admin/assistant) — can write, so no one edits another
+    // player's picks. Server jobs use the Admin SDK and bypass these rules.
+    match /mundial2026/game/participants/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && (request.auth.uid == uid || isStaff());
+    }
+
+    // ── match chat ─────────────────────────────────────────────────────────
+    // Signed-in players can read and post; only staff can edit/remove messages.
+    match /mundial2026/game/matchChats/{matchId}/messages/{msgId} {
+      allow read, create: if signedIn();
+      allow update, delete: if isStaff();
+    }
+
+    // ── cached player→club lookups (best-effort cache, low sensitivity) ─────
+    match /mundial2026/game/playerClubs/{athleteId} {
+      allow read, write: if signedIn();
+    }
+
+    // ── sync timestamps (last API poll times) ──────────────────────────────
+    match /mundial2026/sync {
+      allow read, write: if signedIn();
+    }
+
+    // Everything else is denied by default.
+  }
+}
