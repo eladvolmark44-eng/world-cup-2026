@@ -7,11 +7,17 @@ rules_version = '2';
 // that by requiring authentication for every read and write, and additionally
 // stop one player from tampering with another player's bets.
 //
-// Architecture note: score/result syncing runs in the *client* (any signed-in
-// player's browser writes results onto mundial2026/game), so the game and sync
-// documents must stay writable by any authenticated user — locking them to the
-// admin would freeze results whenever the admin isn't online. Per-user bet docs
-// ARE locked down, since that is the real-money integrity concern.
+// Roles:
+//   • admin      — full control (matches the ⚙️ manager panel in the app).
+//   • assistant  — "עוזר מאמן" coach role: may ONLY edit players' name/photo.
+//                  Deliberately has NO admin-panel powers (results, points,
+//                  knockout overrides, cards, etc.).
+//
+// Architecture note: live score/result syncing runs in the *client* (any
+// signed-in player's browser writes results onto mundial2026/game), so the game
+// and sync documents stay writable by any authenticated user — locking them to
+// the admin would freeze results whenever the admin isn't online. The
+// admin-only manager actions are gated in the app UI (isAdmin).
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -20,12 +26,13 @@ service cloud.firestore {
     function signedIn() {
       return request.auth != null;
     }
-    function isStaff() {
-      // Admin + assistant UIDs (kept in sync with src/constants/game.js).
-      return request.auth != null && request.auth.uid in [
-        '8tDgIRJQDFZyiTvaR0pP8nXShgH2',
-        '18QvfShudxTTsPfUJPpLhEQNp3h1'
-      ];
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.uid == '8tDgIRJQDFZyiTvaR0pP8nXShgH2';
+    }
+    function isAssistant() {
+      return request.auth != null &&
+             request.auth.uid == '18QvfShudxTTsPfUJPpLhEQNp3h1';
     }
 
     // ── main game doc: results, group standings, KO overrides, cards … ─────
@@ -35,20 +42,24 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
-    // ── per-player bets ────────────────────────────────────────────────────
-    // Anyone signed in can read (leaderboards, revealed bets). Only the owner
-    // — or staff (admin/assistant) — can write, so no one edits another
-    // player's picks. Server jobs use the Admin SDK and bypass these rules.
+    // ── per-player bets & profile ──────────────────────────────────────────
+    // Read: anyone signed in (leaderboards, revealed bets).
+    // Write: the owner or the admin (full).
+    // The assistant (coach) may ONLY change name/photoURL of any player — never
+    // bets, scores, or anything else. Server jobs use the Admin SDK (bypass).
     match /mundial2026/game/participants/{uid} {
       allow read: if signedIn();
-      allow write: if signedIn() && (request.auth.uid == uid || isStaff());
+      allow write: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow update: if isAssistant() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'photoURL']);
     }
 
     // ── match chat ─────────────────────────────────────────────────────────
-    // Signed-in players can read and post; only staff can edit/remove messages.
+    // Signed-in players can read and post; only the admin can edit/remove.
     match /mundial2026/game/matchChats/{matchId}/messages/{msgId} {
       allow read, create: if signedIn();
-      allow update, delete: if isStaff();
+      allow update, delete: if isAdmin();
     }
 
     // ── cached player→club lookups (best-effort cache, low sensitivity) ─────
