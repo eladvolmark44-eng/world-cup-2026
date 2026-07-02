@@ -310,8 +310,14 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
         }
         res={home:rHome, away:rAway, live:r.live, minute:r.minute, ...(pens?{pens}:{})};
         if(!r.live){
-          const wTeam = r.winner==="home"?ef.home : r.winner==="away"?ef.away
+          // Determine who advances: ESPN winner flag → aggregate score (incl. extra time) →
+          // penalty shootout. The pens fallback is critical for knockout rounds: without it a
+          // tie decided on penalties leaves the winner null, which stalls the ENTIRE downstream
+          // bracket (the next round's teams stay as "winner of Mxx" labels and never link).
+          let wTeam = r.winner==="home"?ef.home : r.winner==="away"?ef.away
             : r.home>r.away?ef.home : r.away>r.home?ef.away : null;
+          if(!wTeam && r.pens && r.pens.home!==r.pens.away)
+            wTeam = r.pens.home>r.pens.away ? ef.home : ef.away;
           if(wTeam) resolved[bm.id]={winnerTeam:wTeam, loserTeam: wTeam===ef.home?ef.away:ef.home};
         }
       }
