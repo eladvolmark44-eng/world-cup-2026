@@ -92,14 +92,16 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
           {matchOdds.ts&&<span className="odds-ts">עודכן {new Date(matchOdds.ts).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</span>}
         </div>
       )}
-      <div className="match-body">
-        <div className={`team-name ${dir==="home"?"winner":""}`}>{withFlag(teamNames?.[match.home]||match.home)}</div>
+      <div className="match-body match-body-edit">
+        <div className="team-names-row">
+          <div className={`team-name ${dir==="home"?"winner":""}`}>{withFlag(teamNames?.[match.home]||match.home)}</div>
+          <div className={`team-name away ${dir==="away"?"winner":""}`}>{withFlag(teamNames?.[match.away]||match.away)}</div>
+        </div>
         <div className="score-area">
           <NumStepper value={h} onChange={setH} disabled={locked}/>
           <span className="colon">:</span>
           <NumStepper value={a} onChange={setA} disabled={locked}/>
         </div>
-        <div className={`team-name away ${dir==="away"?"winner":""}`}>{withFlag(teamNames?.[match.away]||match.away)}</div>
       </div>
       {!locked && (
         <div className="match-actions">

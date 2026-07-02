@@ -188,6 +188,12 @@
   .team-name{font-size:.95rem;font-weight:600;flex:1;min-width:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .team-name.away{text-align:left}
   .match-actions{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:.5rem}
+  /* Editable bet row: stack names (full-width row) above the score steppers and the action
+     buttons, so long team names show in full instead of being truncated with an ellipsis. */
+  .match-body-edit{flex-direction:column;align-items:stretch;gap:.5rem}
+  .match-body-edit .score-area{justify-content:center}
+  .team-names-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+  .team-names-row .team-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
   .team-name.winner{color:var(--green)}
   .score-area{display:flex;align-items:center;gap:.35rem}
   .colon{font-weight:800;color:var(--muted)}
