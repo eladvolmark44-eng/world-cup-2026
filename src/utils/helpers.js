@@ -271,11 +271,20 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
     // — even ones still TBD — shows a kickoff; ESPN overrides below if/when it has it.
     let res=null, kickoff=bm.kickoff||null, venue=bm.venue, date=bm.date;
 
-    // Find the actual ESPN fixture by matching a known team within this stage
+    // Find the actual ESPN fixture for this bracket slot.
     const known=[home,away].filter(Boolean);
     let ef=null, apiId=null;
     const pool=byStage[bm.stage]||[];
-    if(known.length){
+    if(known.length===2){
+      // Both teams known → a pair meets exactly once in single-elimination, so match by the
+      // team-pair across ALL knockout fixtures regardless of stage label. This makes the
+      // result show even if the sync stored the fixture under a mis-detected/placeholder
+      // stage (which otherwise leaves the match visible but with no score).
+      ef = espn.find(e=>known.every(k=>e.home===k||e.away===k));
+    }
+    if(!ef && known.length){
+      // Fallback: only one team known → search within the correct stage (a lone team recurs
+      // across rounds, so matching it tournament-wide could pick the wrong round).
       ef = pool.find(e=>known.every(k=>e.home===k||e.away===k)) || pool.find(e=>known.some(k=>e.home===k||e.away===k));
     }
     if(ef){

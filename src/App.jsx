@@ -546,7 +546,10 @@ export default function App(){
                       : null;
                     stage = KO_BRACKET.find(k=>k.date===dm)?.stage || null;
                   }
-                  if (!stage) continue;
+                  // Last resort: keep the fixture (with its score) even if we couldn't classify
+                  // the stage — buildKnockoutSchedule links it to the right bracket slot by the
+                  // team-pair, so an unclassified stage no longer hides a played result.
+                  if (!stage) stage = "נוקאאוט";
                   const state = comp.status?.type?.state;
                   const isFinished = state === "post";
                   const isLive = state === "in";
