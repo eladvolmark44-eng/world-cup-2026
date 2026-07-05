@@ -371,7 +371,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
     : [];
   const resFor=m=>m.res!==undefined?m.res:results.matches?.[m.id];
   const groupsPickedCount=Object.keys(GROUPS_2026).filter(g=>(myBets.groups?.[g]||[]).length===2).length;
-  const ranked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},results,participants)})).sort((a,b)=>b.score-a.score);
+  const ranked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},results,participants,p.uid)})).sort((a,b)=>b.score-a.score);
   const medals=["🥇","🥈","🥉"];
   const tournamentOver=isTournamentOver();
   const leader=ranked[0]||null;
@@ -488,7 +488,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                 <span className="lb-score">
                   <span>{p.score>0?`${p.score} נק׳`:"—"}</span>
                 </span>
-                {p.score>0&&(()=>{const bd=calcScoreBreakdown(p.bets||{},results,participants);return(
+                {(()=>{const bd=calcScoreBreakdown(p.bets||{},results,participants,p.uid);if(p.score<=0&&!bd.penalty)return null;return(
                   <div className="lb-breakdown-row">
                     <span className="lb-bd">🏠 {bd.groups}</span>
                     <span className="lb-bd">⚽ {bd.matches}</span>
@@ -496,6 +496,7 @@ export default function HomeView({me, participants, results, teamNames, odds, li
                     {bd.champion>0&&<span className="lb-bd">🥇 {bd.champion}</span>}
                     {bd.goldenBoot>0&&<span className="lb-bd">👟 {bd.goldenBoot}</span>}
                     {bd.totalGoals>0&&<span className="lb-bd">🥅 {bd.totalGoals}</span>}
+                    {bd.penalty>0&&<span className="lb-bd lb-bd-pen">📺 −{bd.penalty}</span>}
                   </div>
                 );})()}
               </div>

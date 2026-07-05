@@ -94,7 +94,7 @@ export function canSeeSpecialBet(viewerUid, ownerUid) {
 }
 
 export function getDir(h,a){if(+h>+a)return"home";if(+a>+h)return"away";return"draw";}
-export function calcScore(bets={},results={},allP=[]){
+export function calcScore(bets={},results={},allP=[],uid=null){
   let t=0;
   // Group picks — award per group as each group's results become known
   Object.keys(GROUPS_2026).forEach(g=>{
@@ -141,13 +141,16 @@ export function calcScore(bets={},results={},allP=[]){
       if(myD===Math.min(...diffs))t+=10;
     }
   }
+  // Admin-applied penalties (e.g. 2 pts for skipping a shared match screening), keyed by uid.
+  if(uid) t -= results.penalties?.[uid] || 0;
   return t;
 }
 
 // Per-category point breakdown (mirrors calcScore): 🏠 group-position picks, ⚽ group
 // matches, 🏆 knockout matches, plus champion / golden-boot / total-goals once decided.
-export function calcScoreBreakdown(bets={},results={},allP=[]){
+export function calcScoreBreakdown(bets={},results={},allP=[],uid=null){
   let groups=0,matches=0,knockout=0,champion=0,goldenBoot=0,totalGoals=0;
+  const penalty = uid ? (results.penalties?.[uid] || 0) : 0;
   Object.keys(GROUPS_2026).forEach(g=>{
     const correct=results.groups?.[g];
     if(!correct?.length) return;
@@ -183,7 +186,7 @@ export function calcScoreBreakdown(bets={},results={},allP=[]){
       if(diffs.length&&myD===Math.min(...diffs))totalGoals+=10;
     }
   }
-  return {groups,matches,knockout,champion,goldenBoot,totalGoals};
+  return {groups,matches,knockout,champion,goldenBoot,totalGoals,penalty};
 }
 
 // Seats the 8 best third-placed teams into the 8 Round-of-32 fixtures that have a "3RD"

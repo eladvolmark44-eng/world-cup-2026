@@ -66,7 +66,7 @@ export function RevealedBetsView({participants, viewerUid, results, teamNames}){
                 <div key={p.uid} className="lb-row" onClick={()=>setActivePlayer(p)}>
                   {p.photoURL&&<img src={p.photoURL} className="lb-avatar" alt=""/>}
                   <span className="lb-name">{p.name}</span>
-                  <span className="lb-score">{calcScore(p.bets||{},results,participants)} נק׳</span>
+                  <span className="lb-score">{calcScore(p.bets||{},results,participants,p.uid)} נק׳</span>
                   <span className="lb-arrow">›</span>
                 </div>
               ))}

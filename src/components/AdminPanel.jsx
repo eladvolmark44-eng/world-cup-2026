@@ -178,6 +178,50 @@ function CardsSection({participants, game, showToast}){
   );
 }
 
+// Admin penalty editor — deducts points from a player's total (e.g. 2 pts for skipping a
+// shared match screening). Stored at results.penalties[uid] and subtracted in calcScore.
+function PenaltySection({participants, game, showToast}){
+  const [uid, setUid] = useState("");
+  const [pts, setPts] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  const onUidChange = (newUid) => {
+    setUid(newUid);
+    setPts(game?.results?.penalties?.[newUid] || 0);
+  };
+
+  const save = async () => {
+    if(!uid) return;
+    setSaving(true);
+    try{
+      await updateDoc(doc(db,"mundial2026","game"),{[`results.penalties.${uid}`]: pts});
+      showToast("✅ עונש עודכן");
+    }catch(e){showToast("❌ "+e.message);}
+    setSaving(false);
+  };
+
+  return(
+    <div className="admin-bet-editor">
+      <div className="admin-bet-title">📺 עונש הברזה (הורדת נקודות)</div>
+      <p className="section-note">מוריד נקודות מהניקוד הכולל של השחקן. 2 נק׳ לכל הברזה מהקרנה משותפת.</p>
+      <div className="admin-bet-selects">
+        <select className="admin-bet-sel" value={uid} onChange={e=>onUidChange(e.target.value)}>
+          <option value="">— בחר שחקן —</option>
+          {participants.filter(p=>!p.isBot).map(p=><option key={p.uid} value={p.uid}>{p.name}</option>)}
+        </select>
+      </div>
+      {uid&&(
+        <div className="admin-bet-row">
+          <button className="btn-admin-save-bet" onClick={()=>setPts(p=>Math.max(0,p-2))}>−2</button>
+          <span style={{fontWeight:800,fontSize:"1.1rem",minWidth:"3.5rem",textAlign:"center"}}>−{pts} נק׳</span>
+          <button className="btn-admin-save-bet" onClick={()=>setPts(p=>p+2)}>+2</button>
+          <button className="btn-admin-save-bet" onClick={save} disabled={saving}>{saving?"שומר...":"שמור"}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Lets admin tag an existing user bet with the 🎲 (auto-bet) icon without touching
 // its score or visibility — reveal timing is still governed by isMatchLocked elsewhere,
 // untouched by this flag, so a tagged bet stays hidden until the match locks normally.
@@ -651,6 +695,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
         </div>
       </div>
       <CardsSection participants={participants} game={game} showToast={showToast}/>
+      <PenaltySection participants={participants} game={game} showToast={showToast}/>
       <AutoBetTagger participants={participants} showToast={showToast}/>
       <KoResultEditor game={game} showToast={showToast}/>
       <ForceResyncEditor game={game} showToast={showToast}/>

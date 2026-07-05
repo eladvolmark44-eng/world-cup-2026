@@ -680,7 +680,7 @@ export default function App(){
     if(localStorage.getItem(key))return;
     const results=game?.results||{};
     const ranked=[...participants]
-      .map(p=>({...p,score:calcScore(p.bets||{},results,participants)}))
+      .map(p=>({...p,score:calcScore(p.bets||{},results,participants,p.uid)}))
       .sort((a,b)=>b.score-a.score);
     const myIdx=ranked.findIndex(p=>p.uid===authUser.uid);
     if(myIdx<0)return;
@@ -766,7 +766,7 @@ export default function App(){
   const isAdmin=authUser?.uid===ADMIN_UID;
   const isAssistant=authUser?.uid===ASSISTANT_UID&&!game.assistantLocked;
   const tournamentOver=isTournamentOver();
-  const appRanked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},game.results||{},participants)})).sort((a,b)=>b.score-a.score);
+  const appRanked=[...participants].map(p=>({...p,score:calcScore(p.bets||{},game.results||{},participants,p.uid)})).sort((a,b)=>b.score-a.score);
   const appLeader=appRanked[0]||null;
 
   if(authLoading||gameLoading)return(<div className="app loading-screen"><div className="loading-ball">⚽</div><p>טוען...</p></div>);

@@ -119,7 +119,7 @@ export function PlayerBetsView({player,viewerUid,results,teamNames,participants=
   const bets=player.bets||{};
   const globalLocked=isGlobalLocked();
   const medals=["🥇","🥈","🥉"];
-  const bd=calcScoreBreakdown(bets,results,participants);
+  const bd=calcScoreBreakdown(bets,results,participants,player.uid);
   const hasSpecial=globalLocked&&(bets.champion||bets.goldenBoot||(bets.totalGoals!=null&&bets.totalGoals!==""));
   return(
     <div className="player-bets-view">
@@ -130,7 +130,7 @@ export function PlayerBetsView({player,viewerUid,results,teamNames,participants=
         <div className="pbv-name">{player.name}{player.isBot&&<span className="bot-badge"> 🤖</span>}</div>
         <div className="pbv-meta">
           {player.rank&&<span className="pbv-rank-badge">{medals[player.rank-1]||`#${player.rank}`}</span>}
-          <span className="pbv-score-badge">{calcScore(bets,results,participants)} נק׳</span>
+          <span className="pbv-score-badge">{calcScore(bets,results,participants,player.uid)} נק׳</span>
         </div>
         <div className="pbv-breakdown">
           <span className="pbv-bd-item">🏠 {bd.groups}</span>
@@ -139,6 +139,7 @@ export function PlayerBetsView({player,viewerUid,results,teamNames,participants=
           {bd.champion>0&&<span className="pbv-bd-item">🥇 {bd.champion}</span>}
           {bd.goldenBoot>0&&<span className="pbv-bd-item">👟 {bd.goldenBoot}</span>}
           {bd.totalGoals>0&&<span className="pbv-bd-item">🥅 {bd.totalGoals}</span>}
+          {bd.penalty>0&&<span className="pbv-bd-item pbv-bd-pen">📺 −{bd.penalty}</span>}
         </div>
         {hasSpecial&&(
           <div className="pbv-special-row">
