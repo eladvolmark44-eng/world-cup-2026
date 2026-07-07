@@ -67,14 +67,17 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
   };
 
   const handleMonkey = async () => {
-    const rnd=()=>Math.floor(Math.random()*Math.random()*5);
-    const rh=rnd(), ra=rnd();
-    setH(rh); setA(ra);
+    // Don't reveal a random score now — reset the bet and delegate to the monkey, which
+    // auto-fills it (generateAutoBet) only once the match kicks off, via the server-side
+    // fillMissingBets / client auto-fill. Keeps the pick hidden until the match starts.
+    setH(null); setA(null);
     setSaving(true);
-    await onSave(match.id, {home: rh, away: ra});
+    await onSave(match.id, {home: null, away: null, monkeyPending: true});
     setSaving(false); setSaved(true);
     setTimeout(()=>setSaved(false), 1500);
   };
+
+  const monkeyPending = !locked && savedBet?.monkeyPending && (savedBet?.home==null);
 
   const dir = h!=null && a!=null ? getDir(+h,+a) : null;
   const venue = MATCH_VENUE[match.id] || match.venue || null;
@@ -105,10 +108,11 @@ export function MatchBetRow({match, savedBet, onSave, teamNames, odds, res}){
       </div>
       {!locked && (
         <div className="match-actions">
-          <button className="btn-monkey" onClick={handleMonkey} title="קוף תהמר לי">🐒</button>
+          <button className={`btn-monkey ${monkeyPending?"btn-monkey-active":""}`} onClick={handleMonkey} title="הקוף יהמר לי כשהמשחק יתחיל">🐒</button>
           <button className={`btn-save-match ${dirty?"dirty":""} ${saved?"done":""}`} onClick={handleSave} disabled={!dirty||saving}>{saved?"✓ נשמר":saving?"...":"💾 שמור"}</button>
         </div>
       )}
+      {monkeyPending && <div className="monkey-pending-note">🐒 הקוף יהמר עבורך אוטומטית עם תחילת המשחק</div>}
       {venue&&<div className="sched-venue">🏟️ {venue}</div>}
     </div>
   );
