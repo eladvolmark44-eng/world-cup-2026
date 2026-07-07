@@ -225,20 +225,27 @@ function PenaltySection({participants, game, showToast}){
 // Lets admin tag an existing user bet with the 🎲 (auto-bet) icon without touching
 // its score or visibility — reveal timing is still governed by isMatchLocked elsewhere,
 // untouched by this flag, so a tagged bet stays hidden until the match locks normally.
-function AutoBetTagger({participants, showToast}){
+function AutoBetTagger({participants, game, showToast}){
   const [uid, setUid] = useState("");
   const [matchId, setMatchId] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const teamNames = game?.playoffNames || {};
+  // Knockout fixtures whose teams are known — so the tagger works on KO bets too, not just
+  // group matches (koMatches bucket, keyed by bracket id M73..M104).
+  const koFixtures = buildKnockoutSchedule(game?.results || {}, teamNames).filter(m=>m.home&&m.away);
+  const isKo = koFixtures.some(m=>m.id===matchId);
+
   const p = uid ? participants.find(p=>p.uid===uid) : null;
-  const bet = p && matchId ? p.bets?.matches?.[matchId] : null;
+  const bucket = isKo ? "koMatches" : "matches";
+  const bet = p && matchId ? p.bets?.[bucket]?.[matchId] : null;
   const hasBet = bet && bet.home!=null;
 
   const toggle = async () => {
     if(!p||!matchId||!hasBet)return;
     setSaving(true);
     try{
-      await saveParticipant({...p,bets:{...(p.bets||{}),matches:{...(p.bets?.matches||{}),[matchId]:{...bet,auto:!bet.auto}}}});
+      await saveParticipant({...p,bets:{...(p.bets||{}),[bucket]:{...(p.bets?.[bucket]||{}),[matchId]:{...bet,auto:!bet.auto}}}});
       showToast(bet.auto?"✅ הוסר הסימון":"🎲 ההימור סומן כאקראי");
     }catch(e){showToast("❌ "+e.message);}
     setSaving(false);
@@ -254,7 +261,14 @@ function AutoBetTagger({participants, showToast}){
         </select>
         <select className="admin-bet-sel" value={matchId} onChange={e=>setMatchId(e.target.value)}>
           <option value="">— בחר משחק —</option>
-          {GROUP_MATCHES.map(m=><option key={m.id} value={m.id}>{m.home} – {m.away} ({m.date})</option>)}
+          <optgroup label="שלב הבתים">
+            {GROUP_MATCHES.map(m=><option key={m.id} value={m.id}>{m.home} – {m.away} ({m.date})</option>)}
+          </optgroup>
+          {koFixtures.length>0&&(
+            <optgroup label="נוקאאוט">
+              {koFixtures.map(m=><option key={m.id} value={m.id}>{m.home} – {m.away} ({m.stage})</option>)}
+            </optgroup>
+          )}
         </select>
       </div>
       {uid&&matchId&&(
@@ -696,7 +710,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
       </div>
       <CardsSection participants={participants} game={game} showToast={showToast}/>
       <PenaltySection participants={participants} game={game} showToast={showToast}/>
-      <AutoBetTagger participants={participants} showToast={showToast}/>
+      <AutoBetTagger participants={participants} game={game} showToast={showToast}/>
       <KoResultEditor game={game} showToast={showToast}/>
       <ForceResyncEditor game={game} showToast={showToast}/>
       <GroupBetsEditor participants={participants} showToast={showToast}/>
