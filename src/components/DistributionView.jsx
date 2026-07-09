@@ -15,7 +15,7 @@ function collectRows(participants, results, teamNames){
       if(!isMatchLocked(m.id, real)) continue;
       const bet = p.bets?.matches?.[m.id];
       if(!bet || bet.home==null || bet.away==null) continue;
-      rows.push({uid:p.uid, name:p.name, isBot:!!p.isBot, betH:+bet.home, betA:+bet.away, realH:+real.home, realA:+real.away});
+      rows.push({uid:p.uid, name:p.name, isBot:!!p.isBot, betH:+bet.home, betA:+bet.away, realH:+real.home, realA:+real.away, label:`${m.home} – ${m.away}`});
     }
     for(const k of koSched){
       if(!k.home || !k.away) continue;
@@ -24,7 +24,7 @@ function collectRows(participants, results, teamNames){
       if(!isMatchLocked(k.id, real, k.kickoff)) continue;
       const bet = p.bets?.koMatches?.[k.id];
       if(!bet || bet.home==null || bet.away==null) continue;
-      rows.push({uid:p.uid, name:p.name, isBot:!!p.isBot, betH:+bet.home, betA:+bet.away, realH:+real.home, realA:+real.away});
+      rows.push({uid:p.uid, name:p.name, isBot:!!p.isBot, betH:+bet.home, betA:+bet.away, realH:+real.home, realA:+real.away, label:`${k.home} – ${k.away}`});
     }
   }
   return rows;
@@ -37,6 +37,7 @@ const scoreKey = (h,a)=> `${Math.max(h,a)}:${Math.min(h,a)}`;
 
 export default function DistributionView({participants, results, teamNames}){
   const [tab, setTab] = useState("general");
+  const [openScore, setOpenScore] = useState(null);
   const rows = useMemo(()=>collectRows(participants, results, teamNames), [participants, results, teamNames]);
 
   const general = useMemo(()=>{
@@ -118,13 +119,35 @@ export default function DistributionView({participants, results, teamNames}){
 
           <div className="dist-block">
             <div className="dist-block-title">כל התוצאות שהומרו · {general.scores.length} תוצאות שונות</div>
-            {general.scores.map(s=>(
-              <div key={s.score} className="dist-score-row">
-                <span className="dist-score-val" dir="ltr">{s.score}</span>
-                <div className="dist-linebar"><div className="dist-linebar-fill" style={{width:`${pct(s.n,general.total)}%`}}/></div>
-                <span className="dist-score-nums">{s.n} ({pct(s.n,general.total)}%) · {s.hit} פגעו</span>
-              </div>
-            ))}
+            <p className="section-note" style={{marginTop:0}}>לחץ על תוצאה כדי לראות מי הימר אותה ובאיזה משחק</p>
+            {general.scores.map(s=>{
+              const open = openScore===s.score;
+              const detail = open ? rows.filter(r=>scoreKey(r.betH,r.betA)===s.score) : [];
+              return(
+                <div key={s.score}>
+                  <button className={`dist-score-row dist-score-btn ${open?"open":""}`} onClick={()=>setOpenScore(open?null:s.score)}>
+                    <span className="dist-score-val" dir="ltr">{s.score}</span>
+                    <div className="dist-linebar"><div className="dist-linebar-fill" style={{width:`${pct(s.n,general.total)}%`}}/></div>
+                    <span className="dist-score-nums">{s.n} ({pct(s.n,general.total)}%) · {s.hit} פגעו</span>
+                  </button>
+                  {open&&(
+                    <div className="dist-score-detail">
+                      {detail.map((r,i)=>{
+                        const exact = r.betH===r.realH && r.betA===r.realA;
+                        return(
+                          <div key={i} className="dist-detail-row">
+                            <span className="dist-detail-name">{r.name}{r.isBot&&" 🐒"}</span>
+                            <span className="dist-detail-match">{r.label}</span>
+                            <span className="dist-detail-bet" dir="ltr">ניחש {r.betH}:{r.betA} · תוצאה {r.realH}:{r.realA}</span>
+                            <span className={`dist-detail-mark ${exact?"ok":"no"}`}>{exact?"🎯":"✗"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
