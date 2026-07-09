@@ -31,6 +31,9 @@ function collectRows(participants, results, teamNames){
 }
 
 const pct = (n,d)=> d>0 ? Math.round(n/d*100) : 0;
+// Order-independent scoreline key: 3:2 and 2:3 are the same result (home/away side doesn't
+// matter for the distribution). Always higher:lower. "Hit" is still judged orientation-aware.
+const scoreKey = (h,a)=> `${Math.max(h,a)}:${Math.min(h,a)}`;
 
 function StatBar({exact, dirOnly, miss}){
   const total = exact+dirOnly+miss || 1;
@@ -55,7 +58,7 @@ export default function DistributionView({participants, results, teamNames}){
       const isExact = r.betH===r.realH && r.betA===r.realA;
       if(bd===rd){ if(isExact) exact++; else dirOnly++; }
       else miss++;
-      const key = `${r.betH}:${r.betA}`;
+      const key = scoreKey(r.betH, r.betA);
       const s = scoreMap[key] || (scoreMap[key]={n:0,hit:0});
       s.n++;
       if(isExact) s.hit++;
@@ -73,7 +76,7 @@ export default function DistributionView({participants, results, teamNames}){
       const isExact = r.betH===r.realH && r.betA===r.realA;
       if(bd===rd){ if(isExact) s.exact++; else s.dirOnly++; }
       else s.miss++;
-      const key=`${r.betH}:${r.betA}`;
+      const key=scoreKey(r.betH, r.betA);
       const sc = s.scores[key] || (s.scores[key]={n:0,hit:0});
       sc.n++; if(isExact) sc.hit++;
     }
@@ -88,7 +91,7 @@ export default function DistributionView({participants, results, teamNames}){
     const players = perPlayer.map(p=>({uid:p.uid, name:p.name, isBot:p.isBot, total:p.total}));
     const cell = {}; let maxCell = 0;
     for(const r of rows){
-      const ck = `${r.betH}:${r.betA}|${r.uid}`;
+      const ck = `${scoreKey(r.betH, r.betA)}|${r.uid}`;
       cell[ck] = (cell[ck]||0)+1;
       if(cell[ck]>maxCell) maxCell = cell[ck];
     }
