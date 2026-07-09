@@ -155,7 +155,7 @@ export default function DistributionView({participants, results, teamNames}){
 
       {tab==="matrix"&&(
         <div className="scroll-area">
-          <p className="section-note">כל תא: <b>פגעו/הימרו</b> — כמה בול (זהב) מתוך כמה שהימר. ככל שהתא ירוק יותר — הימר אותה יותר.</p>
+          <p className="section-note">כל תא: <b>פגעו/הימרו</b> — המספר הבהיר משמאל = כמה בול, מתוך כמה שהימר. ככל שהתא ירוק יותר — הימר אותה יותר.</p>
           <div className="dist-matrix-wrap">
             <table className="dist-matrix">
               <thead>
@@ -176,7 +176,7 @@ export default function DistributionView({participants, results, teamNames}){
                       const op = n>0 ? 0.18 + 0.82*(n/matrix.maxCell) : 0;
                       return(
                         <td key={p.uid} className="dist-mx-cell">
-                          {n>0&&<span className="dist-mx-dot" style={{background:`rgba(0,216,127,${op})`}}><b className={hit>0?"mx-hit":"mx-hit0"}>{hit}</b><span className="mx-slash">/{n}</span></span>}
+                          {n>0&&<span dir="ltr" className="dist-mx-dot" style={{background:`rgba(0,216,127,${op})`}}><b className={hit>0?"mx-hit":"mx-hit0"}>{hit}</b><span className="mx-slash">/{n}</span></span>}
                         </td>
                       );
                     })}
