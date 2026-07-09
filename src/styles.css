@@ -714,3 +714,18 @@
   .seg-miss{background:var(--red)}
   .dist-player-nums{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.4rem;font-size:.72rem;font-weight:700;color:var(--muted)}
   .dist-player-total{margin-inline-start:auto;color:var(--text)}
+  /* per-player scoreline breakdown */
+  .dist-pscores-title{font-size:.68rem;color:var(--muted);font-weight:700;margin-top:.55rem;margin-bottom:.3rem}
+  .dist-pscores{display:flex;flex-wrap:wrap;gap:.3rem}
+  .dist-pscore-chip{font-size:.72rem;font-weight:700;color:var(--text);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.1rem .4rem}
+  .dist-pscore-chip.has-hit{border-color:rgba(255,206,0,.4);background:rgba(255,206,0,.08)}
+  .dist-pscore-hit{color:var(--gold);font-weight:800}
+  /* who-bet-what matrix */
+  .dist-matrix-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+  .dist-matrix{border-collapse:collapse;width:100%;font-size:.75rem}
+  .dist-matrix th,.dist-matrix td{text-align:center;padding:.3rem .25rem;border-bottom:1px solid rgba(255,255,255,.05)}
+  .dist-mx-corner,.dist-mx-score{position:sticky;right:0;background:var(--card2);font-weight:800;z-index:1;min-width:2.9rem}
+  .dist-mx-phead{font-weight:800;color:var(--muted);white-space:nowrap;max-width:4rem;overflow:hidden;text-overflow:ellipsis}
+  .dist-mx-score{font-size:.78rem}
+  .dist-mx-cell{padding:.2rem}
+  .dist-mx-dot{display:inline-flex;align-items:center;justify-content:center;min-width:1.4rem;height:1.4rem;border-radius:7px;font-weight:800;font-size:.72rem;color:#fff}
