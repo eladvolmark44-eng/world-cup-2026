@@ -173,7 +173,7 @@ export default function DistributionView({participants, results, teamNames}){
                     {matrix.players.map(p=>{
                       const n = matrix.cell[`${s.score}|${p.uid}`]||0;
                       const hit = matrix.cellHit[`${s.score}|${p.uid}`]||0;
-                      const op = n>0 ? 0.18 + 0.82*(n/matrix.maxCell) : 0;
+                      const op = n>0 ? 0.12 + 0.48*(n/matrix.maxCell) : 0;
                       return(
                         <td key={p.uid} className="dist-mx-cell">
                           {n>0&&<span dir="ltr" className="dist-mx-dot" style={{background:`rgba(0,216,127,${op})`}}><b className={hit>0?"mx-hit":"mx-hit0"}>{hit}</b><span className="mx-slash">/{n}</span></span>}
