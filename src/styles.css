@@ -689,3 +689,28 @@
   .dra-sub{font-size:.9rem;color:rgba(255,255,255,.8);padding:0 .5rem;text-align:center;animation:dra-title-in .5s .5s ease both}
   .dra-btn{margin-top:.5rem;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);color:#fff;border-radius:12px;padding:.55rem 2rem;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:background .2s}
   .dra-btn:hover{background:rgba(255,255,255,.22)}
+  /* ── Distribution page ── */
+  .dist-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:1rem}
+  .dist-tile{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.55rem .3rem;text-align:center}
+  .dist-tile-num{font-size:1.15rem;font-weight:800}
+  .dist-tile-num small{font-size:.62rem;font-weight:700;opacity:.85}
+  .dist-tile-lbl{font-size:.62rem;color:var(--muted);font-weight:600;margin-top:.15rem}
+  .dist-block{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:.75rem;margin-bottom:.9rem}
+  .dist-block-title{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:.6rem}
+  .dist-dir-row,.dist-score-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem}
+  .dist-dir-label{font-size:.8rem;font-weight:700;min-width:5.6rem;flex-shrink:0}
+  .dist-score-val{font-size:.85rem;font-weight:800;min-width:2.6rem;flex-shrink:0;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:.05rem .3rem;text-align:center}
+  .dist-linebar{flex:1;min-width:0;height:9px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden}
+  .dist-linebar-fill{height:100%;background:linear-gradient(90deg,var(--green),#3ee6a0);border-radius:6px}
+  .dist-dir-nums,.dist-score-nums{font-size:.7rem;color:var(--muted);font-weight:700;white-space:nowrap;flex-shrink:0;min-width:6.5rem;text-align:left}
+  .dist-player-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.6rem .7rem;margin-bottom:.5rem}
+  .dist-player-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem}
+  .dist-player-name{font-weight:800;font-size:.9rem}
+  .dist-player-rate{font-weight:800;font-size:.85rem;color:var(--green)}
+  .dist-bar{display:flex;height:11px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.06)}
+  .dist-seg{height:100%}
+  .seg-exact{background:var(--gold)}
+  .seg-dir{background:var(--green)}
+  .seg-miss{background:var(--red)}
+  .dist-player-nums{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.4rem;font-size:.72rem;font-weight:700;color:var(--muted)}
+  .dist-player-total{margin-inline-start:auto;color:var(--text)}

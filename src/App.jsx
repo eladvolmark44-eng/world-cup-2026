@@ -18,6 +18,7 @@ import HomeView, { WinnerAnnouncement, DailyRankAnimation } from "./components/H
 import { PlayerBetsView } from "./components/BetForm.jsx";
 import MatchDetailView from "./components/MatchViews.jsx";
 import ResultsView from "./components/ResultsView.jsx";
+import DistributionView from "./components/DistributionView.jsx";
 import AdminPanel, { ProfileEditModal, AssistantPanel } from "./components/AdminPanel.jsx";
 
 export default function App(){
@@ -820,7 +821,7 @@ export default function App(){
         </div>
         <div className="main-content">
         <div className="main-tabs">
-          {[["home","🏟️","בית"],["results","score","תוצאות"],["rules","ref","חוקים"],...(isAdmin?[["admin","⚙️","מנהל"]]:[]),...((isAdmin||isAssistant)?[["assistant","amir","מאמן"]]:[])].map(([k,icon,label])=>(
+          {[["home","🏟️","בית"],["results","score","תוצאות"],["dist","📊","התפלגות"],["rules","ref","חוקים"],...(isAdmin?[["admin","⚙️","מנהל"]]:[]),...((isAdmin||isAssistant)?[["assistant","amir","מאמן"]]:[])].map(([k,icon,label])=>(
             <button key={k} className={`main-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>
               {icon==="score"
                 ? <span className="tab-icon tab-score">3:2</span>
@@ -865,6 +866,14 @@ export default function App(){
               subTab={resultsSubTab}
               setSubTab={setResultsSubTab}
               onMatchClick={(match,res)=>setStatsMatch({match,res})}
+            />
+          )}
+
+          {tab==="dist"&&(
+            <DistributionView
+              participants={participants}
+              results={game.results||{}}
+              teamNames={teamNames}
             />
           )}
 
