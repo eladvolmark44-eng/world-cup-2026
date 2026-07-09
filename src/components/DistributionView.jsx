@@ -155,7 +155,7 @@ export default function DistributionView({participants, results, teamNames}){
 
       {tab==="matrix"&&(
         <div className="scroll-area">
-          <p className="section-note">כל תא: <b>פגעו/הימרו</b> — המספר הבהיר משמאל = כמה בול, מתוך כמה שהימר. ככל שהתא ירוק יותר — הימר אותה יותר.</p>
+          <p className="section-note">כל תא: <b>פגעו/הימרו</b> — המספר המודגש משמאל = כמה בול, מתוך כמה שהימר (מימין). ככל שהתא ירוק יותר — הימר אותה יותר.</p>
           <div className="dist-matrix-wrap">
             <table className="dist-matrix">
               <thead>
