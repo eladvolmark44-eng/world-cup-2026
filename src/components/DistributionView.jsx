@@ -79,13 +79,14 @@ export default function DistributionView({participants, results, teamNames}){
   // player predicted that scoreline. Shows at a glance who bets what.
   const matrix = useMemo(()=>{
     const players = perPlayer.map(p=>({uid:p.uid, name:p.name, isBot:p.isBot, total:p.total}));
-    const cell = {}; let maxCell = 0;
+    const cell = {}, cellHit = {}; let maxCell = 0;
     for(const r of rows){
       const ck = `${scoreKey(r.betH, r.betA)}|${r.uid}`;
       cell[ck] = (cell[ck]||0)+1;
+      if(r.betH===r.realH && r.betA===r.realA) cellHit[ck] = (cellHit[ck]||0)+1;
       if(cell[ck]>maxCell) maxCell = cell[ck];
     }
-    return {players, cell, scores: general.scores, maxCell};
+    return {players, cell, cellHit, scores: general.scores, maxCell};
   }, [rows, perPlayer, general.scores]);
 
   if(rows.length===0) return(
@@ -154,7 +155,7 @@ export default function DistributionView({participants, results, teamNames}){
 
       {tab==="matrix"&&(
         <div className="scroll-area">
-          <p className="section-note">כמה פעמים כל שחקן הימר כל תוצאה. ככל שהתא כהה/ירוק יותר — הימר אותה יותר.</p>
+          <p className="section-note">כל תא: <b>פגעו/הימרו</b> — כמה בול (זהב) מתוך כמה שהימר. ככל שהתא ירוק יותר — הימר אותה יותר.</p>
           <div className="dist-matrix-wrap">
             <table className="dist-matrix">
               <thead>
@@ -171,10 +172,11 @@ export default function DistributionView({participants, results, teamNames}){
                     <td className="dist-mx-score" dir="ltr">{s.score}</td>
                     {matrix.players.map(p=>{
                       const n = matrix.cell[`${s.score}|${p.uid}`]||0;
+                      const hit = matrix.cellHit[`${s.score}|${p.uid}`]||0;
                       const op = n>0 ? 0.18 + 0.82*(n/matrix.maxCell) : 0;
                       return(
                         <td key={p.uid} className="dist-mx-cell">
-                          {n>0&&<span className="dist-mx-dot" style={{background:`rgba(0,216,127,${op})`}}>{n}</span>}
+                          {n>0&&<span className="dist-mx-dot" style={{background:`rgba(0,216,127,${op})`}}><b className={hit>0?"mx-hit":"mx-hit0"}>{hit}</b><span className="mx-slash">/{n}</span></span>}
                         </td>
                       );
                     })}

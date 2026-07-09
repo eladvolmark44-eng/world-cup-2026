@@ -728,7 +728,10 @@
   .dist-mx-phead{font-weight:800;color:var(--muted);white-space:nowrap;max-width:4rem;overflow:hidden;text-overflow:ellipsis}
   .dist-mx-score{font-size:.78rem}
   .dist-mx-cell{padding:.2rem}
-  .dist-mx-dot{display:inline-flex;align-items:center;justify-content:center;min-width:1.4rem;height:1.4rem;border-radius:7px;font-weight:800;font-size:.72rem;color:#fff}
+  .dist-mx-dot{display:inline-flex;align-items:center;justify-content:center;min-width:2rem;height:1.4rem;padding:0 .2rem;border-radius:7px;font-weight:800;font-size:.72rem;color:#fff;white-space:nowrap}
+  .dist-mx-dot .mx-hit{color:var(--gold)}
+  .dist-mx-dot .mx-hit0{color:#fff;opacity:.85}
+  .dist-mx-dot .mx-slash{opacity:.9}
   /* clickable scoreline + reveal */
   .dist-score-btn{width:100%;background:transparent;border:none;cursor:pointer;font-family:'Heebo',sans-serif;border-radius:8px;padding:.15rem .2rem;transition:background .15s}
   .dist-score-btn:hover{background:rgba(255,255,255,.04)}
