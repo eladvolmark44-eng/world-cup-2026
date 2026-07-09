@@ -35,17 +35,6 @@ const pct = (n,d)=> d>0 ? Math.round(n/d*100) : 0;
 // matter for the distribution). Always higher:lower. "Hit" is still judged orientation-aware.
 const scoreKey = (h,a)=> `${Math.max(h,a)}:${Math.min(h,a)}`;
 
-function StatBar({exact, dirOnly, miss}){
-  const total = exact+dirOnly+miss || 1;
-  return(
-    <div className="dist-bar">
-      {exact>0&&<div className="dist-seg seg-exact" style={{width:`${exact/total*100}%`}}/>}
-      {dirOnly>0&&<div className="dist-seg seg-dir" style={{width:`${dirOnly/total*100}%`}}/>}
-      {miss>0&&<div className="dist-seg seg-miss" style={{width:`${miss/total*100}%`}}/>}
-    </div>
-  );
-}
-
 export default function DistributionView({participants, results, teamNames}){
   const [tab, setTab] = useState("general");
   const rows = useMemo(()=>collectRows(participants, results, teamNames), [participants, results, teamNames]);
@@ -113,7 +102,7 @@ export default function DistributionView({participants, results, teamNames}){
     <div className="section">
       <h2>📊 התפלגות ניחושים</h2>
       <div className="sub-tabs">
-        {[["general","🌍 כללי"],["players","👤 לפי שחקן"],["matrix","🔢 מי הימר מה"]].map(([k,l])=>(
+        {[["general","🌍 כללי"],["matrix","🔢 מי הימר מה"]].map(([k,l])=>(
           <button key={k} className={`sub-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
@@ -137,38 +126,6 @@ export default function DistributionView({participants, results, teamNames}){
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {tab==="players"&&(
-        <div className="scroll-area">
-          <p className="section-note">ירוק = בול · צהוב = כיוון · אדום = החטאה. ממוין לפי אחוז פגיעה.</p>
-          {perPlayer.map(s=>{
-            const hits=s.exact+s.dirOnly;
-            return(
-              <div key={s.uid} className="dist-player-card">
-                <div className="dist-player-head">
-                  <span className="dist-player-name">{s.name}{s.isBot&&" 🤖"}</span>
-                  <span className="dist-player-rate">{pct(hits,s.total)}% פגיעה</span>
-                </div>
-                <StatBar exact={s.exact} dirOnly={s.dirOnly} miss={s.miss}/>
-                <div className="dist-player-nums">
-                  <span>🎯 {s.exact} בול</span>
-                  <span>✓ {s.dirOnly} כיוון</span>
-                  <span>✗ {s.miss} החטאה</span>
-                  <span className="dist-player-total">{s.total} ניחושים</span>
-                </div>
-                <div className="dist-pscores-title">כמה הימר מכל תוצאה (וכמה פגע):</div>
-                <div className="dist-pscores">
-                  {s.scoreList.map(sc=>(
-                    <span key={sc.score} className={`dist-pscore-chip ${sc.hit>0?"has-hit":""}`}>
-                      <b dir="ltr">{sc.score}</b> ×{sc.n}{sc.hit>0&&<span className="dist-pscore-hit"> · {sc.hit}🎯</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
 
