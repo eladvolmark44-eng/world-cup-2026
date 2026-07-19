@@ -742,3 +742,4 @@
   .dist-detail-bet{font-weight:700;color:var(--text)}
   .dist-detail-mark.ok{color:var(--gold)}
   .dist-detail-mark.no{color:var(--red)}
+  .admin-close-lbl{font-size:.8rem;font-weight:700;color:var(--muted);min-width:5.5rem;display:inline-flex;align-items:center}

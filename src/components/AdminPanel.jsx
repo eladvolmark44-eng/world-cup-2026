@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db, saveParticipant, saveGame } from "../firebase.js";
-import { GROUP_MATCHES, GROUPS_2026, KO_BRACKET } from "../constants/tournament.js";
+import { GROUP_MATCHES, GROUPS_2026, KO_BRACKET, REAL_TEAMS } from "../constants/tournament.js";
+import { STRIKERS } from "../constants/players.js";
 import { API_SOURCES, SOFA_TEAM_MAP } from "../constants/api.js";
 import { probeApiSource } from "../utils/api.js";
-import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts, withFlag, buildKnockoutSchedule } from "../utils/helpers.js";
+import { timeAgo, tsToLocal, resizeImageToDataURL, getCardCounts, withFlag, withStrikerFlag, buildKnockoutSchedule } from "../utils/helpers.js";
 import { NumStepper } from "./common.jsx";
 import { KnockoutBracketView, buildMockKnockoutPreview } from "./StandingsViews.jsx";
 
@@ -218,6 +219,60 @@ function PenaltySection({participants, game, showToast}){
           <button className="btn-admin-save-bet" onClick={save} disabled={saving}>{saving?"שומר...":"שמור"}</button>
         </div>
       )}
+    </div>
+  );
+}
+
+// Sets results.champion and results.goldenBoot — the two end-of-tournament fields that
+// award 12 pts each in calcScore but are NOT written by any sync/derivation. Without this,
+// even after the final those bonuses never get counted. (Total-goals is auto-synced.)
+function TournamentClosingSection({game, showToast}){
+  const results = game?.results || {};
+  const [champ, setChamp] = useState(results.champion || "");
+  const [boot, setBoot] = useState(results.goldenBoot || results.topScorer?.name || "");
+  const [saving, setSaving] = useState(false);
+  const over = Date.now() >= new Date("2026-07-19T23:59:00+03:00").getTime();
+
+  const save = async () => {
+    setSaving(true);
+    try{
+      await updateDoc(doc(db,"mundial2026","game"),{
+        "results.champion": champ || null,
+        "results.goldenBoot": boot || null,
+      });
+      showToast("✅ אלופה ומלך שערים נשמרו");
+    }catch(e){showToast("❌ "+e.message);}
+    setSaving(false);
+  };
+
+  return(
+    <div className="admin-bet-editor">
+      <div className="admin-bet-title">🏆 סגירת טורניר — אלופה ומלך שערים</div>
+      <p className="section-note">
+        12 נק׳ לכל אחד — מחושבים רק אחרי סיום הטורניר ({over?"✅ הטורניר הסתיים":"⏳ עדיין לא הסתיים"}).
+        <b> חייבים לקבוע כאן ידנית</b>, אחרת הניקוד על אלופה ומלך שערים לא נספר.
+      </p>
+      <div className="admin-bet-selects">
+        <label className="admin-close-lbl">🏆 אלופה</label>
+        <select className="admin-bet-sel" value={champ} onChange={e=>setChamp(e.target.value)}>
+          <option value="">— בחר אלופה —</option>
+          {REAL_TEAMS.map(t=><option key={t} value={t}>{withFlag(t)}</option>)}
+        </select>
+      </div>
+      <div className="admin-bet-selects">
+        <label className="admin-close-lbl">👟 מלך שערים</label>
+        <select className="admin-bet-sel" value={boot} onChange={e=>setBoot(e.target.value)}>
+          <option value="">— בחר מלך שערים —</option>
+          {STRIKERS.map(s=><option key={s} value={s}>{withStrikerFlag(s)}</option>)}
+          {boot && !STRIKERS.includes(boot) && <option value={boot}>{boot}</option>}
+        </select>
+      </div>
+      <div className="admin-bet-row">
+        <span className="admin-bet-team">
+          נשמר כעת: 🏆 {results.champion?withFlag(results.champion):"—"} · 👟 {results.goldenBoot||"—"}
+        </span>
+        <button className="btn-admin-save-bet" onClick={save} disabled={saving}>{saving?"שומר...":"שמור"}</button>
+      </div>
     </div>
   );
 }
@@ -708,6 +763,7 @@ export default function AdminPanel({ participants, game, showToast, onTriggerWin
           </button>
         </div>
       </div>
+      <TournamentClosingSection game={game} showToast={showToast}/>
       <CardsSection participants={participants} game={game} showToast={showToast}/>
       <PenaltySection participants={participants} game={game} showToast={showToast}/>
       <AutoBetTagger participants={participants} game={game} showToast={showToast}/>
