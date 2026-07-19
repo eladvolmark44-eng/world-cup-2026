@@ -114,9 +114,12 @@ export function calcScore(bets={},results={},allP=[],uid=null){
   });
   // KO match bets — keyed by bracket id (M73..M104); score against the resolved bracket
   // (teams seated + result mapped to a stable slot order). Points depend on stage.
+  // Build the knockout schedule once — reused for KO bet scoring and champion derivation.
+  const tournamentOver = isTournamentOver();
+  const koSched = (bets.koMatches || tournamentOver) ? buildKnockoutSchedule(results, {}) : null;
   if(bets.koMatches){
     const koById={};
-    for(const k of buildKnockoutSchedule(results, {})) koById[k.id]=k;
+    for(const k of koSched) koById[k.id]=k;
     Object.keys(bets.koMatches).forEach(id=>{
       const bet=bets.koMatches[id];
       const km=koById[id];
@@ -131,10 +134,13 @@ export function calcScore(bets={},results={},allP=[],uid=null){
       }
     });
   }
-  // Champion, golden boot, total goals — only after tournament is over
-  if(isTournamentOver()){
-    if(bets.champion&&bets.champion===results.champion)t+=12;
-    if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())t+=12;
+  // Champion, golden boot, total goals — only after tournament is over. Champion/golden boot
+  // derive automatically (final result / synced top scorer) so no manual step is needed.
+  if(tournamentOver){
+    const champ=getChampion(results, koSched);
+    if(bets.champion&&champ&&bets.champion===champ)t+=12;
+    const boot=getGoldenBoot(results);
+    if(bets.goldenBoot&&boot&&bets.goldenBoot.trim().toLowerCase()===boot.trim().toLowerCase())t+=12;
     if(bets.totalGoals!=null&&results.actualTotalGoals!=null){
       const myD=Math.abs(+bets.totalGoals-+results.actualTotalGoals);
       const diffs=allP.map(p=>Math.abs((p.bets?.totalGoals??9999)-+results.actualTotalGoals));
@@ -165,9 +171,11 @@ export function calcScoreBreakdown(bets={},results={},allP=[],uid=null){
       matches+=1;if(+bet.home===+real.home&&+bet.away===+real.away)matches+=2;
     }
   });
+  const tournamentOver = isTournamentOver();
+  const koSched = (bets.koMatches || tournamentOver) ? buildKnockoutSchedule(results, {}) : null;
   if(bets.koMatches){
     const koById={};
-    for(const k of buildKnockoutSchedule(results, {})) koById[k.id]=k;
+    for(const k of koSched) koById[k.id]=k;
     Object.keys(bets.koMatches).forEach(id=>{
       const bet=bets.koMatches[id], real=koById[id]?.res;
       if(!bet||!real||bet.home==null||bet.away==null||real.home==null||real.away==null)return;
@@ -177,9 +185,11 @@ export function calcScoreBreakdown(bets={},results={},allP=[],uid=null){
       }
     });
   }
-  if(isTournamentOver()){
-    if(bets.champion&&bets.champion===results.champion)champion+=12;
-    if(bets.goldenBoot&&results.goldenBoot&&bets.goldenBoot.trim().toLowerCase()===results.goldenBoot.trim().toLowerCase())goldenBoot+=12;
+  if(tournamentOver){
+    const champ=getChampion(results, koSched);
+    if(bets.champion&&champ&&bets.champion===champ)champion+=12;
+    const boot=getGoldenBoot(results);
+    if(bets.goldenBoot&&boot&&bets.goldenBoot.trim().toLowerCase()===boot.trim().toLowerCase())goldenBoot+=12;
     if(bets.totalGoals!=null&&results.actualTotalGoals!=null){
       const myD=Math.abs(+bets.totalGoals-+results.actualTotalGoals);
       const diffs=allP.map(p=>Math.abs((p.bets?.totalGoals??9999)-+results.actualTotalGoals));
@@ -338,6 +348,25 @@ export function buildKnockoutSchedule(results={}, teamNames={}){
     out.push({id:bm.id, stage:bm.stage, date, venue, kickoff, apiId, home, away, homeLabel, awayLabel, res});
   }
   return out;
+}
+
+// Tournament champion: an explicit admin value (results.champion) wins; otherwise derive it
+// from the final (M104) result once it's decided. Lets champion points count automatically,
+// with no manual step. Pass a pre-built schedule to avoid rebuilding it.
+export function getChampion(results={}, koSched=null){
+  if(results.champion) return results.champion;
+  const sched = koSched || buildKnockoutSchedule(results, {});
+  const f = sched.find(k=>k.id==="M104");
+  if(!f || !f.home || !f.away || !f.res || f.res.live || f.res.home==null || f.res.away==null) return null;
+  const r=f.res;
+  if(+r.home>+r.away) return f.home;
+  if(+r.away>+r.home) return f.away;
+  if(r.pens){ if(+r.pens.home>+r.pens.away) return f.home; if(+r.pens.away>+r.pens.home) return f.away; }
+  return null;
+}
+// Golden boot: explicit admin value wins; otherwise fall back to the auto-synced top scorer.
+export function getGoldenBoot(results={}){
+  return results.goldenBoot || results.topScorer?.name || null;
 }
 
 // Returns the display symbol for a player at position i in a sorted ranked array.

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { GROUP_MATCHES, GROUPS_2026, FLAG_MAP, KO_POINTS } from "../constants/tournament.js";
 import {
   isGlobalLocked, isTournamentOver, withFlag, withStrikerFlag, hePlayer,
-  calcScore, calcScoreBreakdown, rankSymbol, getDir, isChatLocked, getCardCounts, isStillLive, buildKnockoutSchedule
+  calcScore, calcScoreBreakdown, rankSymbol, getDir, isChatLocked, getCardCounts, isStillLive, buildKnockoutSchedule, getChampion, getGoldenBoot
 } from "../utils/helpers.js";
 import { NumStepper, MatchRow, MatchChat } from "./common.jsx";
 import { ALL_MATCH_DATES } from "../constants/tournament.js";
@@ -175,7 +175,8 @@ function SpecialBetsCard({participants, results, teamNames, funIran=0, funIsrael
   const [showScorers,setShowScorers]=useState(false);
   const topScorer=results.topScorer;
   const actualGoals=results.actualTotalGoals;
-  const champion=results.champion;
+  const champion=getChampion(results);
+  const goldenBoot=getGoldenBoot(results);
 
   const diffs=participants
     .filter(p=>p.bets?.totalGoals!=null&&p.bets.totalGoals!=="")
@@ -227,8 +228,8 @@ function SpecialBetsCard({participants, results, teamNames, funIran=0, funIsrael
         <div className="sp-chips">
           {participants.map(p=>{
             const bet=p.bets?.goldenBoot; if(!bet)return null;
-            const correct=over&&topScorer?.name&&bet.trim().toLowerCase()===topScorer.name.trim().toLowerCase();
-            const wrong=over&&topScorer?.name&&!correct;
+            const correct=over&&goldenBoot&&bet.trim().toLowerCase()===goldenBoot.trim().toLowerCase();
+            const wrong=over&&goldenBoot&&!correct;
             return(
               <div key={p.uid} className={`sp-chip ${correct?"sp-correct":wrong?"sp-wrong":""}`}>
                 <span className="sp-chip-name">{p.name.split(" ")[0]}</span>
